@@ -15,6 +15,29 @@ export default defineConfig({
     testTimeout: 10_000,
     hookTimeout: 10_000,
     teardownTimeout: 10_000,
+    coverage: {
+      provider: 'istanbul',
+      reporter: ['text', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        '**/node_modules/**',
+        'src/**/*.test.{ts,tsx}',
+        'src/test/**',
+        'src/types/**',
+        'src/vite-env.d.ts',
+        /** Entry and env-only wiring; behaviour covered by integration smoke tests elsewhere. */
+        'src/main.tsx',
+        'src/App.tsx',
+        'src/lib/supabase.ts',
+      ],
+      thresholds: {
+        /** Standard 8: track upward over time; entry files excluded above. */
+        statements: 76,
+        branches: 62,
+        functions: 72,
+        lines: 77,
+      },
+    },
   },
   // Pre-bundle `cookie` (CJS) so `import { parse } from 'cookie'` in react-router works in the browser.
   // Excluding react-router-dom skips that pre-bundle and triggers "does not provide export named: parse".

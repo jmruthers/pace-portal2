@@ -2,10 +2,17 @@ import { useQuery } from '@tanstack/react-query';
 import { useUnifiedAuthContext } from '@solvera/pace-core';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
+import type { RBACSupabaseClient } from '@solvera/pace-core/rbac';
 import type { Database } from '@/types/pace-database';
 import { computeProfileProgress, type ProfileProgressResult } from '@/shared/lib/profileProgress';
 import { fetchCurrentPersonMember } from '@/shared/lib/utils/userUtils';
-import { isOk } from '@solvera/pace-core/types';
+import {
+  err,
+  isOk,
+  normalizeToApiError,
+  ok,
+  type ApiResult,
+} from '@solvera/pace-core/types';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 
 type MediRow = Database['public']['Tables']['medi_profile']['Row'] | null;
@@ -68,6 +75,89 @@ export function createEmptyEnhancedLandingModel(needsProfileSetup: boolean): Enh
 }
 
 /**
+ * Loads dashboard landing aggregate (profile, phones, medical, contacts, events). Exported for tests and direct orchestration; TanStack consumers should use {@link useEnhancedLanding}.
+ */
+export async function fetchEnhancedLanding(
+  secure: RBACSupabaseClient | null,
+  userId: string,
+  organisationId: string
+): Promise<ApiResult<EnhancedLandingModel>> {
+  try {
+    const client = toTypedSupabase(secure);
+    if (!client || !userId || !organisationId) {
+      return err({
+        code: 'ENHANCED_LANDING_CONTEXT',
+        message: 'Landing data requires organisation context.',
+      });
+    }
+
+    const pm = await fetchCurrentPersonMember(secure, userId, organisationId);
+    if (!isOk(pm)) {
+      if (pm.error.code === NO_PERSON_PROFILE_ERROR_CODE) {
+        return ok(createEmptyEnhancedLandingModel(true));
+      }
+      return err(pm.error);
+    }
+
+    const { person, member } = pm.data;
+    const personId = person.id;
+
+    const [medi, phones, contacts, events] = await Promise.all([
+      client.from('medi_profile').select('*').eq('person_id', personId).maybeSingle(),
+      client.from('core_phone').select('*').eq('person_id', personId).is('deleted_at', null),
+      client.rpc('data_pace_contacts_list', { p_user_id: userId }),
+      client.from('core_events').select('*').eq('organisation_id', organisationId).order('event_date', { ascending: true }),
+    ]);
+
+    const firstError = medi.error ?? phones.error ?? contacts.error ?? events.error;
+    if (firstError) {
+      return err({
+        code: 'ENHANCED_LANDING_QUERY',
+        message: firstError.message || 'Could not load dashboard data.',
+      });
+    }
+
+    const contactRows = (contacts.data ?? []) as AdditionalContactRow[];
+
+    const eventRows = events.data ?? [];
+    const eventsByCategory = groupEventsByRegistrationScope(eventRows);
+
+    const progress = computeProfileProgress({
+      person: {
+        first_name: person.first_name,
+        last_name: person.last_name,
+        email: person.email,
+        date_of_birth: person.date_of_birth,
+        preferred_name: person.preferred_name,
+      },
+      member: member
+        ? {
+            membership_type_id: member.membership_type_id,
+            gender_id: member.gender_id,
+            pronoun_id: member.pronoun_id,
+            membership_number: member.membership_number,
+          }
+        : null,
+    });
+
+    return ok({
+      person,
+      member,
+      mediProfile: medi.data,
+      phones: phones.data ?? [],
+      additionalContacts: contactRows,
+      eventsByCategory,
+      profileProgress: progress,
+      needsProfileSetup: false,
+    });
+  } catch (e) {
+    return err(
+      normalizeToApiError(e, 'ENHANCED_LANDING', 'Could not load dashboard data.')
+    );
+  }
+}
+
+/**
  * Aggregates dashboard landing data: profile, phones, medical profile, contacts, and organisation events.
  */
 export function useEnhancedLanding() {
@@ -84,66 +174,14 @@ export function useEnhancedLanding() {
     enabled: Boolean(client && userId && organisationId),
     staleTime: 60_000,
     queryFn: async (): Promise<EnhancedLandingModel> => {
-      if (!client || !userId || !organisationId) {
+      if (!userId || !organisationId) {
         throw new Error('Landing data requires organisation context.');
       }
-
-      const pm = await fetchCurrentPersonMember(secure, userId, organisationId);
-      if (!isOk(pm)) {
-        if (pm.error.code === NO_PERSON_PROFILE_ERROR_CODE) {
-          return createEmptyEnhancedLandingModel(true);
-        }
-        throw new Error(pm.error.message);
+      const result = await fetchEnhancedLanding(secure, userId, organisationId);
+      if (!isOk(result)) {
+        throw new Error(result.error.message);
       }
-
-      const { person, member } = pm.data;
-      const personId = person.id;
-
-      const [medi, phones, contacts, events] = await Promise.all([
-        client.from('medi_profile').select('*').eq('person_id', personId).maybeSingle(),
-        client.from('core_phone').select('*').eq('person_id', personId).is('deleted_at', null),
-        client.rpc('data_pace_contacts_list', { p_user_id: userId }),
-        client.from('core_events').select('*').eq('organisation_id', organisationId).order('event_date', { ascending: true }),
-      ]);
-
-      if (medi.error) throw medi.error;
-      if (phones.error) throw phones.error;
-      if (contacts.error) throw contacts.error;
-      if (events.error) throw events.error;
-
-      const contactRows = (contacts.data ?? []) as AdditionalContactRow[];
-
-      const eventRows = events.data ?? [];
-      const eventsByCategory = groupEventsByRegistrationScope(eventRows);
-
-      const progress = computeProfileProgress({
-        person: {
-          first_name: person.first_name,
-          last_name: person.last_name,
-          email: person.email,
-          date_of_birth: person.date_of_birth,
-          preferred_name: person.preferred_name,
-        },
-        member: member
-          ? {
-              membership_type_id: member.membership_type_id,
-              gender_id: member.gender_id,
-              pronoun_id: member.pronoun_id,
-              membership_number: member.membership_number,
-            }
-          : null,
-      });
-
-      return {
-        person,
-        member,
-        mediProfile: medi.data,
-        phones: phones.data ?? [],
-        additionalContacts: contactRows,
-        eventsByCategory,
-        profileProgress: progress,
-        needsProfileSetup: false,
-      };
+      return result.data;
     },
   });
 }

@@ -22,4 +22,30 @@ describe('computeProfileProgress', () => {
     expect(r.filledFields).toBe(8);
     expect(r.completionRatio).toBeGreaterThan(0.8);
   });
+
+  it('treats NaN membership fields as unfilled', () => {
+    const r = computeProfileProgress({
+      person: null,
+      member: {
+        membership_type_id: Number.NaN,
+        gender_id: 1,
+        pronoun_id: 1,
+        membership_number: '1',
+      },
+    });
+    expect(r.filledFields).toBeLessThan(r.totalFields);
+  });
+
+  it('treats non-primitive member field values as filled for the ratio', () => {
+    const r = computeProfileProgress({
+      person: null,
+      member: {
+        membership_type_id: {} as never,
+        gender_id: 1,
+        pronoun_id: 1,
+        membership_number: '1',
+      },
+    });
+    expect(r.filledFields).toBeGreaterThanOrEqual(1);
+  });
 });

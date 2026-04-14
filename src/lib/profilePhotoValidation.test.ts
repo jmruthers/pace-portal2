@@ -12,6 +12,13 @@ describe('validateProfileImageFile', () => {
     expect(isOk(r)).toBe(true);
   });
 
+  it('accepts png and webp under limit', () => {
+    const png = new File(['x'], 'a.png', { type: 'image/png' });
+    const webp = new File(['x'], 'a.webp', { type: 'image/webp' });
+    expect(isOk(validateProfileImageFile(png))).toBe(true);
+    expect(isOk(validateProfileImageFile(webp))).toBe(true);
+  });
+
   it('rejects wrong mime', () => {
     const f = new File(['x'], 'a.gif', { type: 'image/gif' });
     const r = validateProfileImageFile(f);

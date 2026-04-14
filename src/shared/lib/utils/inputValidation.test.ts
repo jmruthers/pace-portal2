@@ -19,6 +19,11 @@ describe('validateSlug', () => {
     expect(isErr(validateSlug('../x'))).toBe(true);
     expect(isErr(validateSlug('bad slug'))).toBe(true);
   });
+
+  it('rejects whitespace-only and overlong slugs', () => {
+    expect(isErr(validateSlug('   '))).toBe(true);
+    expect(isErr(validateSlug('a'.repeat(201)))).toBe(true);
+  });
 });
 
 describe('validateUuid', () => {
@@ -46,6 +51,11 @@ describe('validateSafeRedirect', () => {
     expect(isErr(validateSafeRedirect('https://evil.com'))).toBe(true);
     expect(isErr(validateSafeRedirect('javascript:alert(1)'))).toBe(true);
   });
+
+  it('blocks backslashes and overlong paths', () => {
+    expect(isErr(validateSafeRedirect('/x\\y'))).toBe(true);
+    expect(isErr(validateSafeRedirect(`/${'a'.repeat(2048)}`))).toBe(true);
+  });
 });
 
 describe('sanitiseToApiResult', () => {
@@ -53,5 +63,11 @@ describe('sanitiseToApiResult', () => {
     const r = sanitiseToApiResult<void>(new Error('x'), 'E', 'fallback');
     expect(isErr(r)).toBe(true);
     if (isErr(r)) expect(r.error.code).toBe('E');
+  });
+
+  it('uses fallback when error has no message', () => {
+    const r = sanitiseToApiResult<void>({}, 'CODE', 'fallback');
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.message).toBe('fallback');
   });
 });

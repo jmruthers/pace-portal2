@@ -1,34 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@solvera/pace-core/components';
-import { useUnifiedAuthContext } from '@solvera/pace-core';
-import { useSecureSupabase } from '@solvera/pace-core/rbac';
+import { useLinkedProfiles } from '@/shared/hooks/useLinkedProfiles';
 
 /**
  * Linked profiles delegated to the current user (PR03).
  */
 export function LinkedProfilesSection() {
-  const { user } = useUnifiedAuthContext();
-  const secure = useSecureSupabase();
-
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['linkedProfiles', user?.id],
-    enabled: Boolean(secure && user?.id),
-    queryFn: async () => {
-      if (!secure || !user?.id) return [];
-      const r = (await secure.rpc('data_pace_linked_profiles_list', { p_user_id: user.id })) as {
-        data: unknown;
-        error: Error | null;
-      };
-      if (r.error) throw r.error;
-      return (r.data ?? []) as {
-        person_id: string;
-        first_name: string;
-        last_name: string;
-        organisation_name: string;
-        permission_type: string;
-      }[];
-    },
-  });
+  const { data, isLoading, error } = useLinkedProfiles();
 
   if (isLoading) {
     return (
@@ -39,9 +16,20 @@ export function LinkedProfilesSection() {
   }
 
   if (error) {
+    const detail =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message: unknown }).message)
+          : '';
     return (
       <section role="alert" aria-label="Linked profiles">
         <p>Linked profiles could not be loaded.</p>
+        {import.meta.env.DEV && detail ? (
+          <p>
+            <small>{detail}</small>
+          </p>
+        ) : null}
       </section>
     );
   }

@@ -17,12 +17,12 @@ This file is **`PR04-register-placeholder.md`** — portal requirement slice **P
 
 ## Acceptance criteria
 
-- [ ] A public visitor can open `/register` without event or form context.
-- [ ] The page presents generic placeholder content for future self-service account creation.
-- [ ] Existing sessions are redirected away from the public registration page.
-- [ ] The login surface links users without a PACE account to `/register`.
-- [ ] No event-aware redirect or bootstrap behavior is implied by the rebuilt `/register` page.
-- [ ] No payment or billing behavior is introduced.
+- [x] A public visitor can open `/register` without event or form context.
+- [x] The page presents generic placeholder content for future self-service account creation.
+- [x] Existing sessions are redirected away from the public registration page.
+- [x] The login surface links users without a PACE account to `/register`.
+- [x] No event-aware redirect or bootstrap behavior is implied by the rebuilt `/register` page.
+- [x] No payment or billing behavior is introduced.
 
 ## API / Contract
 

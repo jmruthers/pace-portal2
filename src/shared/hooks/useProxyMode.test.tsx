@@ -70,4 +70,15 @@ describe('useProxyMode', () => {
     expect(result.current.targetPersonId).toBe('p-target');
     expect(result.current.proxyAttribution.actingUserId).toBe('acting-user');
   });
+
+  it('clears proxy when RPC returns an error object', async () => {
+    rpc.mockResolvedValue({ data: null, error: new Error('rpc') });
+    localStorage.setItem(PROXY_TARGET_MEMBER_STORAGE_KEY, 'member-err');
+
+    renderHook(() => useProxyMode());
+
+    await waitFor(() => {
+      expect(localStorage.getItem(PROXY_TARGET_MEMBER_STORAGE_KEY)).toBeNull();
+    });
+  });
 });

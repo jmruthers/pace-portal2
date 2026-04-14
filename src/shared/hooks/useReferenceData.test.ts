@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { isOk } from '@solvera/pace-core/types';
+import { isErr, isOk } from '@solvera/pace-core/types';
 import { fetchReferenceDataBundle } from '@/shared/hooks/useReferenceData';
 
 describe('fetchReferenceDataBundle', () => {
@@ -25,5 +25,30 @@ describe('fetchReferenceDataBundle', () => {
     if (!isOk(result)) throw new Error('expected ok');
     expect(result.data.phoneTypes.length).toBe(1);
     expect(result.data.membershipTypes.length).toBe(1);
+  });
+
+  it('returns err when any table query fails', async () => {
+    const from = vi.fn((table: string) => ({
+      select: vi.fn(() =>
+        table === 'core_gender_type'
+          ? Promise.resolve({ data: null, error: { message: 'db down' } })
+          : Promise.resolve({ data: [], error: null })
+      ),
+    }));
+    const result = await fetchReferenceDataBundle({ from } as never);
+    expect(isErr(result)).toBe(true);
+    if (isErr(result)) {
+      expect(result.error.code).toBe('REFERENCE_DATA');
+    }
+  });
+
+  it('maps thrown errors to ApiResult via normalizeToApiError', async () => {
+    const from = vi.fn(() => ({
+      select: vi.fn(() => {
+        throw new Error('network');
+      }),
+    }));
+    const result = await fetchReferenceDataBundle({ from } as never);
+    expect(isErr(result)).toBe(true);
   });
 });

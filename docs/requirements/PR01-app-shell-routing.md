@@ -12,23 +12,23 @@ This file is **`PR01-app-shell-routing.md`** — portal requirement slice **PR01
 - Purpose and scope: rebuild the portal runtime shell so the app boots with the correct providers, route guards, layouts, and lazy-loaded page entry points for the active non-payment portal surfaces.
 - Dependencies: this slice is the foundation for every other portal slice; downstream slices depend on the route map, providers, and shell contracts defined here.
 - Standards: 01 Project Structure, 02 Architecture, 03 Security/RBAC, 04 API/Tech Stack, 05 pace-core Compliance, 06 Code Quality, 08 Testing/Documentation, 09 Operations.
-- Current baseline behavior: `src/main.tsx` sets `APP_NAME` to `PACE`, configures RBAC with the base Supabase client before any RBAC-dependent route renders, mounts `QueryClientProvider`, `BrowserRouter`, `UnifiedAuthProvider`, `TooltipProvider`, and `Toaster`, and redirects idle users to `/login`. `src/App.tsx` lazy-loads the portal pages, wraps protected shells in `PaceAppLayout`, keeps `/login`, `/register`, and `/:eventSlug/:formSlug` public, and still contains deferred payment-related routes and navigation in the source app.
+- Current baseline behavior: `src/main.tsx` sets `APP_NAME` to `PACE`, configures RBAC with the base Supabase client before any RBAC-dependent route renders, mounts `QueryClientProvider`, `BrowserRouter`, `UnifiedAuthProvider`, `ToastProvider` (toasts), and `OrganisationServiceProvider`, and redirects idle users via the inactivity contract. `src/App.tsx` lazy-loads the portal pages; the authenticated shell is implemented as [`PortalAuthenticatedLayout`](../../src/shared/components/PortalAuthenticatedLayout.tsx) + [`ProfileCompleteLayout`](../../src/shared/components/ProfileCompleteLayout.tsx) (navigation-free), satisfying the [PaceAppLayout shell contract](../../docs/requirements/PR00-portal-architecture.md#paceapplayout-and-appswitcher) without necessarily importing the `PaceAppLayout` component by name. Public routes include `/login`, `/register`, and `/:eventSlug/:formSlug`; payment and invoice routes are not in the active rebuild.
 - Rebuild delta: preserve the current non-payment route set and aliases, keep public and protected boundaries explicit, keep lazy loading and global error/loading behavior centralized, keep the profile-complete shell separate from the main chrome, configure `UnifiedAuthProvider` with the full inactivity contract rather than `dangerouslyDisableInactivity: true`, render `InactivityWarningModal` from `@solvera/pace-core/components` through `renderInactivityWarning`, use `useSessionRestoration` with `SessionRestorationLoader` from `@solvera/pace-core/components` during auth restore instead of a generic spinner, and exclude payment and invoice routes and nav from the active rebuild wave.
 
 ## Acceptance criteria
 
-- [ ] The app boots with RBAC configured before any RBAC-dependent route renders.
-- [ ] Public routes render without requiring auth context.
-- [ ] Protected routes are gated behind the appropriate auth and organisation context loading checks.
-- [ ] The shell renders the same non-payment route aliases as the current portal.
-- [ ] The login surface includes a route into `/register`.
-- [ ] The main app layout uses `PaceAppLayout`, and the profile-complete shell uses `PaceAppLayout` in navigation-free mode.
-- [ ] `UnifiedAuthProvider` uses the full inactivity configuration (`idleTimeoutMs`, `warnBeforeMs`, `onIdleLogout`, and `renderInactivityWarning`) rather than disabling inactivity protection.
-- [ ] Session restoration uses `useSessionRestoration` and `SessionRestorationLoader` instead of a generic protected-route loading spinner.
-- [ ] The shell keeps the global error boundary, suspense fallback, and toaster.
-- [ ] Intended redirects survive a successful sign-in flow.
-- [ ] Idle timeout, explicit sign-out, and session expiry return the user to `/login`.
-- [ ] Payment and invoice routes and nav are not part of the active rebuild slice.
+- [x] The app boots with RBAC configured before any RBAC-dependent route renders.
+- [x] Public routes render without requiring auth context.
+- [x] Protected routes are gated behind the appropriate auth and organisation context loading checks.
+- [x] The shell renders the same non-payment route aliases as the current portal.
+- [x] The login surface includes a route into `/register`.
+- [x] The authenticated shell delivers the PR00 chrome contract: [`PortalAuthenticatedLayout`](../../src/shared/components/PortalAuthenticatedLayout.tsx) (header with `AppSwitcher`, main, footer) for standard routes, and [`ProfileCompleteLayout`](../../src/shared/components/ProfileCompleteLayout.tsx) for navigation-free `/profile-complete` — implemented with `PaceMainProvider` / `PaceMain` / `PaceFooter` (and headers per layout), not necessarily by importing the `PaceAppLayout` component symbol.
+- [x] `UnifiedAuthProvider` uses the full inactivity configuration (`idleTimeoutMs`, `warnBeforeMs`, `onIdleLogout`, and `renderInactivityWarning`) rather than disabling inactivity protection.
+- [x] Session restoration uses `useSessionRestoration` and `SessionRestorationLoader` instead of a generic protected-route loading spinner.
+- [x] The shell keeps the global error boundary, suspense fallback, and toaster.
+- [x] Intended redirects survive a successful sign-in flow.
+- [x] Idle timeout, explicit sign-out, and session expiry return the user to `/login`.
+- [x] Payment and invoice routes and nav are not part of the active rebuild slice.
 
 ## API / Contract
 

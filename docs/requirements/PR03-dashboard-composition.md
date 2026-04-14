@@ -12,20 +12,20 @@ This file is **`PR03-dashboard-composition.md`** — portal requirement slice **
 - Purpose and scope: rebuild the dashboard as the portal's composition surface for user summary, profile prompts, event selection, and linked profiles, while excluding billing surfaces from the active rebuild wave.
 - Dependencies: this slice depends on the shell and shared services from PR01 and PR02, and it composes contracts from member profile, contacts, and events slices. **PR14** replaces the dashboard `EventList` interaction defined here; implement PR03 before PR14 so the selector slot exists to swap.
 - Standards: 02 Architecture, 03 Security/RBAC, 05 pace-core Compliance, 07 Visual, 08 Testing/Documentation.
-- Current baseline behavior: `src/pages/DashboardPage.tsx` calls `useEnhancedLanding`, refetches once on mount, clears `editProxyMode` from `localStorage`, shows `LoadingSpinner` while data loads, renders `ProfileSetupPrompt` when no person record exists, and otherwise wraps the dashboard content in `PagePermissionGuard` for `dashboard/read` with an `AccessDenied` fallback. The visible composition currently includes `ContactSummaryCard`, `ProfilePrompts`, `EventList`, `SmartBillingCard`, and `LinkedProfilesSection`. `ContactSummaryCard` includes the profile photo upload entry point and fallback avatar display through `ProfilePhotoUpload` and `PhotoUploadDialog`, using pace-core `FileDisplay` and `FileUpload` against `core_person` with `FileCategory.PROFILE_PHOTOS`, folder `profile_photos`, and image-only upload validation. `ProfilePrompts` renders three summary cards for member profile, medical profile, and additional contacts. `EventList` renders horizontal event cards with logos, badges, and action buttons, then expands a forms panel for the selected event. The source dashboard still contains `SmartBillingCard`, but that is deferred out of this rebuild wave.
+- Current baseline behavior (legacy reference): older portal dashboards included billing cards (`SmartBillingCard`); **the active rebuild excludes billing** and composes `ContactSummaryCard`, `ProfilePrompts`, `EventList` (placeholder slot for PR14), and `LinkedProfilesSection` only. `src/pages/DashboardPage.tsx` calls `useEnhancedLanding`, refetches once on mount, clears proxy mode via `useProxyMode`, shows `LoadingSpinner` while data loads, renders `ProfileSetupPrompt` when no person record exists, and otherwise wraps content in `PagePermissionGuard` for `dashboard/read` with an `AccessDenied` fallback. `ContactSummaryCard` includes profile photo upload through `ProfilePhotoUpload` and `PhotoUploadDialog`, using pace-core `FileDisplay` and `FileUpload` against `core_person` with profile photo category/folder constants and image-only validation. `ProfilePrompts` renders three summary cards for member profile, medical profile, and additional contacts. `EventList` is a placeholder event-selector slot (card + panel) until PR14 replaces it with Apply / Resume / Manage.
 - Rebuild delta: preserve the dashboard as a composition page rather than moving business logic into it, keep the current section order and user-facing structure where it still makes sense, keep profile photo display and upload within the contact summary portion, remove billing surfaces from the active rebuild output, and implement the current `EventList` card-and-panel interaction as a distinct event-selector composition slot so the later event slice can replace it with the resolved `Apply` / `Resume` / `Manage` modal flow.
 
 ## Acceptance criteria
 
-- [ ] The dashboard renders the same non-payment composition surface as the current portal.
-- [ ] Loading, empty, access-denied, and success states are still covered.
-- [ ] The page keeps the page-level permission check for `dashboard/read`.
-- [ ] The dashboard still refreshes landing data after mount.
-- [ ] Profile photo display and upload remain available from the contact summary.
-- [ ] Profile photo upload remains image-only, single-file, and constrained to JPG, PNG, or WebP files up to 5 MB.
-- [ ] A successful profile photo upload refreshes the displayed avatar without requiring a full page reload.
-- [ ] Billing surfaces are removed from the active rebuild output.
-- [ ] The dashboard implements the current `EventList` card-and-panel interaction as a separate event-selector slot that can later be swapped for the resolved `Apply` / `Resume` / `Manage` management modal flow.
+- [x] The dashboard renders the same non-payment composition surface as the current portal.
+- [x] Loading, empty, access-denied, and success states are still covered.
+- [x] The page keeps the page-level permission check for `dashboard/read`.
+- [x] The dashboard still refreshes landing data after mount.
+- [x] Profile photo display and upload remain available from the contact summary.
+- [x] Profile photo upload remains image-only, single-file, and constrained to JPG, PNG, or WebP files up to 5 MB.
+- [x] A successful profile photo upload refreshes the displayed avatar without requiring a full page reload.
+- [x] Billing surfaces are removed from the active rebuild output.
+- [x] The dashboard implements the current `EventList` card-and-panel interaction as a separate event-selector slot that can later be swapped for the resolved `Apply` / `Resume` / `Manage` management modal flow.
 
 ## API / Contract
 
