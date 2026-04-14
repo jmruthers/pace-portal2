@@ -8,6 +8,7 @@ import { OrganisationServiceProvider } from '@solvera/pace-core/providers';
 import { QueryRetryHandler, queryErrorHandler } from '@solvera/pace-core/utils';
 import { supabaseClient } from '@/lib/supabase';
 import { APP_NAME } from '@/constants';
+import { LoginHistoryRecorder } from '@/shared/components/LoginHistoryRecorder';
 import './app.css';
 import App from './App';
 
@@ -35,6 +36,7 @@ function OrganisationToastShell() {
   return (
     <OrganisationServiceProvider supabaseClient={supabaseClient} user={user} session={session}>
       <ToastProvider>
+        <LoginHistoryRecorder />
         <App />
       </ToastProvider>
     </OrganisationServiceProvider>
