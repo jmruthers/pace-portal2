@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { isOk } from '@solvera/pace-core/types';
 import { fetchReferenceDataBundle } from '@/shared/hooks/useReferenceData';
 
 describe('fetchReferenceDataBundle', () => {
@@ -12,7 +13,8 @@ describe('fetchReferenceDataBundle', () => {
       ),
     }));
     const client = { from } as never;
-    const bundle = await fetchReferenceDataBundle(client);
+    const result = await fetchReferenceDataBundle(client);
+    expect(isOk(result)).toBe(true);
     expect(from).toHaveBeenCalledTimes(4);
     expect(from.mock.calls.map((c) => c[0])).toEqual([
       'core_phone_type',
@@ -20,7 +22,8 @@ describe('fetchReferenceDataBundle', () => {
       'core_gender_type',
       'core_pronoun_type',
     ]);
-    expect(bundle.phoneTypes.length).toBe(1);
-    expect(bundle.membershipTypes.length).toBe(1);
+    if (!isOk(result)) throw new Error('expected ok');
+    expect(result.data.phoneTypes.length).toBe(1);
+    expect(result.data.membershipTypes.length).toBe(1);
   });
 });

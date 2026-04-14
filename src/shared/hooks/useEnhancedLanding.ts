@@ -47,7 +47,25 @@ export type EnhancedLandingModel = {
   /** Events grouped by `registration_scope` as category buckets. */
   eventsByCategory: Record<string, EventRow[]>;
   profileProgress: ProfileProgressResult;
+  /** True when no `core_person` row exists for the user in org context (dashboard setup prompt). */
+  needsProfileSetup: boolean;
 };
+
+/** Error code from `fetchCurrentPersonMember` when the user has no person record yet. */
+export const NO_PERSON_PROFILE_ERROR_CODE = 'USER_DATA_NOT_FOUND' as const;
+
+export function createEmptyEnhancedLandingModel(needsProfileSetup: boolean): EnhancedLandingModel {
+  return {
+    person: null,
+    member: null,
+    mediProfile: null,
+    phones: [],
+    additionalContacts: [],
+    eventsByCategory: {},
+    profileProgress: computeProfileProgress({ person: null, member: null }),
+    needsProfileSetup,
+  };
+}
 
 /**
  * Aggregates dashboard landing data: profile, phones, medical profile, contacts, and organisation events.
@@ -72,6 +90,9 @@ export function useEnhancedLanding() {
 
       const pm = await fetchCurrentPersonMember(secure, userId, organisationId);
       if (!isOk(pm)) {
+        if (pm.error.code === NO_PERSON_PROFILE_ERROR_CODE) {
+          return createEmptyEnhancedLandingModel(true);
+        }
         throw new Error(pm.error.message);
       }
 
@@ -121,6 +142,7 @@ export function useEnhancedLanding() {
         additionalContacts: contactRows,
         eventsByCategory,
         profileProgress: progress,
+        needsProfileSetup: false,
       };
     },
   });
