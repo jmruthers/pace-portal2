@@ -1,121 +1,142 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { lazy, Suspense, useMemo } from 'react';
+import { Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { useSessionRestoration } from '@solvera/pace-core/hooks';
+import { ProtectedRoute, LoadingSpinner } from '@solvera/pace-core/components';
+import { AppErrorBoundary } from '@/shared/components/AppErrorBoundary';
+import { OrganisationLoadingGate } from '@/shared/components/OrganisationLoadingGate';
+import { PortalAuthenticatedLayout } from '@/shared/components/PortalAuthenticatedLayout';
+import { ProfileCompleteLayout } from '@/shared/components/ProfileCompleteLayout';
+import { isReservedEventSlug } from '@/routing/eventFormPaths';
 
-function App() {
-  const [count, setCount] = useState(0)
+const LoginPage = lazy(async () => {
+  const m = await import('@/pages/auth/LoginPage');
+  return { default: m.LoginPage };
+});
+const RegistrationPage = lazy(async () => {
+  const m = await import('@/pages/public/RegistrationPage');
+  return { default: m.RegistrationPage };
+});
+const DashboardPage = lazy(async () => {
+  const m = await import('@/pages/DashboardPage');
+  return { default: m.DashboardPage };
+});
+const ProfileCompletionWizardPage = lazy(async () => {
+  const m = await import('@/pages/ProfileCompletionWizardPage');
+  return { default: m.ProfileCompletionWizardPage };
+});
+const MemberProfilePage = lazy(async () => {
+  const m = await import('@/pages/MemberProfilePage');
+  return { default: m.MemberProfilePage };
+});
+const MedicalProfilePage = lazy(async () => {
+  const m = await import('@/pages/MedicalProfilePage');
+  return { default: m.MedicalProfilePage };
+});
+const AdditionalContactsPage = lazy(async () => {
+  const m = await import('@/pages/AdditionalContactsPage');
+  return { default: m.AdditionalContactsPage };
+});
+const ProfileViewPage = lazy(async () => {
+  const m = await import('@/pages/ProfileViewPage');
+  return { default: m.ProfileViewPage };
+});
+const ProfileEditProxyPage = lazy(async () => {
+  const m = await import('@/pages/ProfileEditProxyPage');
+  return { default: m.ProfileEditProxyPage };
+});
+const FormFillPage = lazy(async () => {
+  const m = await import('@/pages/public/FormFillPage');
+  return { default: m.FormFillPage };
+});
+const NotFoundPage = lazy(async () => {
+  const m = await import('@/pages/NotFoundPage');
+  return { default: m.NotFoundPage };
+});
 
+function RouteLoadingFallback() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+    <main className="grid min-h-screen place-items-center px-4" aria-busy="true">
+      <section className="grid place-items-center gap-4">
+        <LoadingSpinner label="Loading…" />
       </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    </main>
+  );
 }
 
-export default App
+function ProtectedRouteWithRedirect() {
+  const location = useLocation();
+  const redirectTarget = `${location.pathname}${location.search}`;
+  const loginPath = useMemo(() => {
+    if (redirectTarget === '/login' || redirectTarget.startsWith('/login?')) {
+      return '/login';
+    }
+    return `/login?redirect=${encodeURIComponent(redirectTarget)}`;
+  }, [redirectTarget]);
+
+  return (
+    <ProtectedRoute
+      loginPath={loginPath}
+      loadingFallback={
+        <main className="grid min-h-screen place-items-center px-4" aria-busy="true">
+          <section className="grid place-items-center gap-4">
+            <LoadingSpinner label="Loading…" />
+          </section>
+        </main>
+      }
+    />
+  );
+}
+
+function SessionRestorationHookProbe() {
+  useSessionRestoration();
+  return null;
+}
+
+function EventFormRoute() {
+  const { eventSlug = '', formSlug = '' } = useParams();
+  if (eventSlug === '' || formSlug === '') {
+    return <NotFoundPage />;
+  }
+  if (isReservedEventSlug(eventSlug)) {
+    return <NotFoundPage />;
+  }
+  return <FormFillPage eventSlug={eventSlug} formSlug={formSlug} />;
+}
+
+function ProfileCompleteRoute() {
+  return (
+    <ProfileCompleteLayout>
+      <ProfileCompletionWizardPage />
+    </ProfileCompleteLayout>
+  );
+}
+
+export default function App() {
+  return (
+    <AppErrorBoundary>
+      <SessionRestorationHookProbe />
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegistrationPage />} />
+          <Route path="/" element={<ProtectedRouteWithRedirect />}>
+            <Route element={<OrganisationLoadingGate />}>
+              <Route path="profile-complete" element={<ProfileCompleteRoute />} />
+              <Route element={<PortalAuthenticatedLayout />}>
+                <Route index element={<DashboardPage />} />
+                <Route path="dashboard" element={<DashboardPage />} />
+                <Route path="member-profile" element={<MemberProfilePage />} />
+                <Route path="medical-profile" element={<MedicalProfilePage />} />
+                <Route path="additional-contacts" element={<AdditionalContactsPage />} />
+                <Route path="profile/view/:memberId" element={<ProfileViewPage />} />
+                <Route path="profile/edit/:memberId" element={<ProfileEditProxyPage />} />
+              </Route>
+            </Route>
+          </Route>
+          <Route path="/:eventSlug/:formSlug" element={<EventFormRoute />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Suspense>
+    </AppErrorBoundary>
+  );
+}
