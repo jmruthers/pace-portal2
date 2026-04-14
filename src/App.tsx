@@ -13,7 +13,7 @@ const LoginPage = lazy(async () => {
   return { default: m.LoginPage };
 });
 const RegistrationPage = lazy(async () => {
-  const m = await import('@/pages/public/RegistrationPage');
+  const m = await import('@/pages/auth/public/RegistrationPage');
   return { default: m.RegistrationPage };
 });
 const DashboardPage = lazy(async () => {

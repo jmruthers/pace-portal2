@@ -27,7 +27,7 @@ This file is **`PR04-register-placeholder.md`** — portal requirement slice **P
 ## API / Contract
 
 - Public exports: the `/register` route contract and the placeholder registration page.
-- File paths: `src/pages/auth/RegistrationPage.tsx` and the `/register` route wiring in `src/App.tsx`.
+- File paths: `src/pages/auth/public/RegistrationPage.tsx` (public auth surface; pace-core audit treats `pages/**/public/**` as intentionally unguarded) and the `/register` route wiring in `src/App.tsx`.
 - Data contracts: the rebuilt route must not depend on event or form context, and it must not require registration bootstrap, person creation, or RBAC membership mutation contracts.
 - Permission and context contracts: the route is public; if a session already exists, the page must redirect instead of presenting account creation; the login page must continue linking to `/register`.
 
@@ -58,7 +58,7 @@ This file is **`PR04-register-placeholder.md`** — portal requirement slice **P
 ## References
 
 - [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
-- `src/pages/auth/RegistrationPage.tsx`
+- `src/pages/auth/public/RegistrationPage.tsx`
 - `src/App.tsx`
 - `./PR00-portal-project-brief.md`
 - `./PR00-portal-architecture.md`

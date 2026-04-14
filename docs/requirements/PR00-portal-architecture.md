@@ -348,7 +348,7 @@ Contract-only: public exports, paths, data touchpoints, and layout obligations â
 ### References
 
 - [Project brief: pace-portal](./PR00-portal-project-brief.md) (event selector and source-of-truth decisions)
-- `src/pages/auth/RegistrationPage.tsx`
+- `src/pages/auth/public/RegistrationPage.tsx`
 - `src/pages/auth/ProfileCompletionWizardPage.tsx`
 - `src/hooks/auth/useProfileCompletionWizard.ts`
 - `src/utils/auth/registrationUtils.ts`
