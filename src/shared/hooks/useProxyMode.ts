@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useUnifiedAuthContext } from '@solvera/pace-core';
+import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
+import { isOk } from '@solvera/pace-core/types';
 import { PROXY_TARGET_MEMBER_STORAGE_KEY } from '@/constants';
 import { toTypedSupabase } from '@/lib/supabase-typed';
+import { fetchCurrentPersonMember } from '@/shared/lib/utils/userUtils';
 
 export type ProxyModeState = {
   /** True when local storage had a target and RPC granted access. */
@@ -47,6 +50,8 @@ function writeStoredMemberId(memberId: string | null): void {
  */
 export function useProxyMode() {
   const { user } = useUnifiedAuthContext();
+  const org = useOrganisationsContextOptional();
+  const organisationId = org?.selectedOrganisation?.id ?? null;
   const secure = useSecureSupabase();
   const client = toTypedSupabase(secure);
   const actingUserId = user?.id ?? null;
@@ -59,7 +64,6 @@ export function useProxyMode() {
   const validateAndResolve = useCallback(async () => {
     if (!secure || !client || !targetMemberId) {
       setTargetPersonId(null);
-      setValidationError(null);
       setIsValidating(false);
       return;
     }
@@ -104,11 +108,22 @@ export function useProxyMode() {
         return;
       }
 
+      if (actingUserId && organisationId) {
+        const selfPm = await fetchCurrentPersonMember(secure, actingUserId, organisationId);
+        if (isOk(selfPm) && selfPm.data.member?.id === targetMemberId) {
+          writeStoredMemberId(null);
+          setTargetMemberId(null);
+          setTargetPersonId(null);
+          setValidationError('You cannot use a delegated session for your own membership.');
+          return;
+        }
+      }
+
       setTargetPersonId(member.person_id);
     } finally {
       setIsValidating(false);
     }
-  }, [client, secure, targetMemberId]);
+  }, [actingUserId, client, organisationId, secure, targetMemberId]);
 
   useEffect(() => {
     void validateAndResolve();

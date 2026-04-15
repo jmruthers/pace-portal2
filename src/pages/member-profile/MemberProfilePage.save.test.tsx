@@ -1,11 +1,24 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { MemberProfileLoadModel } from '@/hooks/member-profile/useMemberProfileData';
 import type { ReferenceDataBundle } from '@/shared/hooks/useReferenceData';
+import type { MemberProfileFormValues } from '@/components/member-profile/MemberProfile/MemberProfileForm';
 import { MemberProfilePage } from '@/pages/member-profile/MemberProfilePage';
+import { Button } from '@solvera/pace-core/components';
+
+const navigate = vi.fn();
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => navigate,
+  };
+});
 
 vi.mock('@solvera/pace-core/rbac', () => ({
   PagePermissionGuard: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -37,17 +50,6 @@ const hooks = vi.hoisted(() => ({
     data: null as ReferenceDataBundle | null,
     isLoading: false,
   },
-  proxy: {
-    isProxyActive: false,
-    isValidating: false,
-    validationError: null as string | null,
-    targetMemberId: null as string | null,
-    targetPersonId: null,
-    actingUserId: null,
-    clearProxy: vi.fn(),
-    setProxyTargetMemberId: vi.fn(),
-    proxyAttribution: {},
-  },
 }));
 
 vi.mock('@/hooks/member-profile/useMemberProfileData', async (importOriginal) => {
@@ -62,24 +64,83 @@ vi.mock('@/hooks/member-profile/useMemberAdditionalFields', () => ({
   useMemberAdditionalFields: () => hooks.reference,
 }));
 
+const saveFns = vi.hoisted(() => ({
+  saveAddressesAndPhones: vi.fn().mockResolvedValue({
+    residentialAddressId: 'addr-r',
+    postalAddressId: 'addr-p',
+  }),
+  savePersonMember: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/hooks/member-profile/useAddressOperations', () => ({
-  useAddressOperations: () => ({ saveAddressesAndPhones: vi.fn() }),
+  useAddressOperations: () => ({ saveAddressesAndPhones: saveFns.saveAddressesAndPhones }),
 }));
 
-vi.mock('@/hooks/member-profile/usePersonOperations', () => ({
-  usePersonOperations: () => ({ savePersonMember: vi.fn() }),
-}));
-
-vi.mock('@/components/member-profile/MemberProfile/MemberProfileForm', () => ({
-  MemberProfileForm: () => <div data-testid="member-profile-form-stub" />,
-}));
+vi.mock('@/hooks/member-profile/usePersonOperations', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/member-profile/usePersonOperations')>();
+  return {
+    ...actual,
+    usePersonOperations: () => ({ savePersonMember: saveFns.savePersonMember }),
+  };
+});
 
 vi.mock('@/integrations/google-maps/loadGoogleMapsWithPlaces', () => ({
   loadGoogleMapsWithPlaces: () => Promise.reject(new Error('no key')),
 }));
 
 vi.mock('@/shared/hooks/useProxyMode', () => ({
-  useProxyMode: () => hooks.proxy,
+  useProxyMode: () => ({
+    isProxyActive: false,
+    isValidating: false,
+    validationError: null,
+    targetMemberId: null,
+    targetPersonId: null,
+    actingUserId: null,
+    clearProxy: vi.fn(),
+    setProxyTargetMemberId: vi.fn(),
+    proxyAttribution: {},
+  }),
+}));
+
+const validSubmitValues: MemberProfileFormValues = {
+  first_name: 'A',
+  last_name: 'B',
+  middle_name: null,
+  preferred_name: null,
+  email: 'a@b.c',
+  date_of_birth: '1990-01-01',
+  gender_id: 1,
+  pronoun_id: 1,
+  residential: {
+    line1: '1 Main St',
+    locality: 'Town',
+    countryCode: 'US',
+    line2: undefined,
+    region: undefined,
+    postalCode: undefined,
+    placeId: undefined,
+    formattedAddress: undefined,
+  },
+  postal_same_as_residential: true,
+  postal: null,
+  membership_type_id: 1,
+  membership_number: '1',
+  membership_status: 'Active',
+  phones: [{ phone_number: '+15555550100', phone_type_id: 1 }],
+};
+
+vi.mock('@/components/member-profile/MemberProfile/MemberProfileForm', () => ({
+  MemberProfileForm: ({
+    onSubmit,
+    isSubmitting,
+  }: {
+    onSubmit: (v: MemberProfileFormValues) => void | Promise<void>;
+    isSubmitting: boolean;
+  }) => (
+    <Button type="button" disabled={isSubmitting} onClick={() => void onSubmit(validSubmitValues)}>
+      Save profile
+    </Button>
+  ),
 }));
 
 const referenceBundle: ReferenceDataBundle = {
@@ -140,35 +201,30 @@ function renderPage() {
   );
 }
 
-describe('MemberProfilePage', () => {
+describe('MemberProfilePage save flow', () => {
   beforeEach(() => {
-    hooks.memberProfile.data = 'needs_setup';
-    hooks.memberProfile.isLoading = false;
-    hooks.memberProfile.isError = false;
-    hooks.memberProfile.error = null;
-    hooks.memberProfile.dataUpdatedAt = 0;
-    hooks.reference.data = null;
-    hooks.reference.isLoading = false;
-    hooks.proxy.isProxyActive = false;
-    hooks.proxy.isValidating = false;
-    hooks.proxy.validationError = null;
-    hooks.proxy.targetMemberId = null;
-  });
-
-  it('shows profile setup prompt when no person record exists', () => {
-    renderPage();
-    expect(screen.getByRole('heading', { name: /member profile/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /complete your profile/i })).toBeInTheDocument();
-  });
-
-  it('shows proxy banner when delegated context is active', () => {
+    navigate.mockClear();
+    saveFns.saveAddressesAndPhones.mockClear();
+    saveFns.savePersonMember.mockClear();
     hooks.memberProfile.data = loadedProfile;
     hooks.memberProfile.dataUpdatedAt = 1;
     hooks.reference.data = referenceBundle;
-    hooks.proxy.isProxyActive = true;
-    hooks.proxy.targetMemberId = 'm-proxy';
+  });
 
+  it('navigates to dashboard after successful save', async () => {
+    const user = userEvent.setup();
     renderPage();
-    expect(screen.getByText(/delegated context active/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /save profile/i }));
+
+    await vi.waitFor(() => {
+      expect(saveFns.saveAddressesAndPhones).toHaveBeenCalled();
+    });
+    await vi.waitFor(() => {
+      expect(saveFns.savePersonMember).toHaveBeenCalled();
+    });
+    await vi.waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('/');
+    });
   });
 });

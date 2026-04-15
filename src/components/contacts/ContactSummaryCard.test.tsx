@@ -48,4 +48,12 @@ describe('ContactSummaryCard', () => {
     );
     expect(screen.getByText(/2 phone number/i)).toBeInTheDocument();
   });
+
+  it('hides profile photo upload when readOnly', () => {
+    render(
+      <ContactSummaryCard person={person} phones={[]} organisationId="org-1" readOnly />
+    );
+    expect(screen.queryByTestId('photo-upload')).not.toBeInTheDocument();
+    expect(screen.getByText(/Sam Lee/)).toBeInTheDocument();
+  });
 });

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -15,6 +15,7 @@ import { FormFillPage } from '@/pages/public/FormFillPage';
 vi.mock('@solvera/pace-core/rbac', () => ({
   PagePermissionGuard: ({ children }: { children: ReactNode }) => <>{children}</>,
   AccessDenied: () => <p>Access denied</p>,
+  useSecureSupabase: () => null,
 }));
 
 vi.mock('@solvera/pace-core', () => ({
@@ -27,6 +28,7 @@ vi.mock('@solvera/pace-core/providers', () => ({
 
 vi.mock('@solvera/pace-core/hooks', () => ({
   useToast: () => ({ toast: vi.fn() }),
+  useFileDisplay: () => ({ url: null as string | null, isLoading: false }),
 }));
 
 vi.mock('@/hooks/member-profile/useMemberProfileData', () => ({
@@ -55,21 +57,147 @@ vi.mock('@/integrations/google-maps/loadGoogleMapsWithPlaces', () => ({
   loadGoogleMapsWithPlaces: () => Promise.reject(new Error('no key')),
 }));
 
-vi.mock('@/shared/hooks/useProxyMode', () => ({
-  useProxyMode: () => ({
+const proxyModeImpl = vi.hoisted(() =>
+  vi.fn(() => ({
     isProxyActive: false,
     isValidating: false,
-    validationError: null,
-    targetMemberId: null,
-    targetPersonId: null,
-    actingUserId: null,
+    validationError: null as string | null,
+    targetMemberId: null as string | null,
+    targetPersonId: null as string | null,
+    actingUserId: null as string | null,
     clearProxy: vi.fn(),
     setProxyTargetMemberId: vi.fn(),
     proxyAttribution: {},
+  }))
+);
+
+vi.mock('@/shared/hooks/useProxyMode', () => ({
+  useProxyMode: () => proxyModeImpl(),
+}));
+
+vi.mock('@/hooks/member-profile/useDelegatedProfileView', () => ({
+  useDelegatedProfileView: () => ({
+    data: {
+      person: {
+        id: 'p-view',
+        user_id: 'u-other',
+        first_name: 'View',
+        last_name: 'User',
+        email: 'v@example.com',
+        middle_name: null,
+        preferred_name: null,
+        date_of_birth: null,
+        gender_id: 1,
+        pronoun_id: 1,
+        residential_address_id: null,
+        postal_address_id: null,
+        created_at: null,
+        created_by: null,
+        deleted_at: null,
+        updated_at: null,
+        updated_by: null,
+      },
+      phones: [],
+      member: {
+        id: 'm1',
+        person_id: 'p-view',
+        organisation_id: 'org-1',
+        membership_number: '1',
+        membership_type_id: 1,
+        membership_status: 'Active' as const,
+        created_at: null,
+        created_by: null,
+        deleted_at: null,
+        updated_at: null,
+        updated_by: null,
+      },
+    },
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
+}));
+
+vi.mock('@/shared/hooks/useLinkedProfiles', () => ({
+  useLinkedProfiles: () => ({
+    data: [
+      {
+        person_id: 'p-view',
+        member_id: 'm1',
+        first_name: 'View',
+        last_name: 'User',
+        organisation_name: 'Org',
+        permission_type: 'view',
+      },
+    ],
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+vi.mock('@/shared/hooks/useProxyDashboard', () => ({
+  useProxyDashboard: () => ({
+    data: {
+      person: {
+        id: 'p-edit',
+        user_id: 'u-other',
+        first_name: 'Edit',
+        last_name: 'User',
+        email: 'e@example.com',
+        middle_name: null,
+        preferred_name: null,
+        date_of_birth: null,
+        gender_id: 1,
+        pronoun_id: 1,
+        residential_address_id: null,
+        postal_address_id: null,
+        created_at: null,
+        created_by: null,
+        deleted_at: null,
+        updated_at: null,
+        updated_by: null,
+      },
+      phones: [],
+      member: {
+        id: 'm2',
+        person_id: 'p-edit',
+        organisation_id: 'org-1',
+        membership_number: '2',
+        membership_type_id: 1,
+        membership_status: 'Active' as const,
+        created_at: null,
+        created_by: null,
+        deleted_at: null,
+        updated_at: null,
+        updated_by: null,
+      },
+      mediProfile: null,
+      additionalContacts: [],
+      eventsByCategory: {},
+      profileProgress: { completionRatio: 0.5, totalFields: 9, filledFields: 4 },
+      needsProfileSetup: false,
+    },
+    isLoading: false,
+    isError: false,
+    error: null,
   }),
 }));
 
 describe('placeholder pages', () => {
+  beforeEach(() => {
+    proxyModeImpl.mockImplementation(() => ({
+      isProxyActive: false,
+      isValidating: false,
+      validationError: null,
+      targetMemberId: null,
+      targetPersonId: null,
+      actingUserId: null,
+      clearProxy: vi.fn(),
+      setProxyTargetMemberId: vi.fn(),
+      proxyAttribution: {},
+    }));
+  });
+
   it('renders not-found with home link', () => {
     render(
       <MemoryRouter>
@@ -108,25 +236,42 @@ describe('placeholder pages', () => {
   });
 
   it('renders delegated profile view with member id', () => {
+    const client = new QueryClient();
     render(
-      <MemoryRouter initialEntries={['/profile/view/m1']}>
-        <Routes>
-          <Route path="/profile/view/:memberId" element={<ProfileViewPage />} />
-        </Routes>
-      </MemoryRouter>
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/profile/view/m1']}>
+          <Routes>
+            <Route path="/profile/view/:memberId" element={<ProfileViewPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
     );
-    expect(screen.getByText(/Member: m1/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /delegated profile/i })).toBeInTheDocument();
   });
 
   it('renders delegated profile edit with member id', () => {
+    proxyModeImpl.mockImplementation(() => ({
+      isProxyActive: true,
+      isValidating: false,
+      validationError: null,
+      targetMemberId: 'm2',
+      targetPersonId: 'p-edit',
+      actingUserId: 'acting',
+      clearProxy: vi.fn(),
+      setProxyTargetMemberId: vi.fn(),
+      proxyAttribution: {},
+    }));
+    const client = new QueryClient();
     render(
-      <MemoryRouter initialEntries={['/profile/edit/m2']}>
-        <Routes>
-          <Route path="/profile/edit/:memberId" element={<ProfileEditProxyPage />} />
-        </Routes>
-      </MemoryRouter>
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/profile/edit/m2']}>
+          <Routes>
+            <Route path="/profile/edit/:memberId" element={<ProfileEditProxyPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
     );
-    expect(screen.getByText(/Member: m2/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /delegated workspace/i })).toBeInTheDocument();
   });
 
   it('renders public form fill branch when unauthenticated', () => {

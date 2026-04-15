@@ -2,7 +2,11 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { useLinkedProfiles } from '@/shared/hooks/useLinkedProfiles';
+import {
+  enrichLinkedProfilesWithMemberIds,
+  useLinkedProfiles,
+  type LinkedProfileRow,
+} from '@/shared/hooks/useLinkedProfiles';
 
 vi.mock('@/lib/env', () => ({
   isSupabaseConfigured: true,
@@ -31,6 +35,104 @@ function createWrapper() {
   };
 }
 
+const baseRow = (overrides: Partial<LinkedProfileRow> = {}): LinkedProfileRow => ({
+  person_id: 'p1',
+  first_name: 'A',
+  last_name: 'B',
+  organisation_name: 'Org',
+  permission_type: 'view',
+  ...overrides,
+});
+
+describe('enrichLinkedProfilesWithMemberIds', () => {
+  it('returns an empty list without querying', async () => {
+    const from = vi.fn();
+    const client = { from } as never;
+    const out = await enrichLinkedProfilesWithMemberIds(client, []);
+    expect(out).toEqual([]);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it('returns early when every row already has member_id', async () => {
+    const from = vi.fn();
+    const client = { from } as never;
+    const rows = [baseRow({ member_id: 'm1' })];
+    const out = await enrichLinkedProfilesWithMemberIds(client, rows);
+    expect(from).not.toHaveBeenCalled();
+    expect(out[0]?.member_id).toBe('m1');
+  });
+
+  it('returns rows unchanged when member lookup returns nothing', async () => {
+    const from = vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockResolvedValue({ data: [], error: null }),
+    }));
+    const client = { from } as never;
+    const rows = [baseRow()];
+    const out = await enrichLinkedProfilesWithMemberIds(client, rows);
+    expect(out[0]?.member_id).toBeUndefined();
+  });
+
+  it('matches organisation_id when multiple candidates exist', async () => {
+    const from = vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockResolvedValue({
+        data: [
+          { id: 'wrong', person_id: 'p1', organisation_id: 'other' },
+          { id: 'right', person_id: 'p1', organisation_id: 'org-a' },
+        ],
+        error: null,
+      }),
+    }));
+    const client = { from } as never;
+    const rows = [baseRow({ organisation_id: 'org-a' })];
+    const out = await enrichLinkedProfilesWithMemberIds(client, rows);
+    expect(out[0]?.member_id).toBe('right');
+  });
+
+  it('uses a single candidate when organisation_id is absent', async () => {
+    const from = vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockResolvedValue({
+        data: [{ id: 'only', person_id: 'p1', organisation_id: 'org-x' }],
+        error: null,
+      }),
+    }));
+    const client = { from } as never;
+    const rows = [baseRow()];
+    const out = await enrichLinkedProfilesWithMemberIds(client, rows);
+    expect(out[0]?.member_id).toBe('only');
+  });
+
+  it('returns rows unchanged when core_member query errors', async () => {
+    const from = vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockResolvedValue({ data: null, error: { message: 'db' } }),
+    }));
+    const client = { from } as never;
+    const rows = [baseRow()];
+    const out = await enrichLinkedProfilesWithMemberIds(client, rows);
+    expect(out[0]?.member_id).toBeUndefined();
+  });
+
+  it('does not guess member_id when multiple candidates share person_id without organisation_id', async () => {
+    const from = vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockResolvedValue({
+        data: [
+          { id: 'a', person_id: 'p1', organisation_id: 'o1' },
+          { id: 'b', person_id: 'p1', organisation_id: 'o2' },
+        ],
+        error: null,
+      }),
+    }));
+    const client = { from } as never;
+    const rows = [baseRow()];
+    const out = await enrichLinkedProfilesWithMemberIds(client, rows);
+    expect(out[0]?.member_id).toBeUndefined();
+  });
+});
+
 describe('useLinkedProfiles', () => {
   beforeEach(() => {
     getSession.mockResolvedValue({ data: { session: { user: { id: 'u1' } } } });
@@ -42,6 +144,7 @@ describe('useLinkedProfiles', () => {
           last_name: 'B',
           organisation_name: 'Org',
           permission_type: 'view',
+          member_id: 'm1',
         },
       ],
       error: null,

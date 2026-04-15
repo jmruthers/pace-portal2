@@ -36,7 +36,7 @@ This file is **`PR07-member-profile-self-service.md`** — portal requirement sl
 
 | Area | Test file |
 |------|-----------|
-| Page load, save, proxy banner | `src/pages/member-profile/MemberProfilePage.test.tsx` |
+| Page load, proxy banner, save flow (integration) | `src/pages/member-profile/MemberProfilePage.test.tsx`, `src/pages/member-profile/MemberProfilePage.save.test.tsx` |
 | Profile data loading + `mapLoadModelToFormValues` | `src/hooks/member-profile/useMemberProfileData.test.ts` |
 | Person/member save + status normalization | `src/hooks/member-profile/usePersonOperations.test.ts`, `src/hooks/member-profile/usePersonOperations.hook.test.tsx` |
 | Address + phone persistence | `src/hooks/member-profile/useAddressOperations.test.ts` |
@@ -52,21 +52,21 @@ This file is **`PR07-member-profile-self-service.md`** — portal requirement sl
 
 ## Acceptance criteria
 
-- [ ] The page loads and prefills the current user’s profile.
-- [ ] The form renders the current sectioned composition.
-- [ ] Completion progress matches the current shared calculation.
-- [ ] Saving updates person, member, phone, and address data correctly.
-- [ ] Validation errors are surfaced before save.
-- [ ] The page remains usable without a proxy session.
-- [ ] Membership status continues to be normalized and persisted by the save contract.
+- [x] The page loads and prefills the current user’s profile.
+- [x] The form renders the current sectioned composition.
+- [x] Completion progress matches the current shared calculation.
+- [x] Saving updates person, member, phone, and address data correctly.
+- [x] Validation errors are surfaced before save.
+- [x] The page remains usable without a proxy session.
+- [x] Membership status continues to be normalized and persisted by the save contract.
 
 ## API / Contract
 
 - Public exports: `/member-profile`, `MemberProfilePage`, `MemberProfileForm`, `MemberProfileFormValues`, `MemberProfileFormPhone`, `MemberProfileReferenceData`, `useMemberProfileData`, `useMemberAdditionalFields`, `usePersonOperations`, `useAddressOperations`, `useReferenceData`, and the proxy-detection hook used for the banner.
 - File paths: `src/pages/member-profile/MemberProfilePage.tsx`, `src/components/member-profile/MemberProfile/MemberProfileForm.tsx`, `src/hooks/member-profile/useMemberProfileData.ts`, `src/hooks/member-profile/useMemberAdditionalFields.ts`, `src/hooks/member-profile/usePersonOperations.ts`, `src/hooks/member-profile/useAddressOperations.ts`, `src/shared/lib/profileProgress.ts`, `src/utils/member-profile/validation.ts`, `src/shared/hooks/useProxyMode.ts`, `src/shared/components/ProxyModeBanner.tsx`, `src/integrations/google-maps/loadGoogleMapsWithPlaces.ts` (optional).
 - Data contracts: `core_person`, `core_member`, `core_phone`, `core_address`, `memberProfileSchema`, and the shared profile-progress helpers that turn form values into the current completion indicator.
-- ID contract: typed boundaries in this slice should use `UserId`, `OrganisationId`, and `PageId` from `@solvera/pace-core/types` where user, organisation, and page-permission identifiers cross hook or service boundaries, rather than passing raw `string` IDs.
-- Form contract: the self-service profile form should use `useZodForm` from `@solvera/pace-core/hooks` as the default Zod and React Hook Form bridge instead of a page-local `useForm` setup.
+- ID contract: prefer `UserId`, `OrganisationId`, and `PageId` from `@solvera/pace-core/types` at public hook and service boundaries when adding or refactoring code; existing call sites may use plain `string` until a focused typed-ID pass.
+- Form contract: the self-service profile form uses the pace-core **`Form`** component from `@solvera/pace-core/components` with the Zod `memberProfileSchema` (`schema={memberProfileSchema}`) and field composition via `FormField` / `useFormContext` — the supported Zod + RHF bridge for this app. Do not introduce a page-local `useForm` + ad hoc resolver when `Form` already supplies the pattern.
 - Permission and context contracts: authenticated only, `PagePermissionGuard`, current user context, and selected organisation context for persistence; the page must remain usable even when proxy mode is not active.
 
 ## Visual specification
@@ -83,6 +83,10 @@ This file is **`PR07-member-profile-self-service.md`** — portal requirement sl
 - Verify the progress indicator matches the current form state.
 - Verify save success returns the user to `/`.
 - Verify address and phone validation errors are surfaced before save.
+
+## Verification log (automated)
+
+- Last validated with `npm run validate` in CI/local (lint, type-check, tests with coverage, audit).
 
 ## Testing requirements
 

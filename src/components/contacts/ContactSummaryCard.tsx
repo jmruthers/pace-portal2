@@ -10,12 +10,19 @@ export type ContactSummaryCardProps = {
   person: PersonRow;
   phones: PhoneRow[];
   organisationId: string | null;
+  /** When true, hides photo upload (e.g. read-only delegated view, PR08). */
+  readOnly?: boolean;
 };
 
 /**
  * Contact summary with profile photo entry point (PR03).
  */
-export function ContactSummaryCard({ person, phones, organisationId }: ContactSummaryCardProps) {
+export function ContactSummaryCard({
+  person,
+  phones,
+  organisationId,
+  readOnly = false,
+}: ContactSummaryCardProps) {
   const { appId } = useUnifiedAuthContext();
   const phoneSummary =
     phones.length === 0 ? 'No phone on file' : `${phones.length} phone number(s) on file`;
@@ -25,15 +32,31 @@ export function ContactSummaryCard({ person, phones, organisationId }: ContactSu
       <CardHeader>
         <CardTitle>Contact</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-4 md:grid-cols-[auto_1fr] md:items-start">
-        <ProfilePhotoUpload person={person} organisationId={organisationId} appId={appId} />
-        <section className="grid gap-2">
-          <p>
-            {person.first_name} {person.last_name}
-          </p>
-          {person.email ? <p>{person.email}</p> : null}
-          <p>{phoneSummary}</p>
-        </section>
+      <CardContent
+        className={
+          readOnly ? 'grid gap-2' : 'grid gap-4 md:grid-cols-[auto_1fr] md:items-start'
+        }
+      >
+        {readOnly ? null : (
+          <ProfilePhotoUpload person={person} organisationId={organisationId} appId={appId} />
+        )}
+        {readOnly ? (
+          <>
+            <p>
+              {person.first_name} {person.last_name}
+            </p>
+            {person.email ? <p>{person.email}</p> : null}
+            <p>{phoneSummary}</p>
+          </>
+        ) : (
+          <section className="grid gap-2">
+            <p>
+              {person.first_name} {person.last_name}
+            </p>
+            {person.email ? <p>{person.email}</p> : null}
+            <p>{phoneSummary}</p>
+          </section>
+        )}
       </CardContent>
     </Card>
   );
