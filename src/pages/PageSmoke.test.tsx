@@ -11,6 +11,38 @@ import { ProfileViewPage } from '@/pages/ProfileViewPage';
 import { ProfileEditProxyPage } from '@/pages/ProfileEditProxyPage';
 import { FormFillPage } from '@/pages/public/FormFillPage';
 
+vi.mock('@/hooks/auth/useProfileCompletionWizard', () => ({
+  useProfileCompletionWizard: () => ({
+    currentStep: 0,
+    totalSteps: 3,
+    stepLabels: ['Personal details', 'Contact details', 'Membership details'],
+    progressValue: 33,
+    isShellLoading: false,
+    shellError: null,
+    referenceData: {},
+    personMember: null,
+    person: null,
+    member: null,
+    phones: [],
+    addressData: { residential: null, isUnresolved: true },
+    mapsPreload: {
+      phase: 'ready',
+      result: { ok: true, data: { status: 'skipped', reason: 'no_api_key' } },
+    },
+    saveStatus: 'idle',
+    validationMessage: null,
+    eventSlug: null,
+    formSlug: null,
+    completionPathPreview: '/dashboard',
+    saveAndContinue: vi.fn(),
+    goToPrevious: vi.fn(),
+    goToStep: vi.fn(),
+    cancel: vi.fn(),
+    completeProfile: vi.fn(),
+    skipFinalStep: vi.fn(),
+  }),
+}));
+
 vi.mock('@solvera/pace-core/rbac', () => ({
   PagePermissionGuard: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
@@ -45,7 +77,7 @@ describe('placeholder pages', () => {
     expect(screen.getByRole('heading', { name: /additional contacts/i })).toBeInTheDocument();
   });
 
-  it('renders profile completion placeholder', () => {
+  it('renders profile completion wizard shell', () => {
     render(<ProfileCompletionWizardPage />);
     expect(screen.getByRole('heading', { name: /complete your profile/i })).toBeInTheDocument();
   });

@@ -138,3 +138,6 @@ async function fallbackPath(
     usedReducedFieldFallback: true,
   });
 }
+
+/** PR05 contract name for {@link fetchCurrentPersonMember}. */
+export const fetchUserData = fetchCurrentPersonMember;

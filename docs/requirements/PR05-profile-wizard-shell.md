@@ -28,7 +28,7 @@ This file is **`PR05-profile-wizard-shell.md`** — portal requirement slice **P
 ## API / Contract
 
 - Public exports: `/profile-complete`, `ProfileCompletionWizardPage`, `useProfileCompletionWizard`, `useReferenceData`, `fetchUserData`, `usePhoneNumbers`, `useAddressData`, and `loadGoogleMapsWithPlaces`.
-- File paths: `src/pages/auth/ProfileCompletionWizardPage.tsx`, `src/hooks/auth/useProfileCompletionWizard.ts`, `src/shared/hooks/useReferenceData.ts`, `src/shared/lib/utils/userUtils.ts`, `src/hooks/contacts/usePhoneNumbers.ts`, `src/hooks/shared/useAddressData.ts`, `src/integrations/google-maps/loader.ts`.
+- File paths: `src/pages/ProfileCompletionWizardPage.tsx` (wizard shell page), `src/hooks/auth/useProfileCompletionWizard.ts`, `src/hooks/auth/profileWizardShell.ts` (shell validation helpers), `src/shared/hooks/useReferenceData.ts`, `src/shared/lib/utils/userUtils.ts` (`fetchUserData` alias), `src/hooks/contacts/usePhoneNumbers.ts`, `src/hooks/shared/useAddressData.ts`, `src/integrations/google-maps/loader.ts`.
 - Data contracts: `core_person`, `core_member`, `core_phone`, and `core_address` are the persistence seams behind the shell; query-param handoff uses `eventSlug`, `formSlug`, and the `fromWizard=true` return flag.
 - Permission and context contracts: authenticated route, `PagePermissionGuard`, current user/session context, and event-form handoff context are required; this shell does not own its own organisation or RBAC policy.
 - Ownership rule: edits in this slice should stay limited to the exported page shell, shell-level loading and redirect behavior, progress and action-row orchestration, and the `useProfileCompletionWizard` surface that coordinates steps. Step body rendering, field-level validation, and save-shape detail belong to PR06 even when they live behind the same hook.
@@ -71,7 +71,7 @@ This file is **`PR05-profile-wizard-shell.md`** — portal requirement slice **P
 - [Project brief: pace-portal](./PR00-portal-project-brief.md)
 - [Portal architecture](./PR00-portal-architecture.md)
 - Field detail slice: [PR06-wizard-field-details.md](./PR06-wizard-field-details.md)
-- `src/pages/auth/ProfileCompletionWizardPage.tsx`
+- `src/pages/ProfileCompletionWizardPage.tsx`
 - `src/hooks/auth/useProfileCompletionWizard.ts`
 - `src/shared/lib/profileProgress.ts`
 - `src/shared/hooks/useReferenceData.ts`

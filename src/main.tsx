@@ -7,12 +7,16 @@ import { InactivityWarningModal, SessionRestorationLoader, ToastProvider } from 
 import { OrganisationServiceProvider } from '@solvera/pace-core/providers';
 import { QueryRetryHandler, queryErrorHandler } from '@solvera/pace-core/utils';
 import { supabaseClient } from '@/lib/supabase';
+import { resolveRbacAppIdForSetup } from '@/lib/rbacResolveAppId';
 import { APP_NAME } from '@/constants';
 import { LoginHistoryRecorder } from '@/shared/components/LoginHistoryRecorder';
 import './app.css';
 import App from './App';
 
-setupRBAC(supabaseClient, { appName: APP_NAME });
+setupRBAC(supabaseClient, {
+  appName: APP_NAME,
+  getAppId: (name) => resolveRbacAppIdForSetup(supabaseClient, name),
+});
 
 const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 const WARN_BEFORE_MS = 2 * 60 * 1000;
