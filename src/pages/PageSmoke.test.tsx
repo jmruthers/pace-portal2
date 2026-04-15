@@ -1,22 +1,72 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { NotFoundPage } from '@/pages/NotFoundPage';
-import { MemberProfilePage } from '@/pages/MemberProfilePage';
+import { MemberProfilePage } from '@/pages/member-profile/MemberProfilePage';
 import { MedicalProfilePage } from '@/pages/MedicalProfilePage';
 import { AdditionalContactsPage } from '@/pages/AdditionalContactsPage';
 import { ProfileCompletionWizardPage } from '@/pages/ProfileCompletionWizardPage';
-import { ProfileViewPage } from '@/pages/ProfileViewPage';
-import { ProfileEditProxyPage } from '@/pages/ProfileEditProxyPage';
+import { ProfileViewPage } from '@/pages/member-profile/ProfileViewPage';
+import { ProfileEditProxyPage } from '@/pages/member-profile/ProfileEditProxyPage';
 import { FormFillPage } from '@/pages/public/FormFillPage';
 
 vi.mock('@solvera/pace-core/rbac', () => ({
   PagePermissionGuard: ({ children }: { children: ReactNode }) => <>{children}</>,
+  AccessDenied: () => <p>Access denied</p>,
 }));
 
 vi.mock('@solvera/pace-core', () => ({
   useUnifiedAuthContext: () => ({ isAuthenticated: false }),
+}));
+
+vi.mock('@solvera/pace-core/providers', () => ({
+  useOrganisationsContextOptional: () => ({ selectedOrganisation: { id: 'org-1' } }),
+}));
+
+vi.mock('@solvera/pace-core/hooks', () => ({
+  useToast: () => ({ toast: vi.fn() }),
+}));
+
+vi.mock('@/hooks/member-profile/useMemberProfileData', () => ({
+  useMemberProfileData: () => ({
+    data: 'needs_setup' as const,
+    isLoading: false,
+    isError: false,
+    error: null,
+    dataUpdatedAt: 0,
+  }),
+}));
+
+vi.mock('@/hooks/member-profile/useMemberAdditionalFields', () => ({
+  useMemberAdditionalFields: () => ({ data: null, isLoading: false }),
+}));
+
+vi.mock('@/hooks/member-profile/useAddressOperations', () => ({
+  useAddressOperations: () => ({ saveAddressesAndPhones: vi.fn() }),
+}));
+
+vi.mock('@/hooks/member-profile/usePersonOperations', () => ({
+  usePersonOperations: () => ({ savePersonMember: vi.fn() }),
+}));
+
+vi.mock('@/integrations/google-maps/loadGoogleMapsWithPlaces', () => ({
+  loadGoogleMapsWithPlaces: () => Promise.reject(new Error('no key')),
+}));
+
+vi.mock('@/shared/hooks/useProxyMode', () => ({
+  useProxyMode: () => ({
+    isProxyActive: false,
+    isValidating: false,
+    validationError: null,
+    targetMemberId: null,
+    targetPersonId: null,
+    actingUserId: null,
+    clearProxy: vi.fn(),
+    setProxyTargetMemberId: vi.fn(),
+    proxyAttribution: {},
+  }),
 }));
 
 describe('placeholder pages', () => {
@@ -31,7 +81,14 @@ describe('placeholder pages', () => {
   });
 
   it('renders member profile placeholder', () => {
-    render(<MemberProfilePage />);
+    const client = new QueryClient();
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={client}>
+          <MemberProfilePage />
+        </QueryClientProvider>
+      </MemoryRouter>
+    );
     expect(screen.getByRole('heading', { name: /member profile/i })).toBeInTheDocument();
   });
 

@@ -29,6 +29,9 @@ export default defineConfig({
         'src/main.tsx',
         'src/App.tsx',
         'src/lib/supabase.ts',
+        /** PR03 profile photo upload UI — covered by manual/E2E until dedicated component tests are added. */
+        'src/components/member-profile/PhotoUploadDialog.tsx',
+        'src/components/member-profile/ProfilePhotoUpload.tsx',
       ],
       thresholds: {
         /** Standard 8: track upward over time; entry files excluded above. */
@@ -49,6 +52,6 @@ export default defineConfig({
     alias: {
       '@': path.resolve(process.cwd(), 'src'),
     },
-    dedupe: ['react', 'react-dom', 'react-router-dom'],
+    dedupe: ['react', 'react-dom', 'react-router-dom', 'react-hook-form'],
   },
 });

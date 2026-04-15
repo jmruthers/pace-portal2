@@ -5,7 +5,10 @@ import { useSecureSupabase } from '@solvera/pace-core/rbac';
 import type { RBACSupabaseClient } from '@solvera/pace-core/rbac';
 import type { Database } from '@/types/pace-database';
 import { computeProfileProgress, type ProfileProgressResult } from '@/shared/lib/profileProgress';
-import { fetchCurrentPersonMember } from '@/shared/lib/utils/userUtils';
+import {
+  fetchCurrentPersonMember,
+  NO_PERSON_PROFILE_ERROR_CODE,
+} from '@/shared/lib/utils/userUtils';
 import {
   err,
   isOk,
@@ -14,6 +17,9 @@ import {
   type ApiResult,
 } from '@solvera/pace-core/types';
 import { toTypedSupabase } from '@/lib/supabase-typed';
+
+/** Re-export for modules that imported this constant from `useEnhancedLanding`. */
+export { NO_PERSON_PROFILE_ERROR_CODE } from '@/shared/lib/utils/userUtils';
 
 type MediRow = Database['public']['Tables']['medi_profile']['Row'] | null;
 type PhoneRow = Database['public']['Tables']['core_phone']['Row'];
@@ -57,9 +63,6 @@ export type EnhancedLandingModel = {
   /** True when no `core_person` row exists for the user in org context (dashboard setup prompt). */
   needsProfileSetup: boolean;
 };
-
-/** Error code from `fetchCurrentPersonMember` when the user has no person record yet. */
-export const NO_PERSON_PROFILE_ERROR_CODE = 'USER_DATA_NOT_FOUND' as const;
 
 export function createEmptyEnhancedLandingModel(needsProfileSetup: boolean): EnhancedLandingModel {
   return {
@@ -129,12 +132,12 @@ export async function fetchEnhancedLanding(
         email: person.email,
         date_of_birth: person.date_of_birth,
         preferred_name: person.preferred_name,
+        gender_id: person.gender_id,
+        pronoun_id: person.pronoun_id,
       },
       member: member
         ? {
             membership_type_id: member.membership_type_id,
-            gender_id: member.gender_id,
-            pronoun_id: member.pronoun_id,
             membership_number: member.membership_number,
           }
         : null,

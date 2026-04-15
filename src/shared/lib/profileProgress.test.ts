@@ -10,11 +10,11 @@ describe('computeProfileProgress', () => {
         email: 'a@b.c',
         date_of_birth: '2000-01-01',
         preferred_name: null,
+        gender_id: 1,
+        pronoun_id: 2,
       },
       member: {
         membership_type_id: 1,
-        gender_id: 2,
-        pronoun_id: 3,
         membership_number: 'M1',
       },
     });
@@ -28,8 +28,6 @@ describe('computeProfileProgress', () => {
       person: null,
       member: {
         membership_type_id: Number.NaN,
-        gender_id: 1,
-        pronoun_id: 1,
         membership_number: '1',
       },
     });
@@ -41,8 +39,6 @@ describe('computeProfileProgress', () => {
       person: null,
       member: {
         membership_type_id: {} as never,
-        gender_id: 1,
-        pronoun_id: 1,
         membership_number: '1',
       },
     });
