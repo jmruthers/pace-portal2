@@ -56,12 +56,13 @@ vi.mock('@/hooks/contacts/usePhoneNumbers', () => ({
 }));
 
 vi.mock('@/hooks/shared/useAddressData', () => ({
-  useAddressData: () => ({
+  usePersonAddresses: () => ({
     isLoading: false,
     isError: false,
     error: null,
     addressData: {
       residential: { full_address: '1 Test St', place_id: 'place' },
+      postal: null,
       isUnresolved: false,
     },
   }),
@@ -83,7 +84,10 @@ vi.mock('@/shared/lib/utils/userUtils', () => {
     middle_name: null,
     preferred_name: null,
     date_of_birth: null,
-    address_id: 'addr-1',
+    gender_id: null,
+    pronoun_id: null,
+    residential_address_id: 'addr-1',
+    postal_address_id: null,
     created_at: null,
     created_by: null,
     deleted_at: null,

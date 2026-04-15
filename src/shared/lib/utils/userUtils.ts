@@ -3,7 +3,7 @@ import type { ApiResult } from '@solvera/pace-core/types';
 import { err, ok } from '@solvera/pace-core/types';
 import type { RBACSupabaseClient } from '@solvera/pace-core/rbac';
 import type { Database } from '@/types/pace-database';
-import { getOrCreateCached } from '@/shared/lib/utils/userDataCache';
+import { deleteUserDataCacheEntry, getOrCreateCached } from '@/shared/lib/utils/userDataCache';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 
 export type CurrentPersonMember = {
@@ -20,6 +20,11 @@ type ReducedPerson = Pick<
 
 function cacheKey(userId: string, organisationId: string): string {
   return `personMember:${userId}:${organisationId}`;
+}
+
+/** Clears the cached {@link fetchCurrentPersonMember} snapshot so the next read refetches from Supabase. */
+export function bustCurrentPersonMemberCache(userId: string, organisationId: string): void {
+  deleteUserDataCacheEntry(cacheKey(userId, organisationId));
 }
 
 /**

@@ -1,65 +1,71 @@
 /*
  * Canonical consuming-app Tailwind v4 entry (Standard 7 Part A).
+ *
+ * Setup once: copy to src/app.css in your app. @source paths are relative to THIS file;
+ * if app.css lives elsewhere, adjust the path to node_modules (see Standard 7).
+ *
+ * Import only ./app.css from main.tsx — do not import core.css again from JS.
+ * Validate: npm run validate (pace-core audit checks structure and palettes).
  */
 
 @import "tailwindcss";
 
+/* @source directives for Tailwind v4 content scanning (paths relative to this file) */
 @source "./**/*.{js,ts,jsx,tsx}";
 @source "../node_modules/@solvera/pace-core/src/**/*.{js,ts,jsx,tsx}";
 
 @import "@solvera/pace-core/styles/core.css";
 
+/* Suite layout width token (--app-width) is defined in pace-core core.css. Do not redefine it here. */
+
 @theme static {
-  /* Solvera green */
-  --color-main-raw: oklch(0.825 0.174 155.718);
-  --color-main-50: oklch(0.98 0.008 155.718);
-  --color-main-100: oklch(0.96 0.027 155.718);
-  --color-main-200: oklch(0.927 0.063 155.718);
-  --color-main-300: oklch(0.881 0.113 155.718);
-  --color-main-400: oklch(0.825 0.174 155.718);
-  --color-main-500: oklch(0.775 0.15 155.718);
-  --color-main-600: oklch(0.665 0.11 155.718);
-  --color-main-700: oklch(0.567 0.087 155.718);
-  --color-main-800: oklch(0.456 0.064 155.718);
-  --color-main-900: oklch(0.332 0.042 155.718);
-  --color-main-950: oklch(0.195 0.021 155.718);
+  --color-main-raw: oklch(0.58 0.23 300);
+  --color-main-50: oklch(0.98 0.003 300);
+  --color-main-100: oklch(0.96 0.014 300);
+  --color-main-200: oklch(0.927 0.033 300);
+  --color-main-300: oklch(0.881 0.059 300);
+  --color-main-400: oklch(0.822 0.093 300);
+  --color-main-500: oklch(0.75 0.133 300);
+  --color-main-600: oklch(0.665 0.182 300);
+  --color-main-700: oklch(0.58 0.23 300);
+  --color-main-800: oklch(0.456 0.158 300);
+  --color-main-900: oklch(0.332 0.099 300);
+  --color-main-950: oklch(0.195 0.047 300);
 
-  /* Solvera blue */
-  --color-sec-raw: oklch(0.564 0.218 267.6);
-  --color-sec-50: oklch(0.98 0.007 267.6);
-  --color-sec-100: oklch(0.96 0.017 267.6);
-  --color-sec-200: oklch(0.927 0.033 267.6);
-  --color-sec-300: oklch(0.881 0.056 267.6);
-  --color-sec-400: oklch(0.822 0.087 267.6);
-  --color-sec-500: oklch(0.775 0.121 267.6);
-  --color-sec-600: oklch(0.665 0.166 267.6);
-  --color-sec-700: oklch(0.564 0.218 267.6);
-  --color-sec-800: oklch(0.456 0.129 267.6);
-  --color-sec-900: oklch(0.332 0.056 267.6);
-  --color-sec-950: oklch(0.195 0.024 267.6);
+  --color-sec-raw: oklch(0.675 0.169 244.75);
+  --color-sec-50: oklch(0.98 0.003 244.75);
+  --color-sec-100: oklch(0.96 0.014 244.75);
+  --color-sec-200: oklch(0.927 0.032 244.75);
+  --color-sec-300: oklch(0.881 0.057 244.75);
+  --color-sec-400: oklch(0.822 0.089 244.75);
+  --color-sec-500: oklch(0.75 0.128 244.75);
+  --color-sec-600: oklch(0.675 0.169 244.75);
+  --color-sec-700: oklch(0.567 0.134 244.75);
+  --color-sec-800: oklch(0.456 0.101 244.75);
+  --color-sec-900: oklch(0.332 0.068 244.75);
+  --color-sec-950: oklch(0.195 0.037 244.75);
 
-  /* Solvera purple */
-  --color-acc-raw: oklch(0.788 0.13 311.297);
-  --color-acc-50: oklch(0.98 0.007 311.297);
-  --color-acc-100: oklch(0.96 0.018 311.297);
-  --color-acc-200: oklch(0.927 0.038 311.297);
-  --color-acc-300: oklch(0.881 0.069 311.297);
-  --color-acc-400: oklch(0.822 0.108 311.297);
-  --color-acc-500: oklch(0.788 0.13 311.297);
-  --color-acc-600: oklch(0.665 0.105 311.297);
-  --color-acc-700: oklch(0.567 0.084 311.297);
-  --color-acc-800: oklch(0.456 0.063 311.297);
-  --color-acc-900: oklch(0.332 0.042 311.297);
-  --color-acc-950: oklch(0.195 0.022 311.297);
+  --color-acc-raw: oklch(0.64 0.23 7.385);
+  --color-acc-50: oklch(0.98 0.003 7.385);
+  --color-acc-100: oklch(0.96 0.017 7.385);
+  --color-acc-200: oklch(0.927 0.039 7.385);
+  --color-acc-300: oklch(0.881 0.069 7.385);
+  --color-acc-400: oklch(0.822 0.109 7.385);
+  --color-acc-500: oklch(0.75 0.157 7.385);
+  --color-acc-600: oklch(0.64 0.23 7.385);
+  --color-acc-700: oklch(0.567 0.193 7.385);
+  --color-acc-800: oklch(0.456 0.142 7.385);
+  --color-acc-900: oklch(0.332 0.092 7.385);
+  --color-acc-950: oklch(0.195 0.047 7.385);
 }
 
+/* Body chrome: `index.html` uses `class="pacebackground"`; wire the asset from /public. */
 @layer base {
-  .pacebackground {
+  body.pacebackground {
     background-image: url('/pace_background.svg');
-    background-size: cover;
-    background-position: center;
+    background-position: center center;
     background-repeat: no-repeat;
+    background-size: cover;
     background-attachment: fixed;
   }
-
 }

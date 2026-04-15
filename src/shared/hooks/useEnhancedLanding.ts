@@ -129,12 +129,12 @@ export async function fetchEnhancedLanding(
         email: person.email,
         date_of_birth: person.date_of_birth,
         preferred_name: person.preferred_name,
+        gender_id: person.gender_id,
+        pronoun_id: person.pronoun_id,
       },
       member: member
         ? {
             membership_type_id: member.membership_type_id,
-            gender_id: member.gender_id,
-            pronoun_id: member.pronoun_id,
             membership_number: member.membership_number,
           }
         : null,

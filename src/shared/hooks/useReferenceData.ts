@@ -18,6 +18,9 @@ export type ReferenceDataBundle = {
   pronounTypes: Database['public']['Tables']['core_pronoun_type']['Row'][];
 };
 
+/** Requirement name for PR06 / wizard docs; same shape as {@link ReferenceDataBundle}. */
+export type MemberProfileReferenceData = ReferenceDataBundle;
+
 /** Exported for tests — loads all reference tables in parallel. */
 export async function fetchReferenceDataBundle(
   client: SupabaseClient<Database>

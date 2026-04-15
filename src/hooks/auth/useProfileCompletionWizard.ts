@@ -1,22 +1,30 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUnifiedAuthContext } from '@solvera/pace-core';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
-import { toast } from '@solvera/pace-core/components';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
+import { useZodForm } from '@solvera/pace-core/hooks';
 import { isOk } from '@solvera/pace-core/types';
 import { loadGoogleMapsWithPlaces } from '@/integrations/google-maps/loader';
-import { useAddressData } from '@/hooks/shared/useAddressData';
+import { usePersonAddresses } from '@/hooks/shared/useAddressData';
 import { usePhoneNumbers } from '@/hooks/contacts/usePhoneNumbers';
 import { useReferenceData } from '@/shared/hooks/useReferenceData';
-import { fetchCurrentPersonMember, type CurrentPersonMember } from '@/shared/lib/utils/userUtils';
+import { bustCurrentPersonMemberCache, fetchCurrentPersonMember } from '@/shared/lib/utils/userUtils';
 import { NO_PERSON_PROFILE_ERROR_CODE } from '@/shared/hooks/useEnhancedLanding';
+import { toTypedSupabase } from '@/lib/supabase-typed';
+import { buildCompletionPath } from '@/hooks/auth/profileWizardShell';
 import {
-  buildCompletionPath,
-  validateShellStep,
-  type ValidateShellStepResult,
-} from '@/hooks/auth/profileWizardShell';
+  buildMemberProfileFormDefaults,
+  emptyMemberProfileFormValues,
+  memberProfileWizardFormSchema,
+  validateMemberProfileWizardStep,
+} from '@/components/member-profile/MemberProfile/memberProfileWizardSchema';
+import {
+  persistProfileWizardStep0,
+  persistProfileWizardStep1,
+  persistProfileWizardStep2,
+} from '@/hooks/auth/profileWizardPersistence';
 
 export const PROFILE_WIZARD_STEP_COUNT = 3;
 
@@ -55,14 +63,14 @@ function combineWizardShellLoading(
   personLoading: boolean,
   personId: string | null,
   phonesLoading: boolean,
-  personAddressId: string | null,
-  addressLoading: boolean
+  addressLoading: boolean,
+  hasAddressIds: boolean
 ): boolean {
   return Boolean(
     referenceLoading ||
       personLoading ||
       (personId != null && phonesLoading) ||
-      (personAddressId != null && addressLoading)
+      (hasAddressIds && addressLoading)
   );
 }
 
@@ -82,8 +90,10 @@ function combineWizardShellError(
   return refErr ?? personErr ?? phonesErr ?? addressErr;
 }
 
+/* eslint-disable complexity -- PR06 wizard orchestrates queries, form reset, maps preload, and step persistence in one hook; split tracked as follow-up. */
 export function useProfileCompletionWizard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const { user } = useUnifiedAuthContext();
   const org = useOrganisationsContextOptional();
@@ -104,7 +114,7 @@ export function useProfileCompletionWizard() {
     queryKey: ['profileWizardPersonMember', 'v1', userId, organisationId],
     enabled: Boolean(secure && userId && organisationId),
     staleTime: 30_000,
-    queryFn: async (): Promise<CurrentPersonMember | null> => {
+    queryFn: async () => {
       if (!secure || !userId || !organisationId) {
         throw new Error('Profile wizard requires organisation context.');
       }
@@ -122,14 +132,25 @@ export function useProfileCompletionWizard() {
   const person = personMemberQuery.data?.person ?? null;
   const member = personMemberQuery.data?.member ?? null;
   const personId = person?.id ?? null;
-  const personAddressId = person?.address_id ?? null;
+
+  const residentialId = person?.residential_address_id ?? null;
+  const postalId = person?.postal_address_id ?? null;
+  const hasAddressIds = residentialId != null || postalId != null;
 
   const phonesQuery = usePhoneNumbers(personId);
-  const addressQuery = useAddressData(personAddressId);
+  const addressQuery = usePersonAddresses(residentialId, postalId);
+
+  const form = useZodForm({
+    schema: memberProfileWizardFormSchema,
+    defaultValues: emptyMemberProfileFormValues(),
+    mode: 'onBlur',
+  });
 
   const [currentStep, setCurrentStep] = useState(0);
   const [saveStatus, setSaveStatus] = useState<ProfileWizardSaveStatus>('idle');
-  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
+  /** Set when a known `core_member` id is available before TanStack refetch returns. */
+  const [createdMemberId, setCreatedMemberId] = useState<string | null>(null);
   const mapsPreload = useGoogleMapsPreloadForWizard();
 
   const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -142,15 +163,16 @@ export function useProfileCompletionWizard() {
   }, []);
 
   const phones = useMemo(() => phonesQuery.data ?? [], [phonesQuery.data]);
-  const addressUnresolved = addressQuery.addressData.isUnresolved;
+
+  const effectiveMemberId = member?.id ?? createdMemberId;
 
   const isShellLoading = combineWizardShellLoading(
     referenceQuery.isLoading,
     personMemberQuery.isLoading,
     personId,
     phonesQuery.isLoading,
-    personAddressId,
-    addressQuery.isLoading
+    addressQuery.isLoading,
+    hasAddressIds
   );
 
   const shellError = combineWizardShellError(
@@ -164,17 +186,195 @@ export function useProfileCompletionWizard() {
     addressQuery.error
   );
 
+  const profilePrefillKey = useMemo(() => {
+    const phoneSig = phones.map((p) => `${p.id}:${p.phone_number}`).join('|');
+    return [
+      person?.id ?? '',
+      member?.id ?? '',
+      member?.updated_at ?? '',
+      phoneSig,
+      addressQuery.addressData.residential?.id ?? '',
+      addressQuery.addressData.postal?.id ?? '',
+      addressQuery.addressData.residential?.updated_at ?? '',
+      addressQuery.addressData.postal?.updated_at ?? '',
+    ].join('\u001f');
+  }, [
+    person?.id,
+    member?.id,
+    member?.updated_at,
+    phones,
+    addressQuery.addressData.residential?.id,
+    addressQuery.addressData.postal?.id,
+    addressQuery.addressData.residential?.updated_at,
+    addressQuery.addressData.postal?.updated_at,
+  ]);
+
+  useEffect(() => {
+    if (personMemberQuery.isLoading) {
+      return;
+    }
+    if (personId != null && phonesQuery.isLoading) {
+      return;
+    }
+    if (hasAddressIds && addressQuery.isLoading) {
+      return;
+    }
+    form.reset(
+      buildMemberProfileFormDefaults({
+        person,
+        member,
+        phones,
+        residential: addressQuery.addressData.residential,
+        postal: addressQuery.addressData.postal,
+      })
+    );
+    /* eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by profilePrefillKey so React Query object identity does not retrigger reset every render */
+  }, [
+    profilePrefillKey,
+    personMemberQuery.isLoading,
+    hasAddressIds,
+    personId,
+    phonesQuery.isLoading,
+    addressQuery.isLoading,
+  ]);
+
   const progressValue = useMemo(() => {
     return Math.round(((currentStep + 1) / PROFILE_WIZARD_STEP_COUNT) * 100);
   }, [currentStep]);
 
-  const validateCurrentStep = useCallback((): ValidateShellStepResult => {
-    return validateShellStep(currentStep, {
-      person,
-      phones,
-      addressUnresolved,
+  const invalidatePersonBundle = useCallback(async () => {
+    if (userId != null && organisationId != null) {
+      bustCurrentPersonMemberCache(userId, organisationId);
+    }
+    await queryClient.invalidateQueries({
+      queryKey: ['profileWizardPersonMember', 'v1', userId, organisationId],
     });
-  }, [currentStep, person, phones, addressUnresolved]);
+    await queryClient.invalidateQueries({ queryKey: ['profileWizardPhones', 'v1', personId] });
+    await queryClient.invalidateQueries({
+      predicate: (q) => Array.isArray(q.queryKey) && q.queryKey[0] === 'profileWizardAddresses',
+    });
+  }, [queryClient, userId, organisationId, personId]);
+
+  const persistCurrentStep = useCallback(
+    async (stepIndex: number) => {
+      const db = toTypedSupabase(secure);
+      if (!db || !organisationId || !personId || !userId) {
+        throw new Error('Missing session or profile context.');
+      }
+      const values = form.getValues();
+
+      if (stepIndex === 0) {
+        /** Prefer server `member.id`; use `createdMemberId` until TanStack refetch returns (avoids a second INSERT → 403). */
+        const knownMemberId = member?.id ?? createdMemberId ?? null;
+        const { memberId } = await persistProfileWizardStep0({
+          db,
+          organisationId,
+          userId,
+          personId,
+          memberId: knownMemberId,
+          values,
+          existingMembershipStatus: member?.membership_status ?? null,
+        });
+        if (memberId != null) {
+          setCreatedMemberId(memberId);
+        }
+        await invalidatePersonBundle();
+        return;
+      }
+
+      if (stepIndex === 1) {
+        await persistProfileWizardStep1({
+          db,
+          organisationId,
+          userId,
+          personId,
+          values,
+          residentialRow: addressQuery.addressData.residential,
+          postalRow: addressQuery.addressData.postal,
+        });
+        await invalidatePersonBundle();
+        return;
+      }
+
+      const mId = effectiveMemberId;
+      if (mId == null) {
+        const hasMembershipInput =
+          (values.membership_number != null && values.membership_number.trim() !== '') ||
+          values.membership_type_id != null;
+        if (!hasMembershipInput) {
+          return;
+        }
+        throw new Error(
+          'Membership details cannot be saved because membership record creation is not permitted for this account.'
+        );
+      }
+      await persistProfileWizardStep2({
+        db,
+        userId,
+        memberId: mId,
+        values,
+        existingMembershipStatus: member?.membership_status ?? null,
+      });
+      await invalidatePersonBundle();
+    },
+    [
+      secure,
+      organisationId,
+      personId,
+      userId,
+      form,
+      member?.id,
+      createdMemberId,
+      member?.membership_status,
+      addressQuery.addressData.residential,
+      addressQuery.addressData.postal,
+      invalidatePersonBundle,
+      effectiveMemberId,
+    ]
+  );
+
+  const clearStepFieldErrors = useCallback(
+    (stepIndex: number): void => {
+      if (stepIndex === 0) {
+        form.clearErrors([
+          'first_name',
+          'last_name',
+          'middle_name',
+          'preferred_name',
+          'email',
+          'date_of_birth',
+          'gender_id',
+          'pronoun_id',
+        ]);
+        return;
+      }
+      if (stepIndex === 1) {
+        form.clearErrors(['residential', 'postal', 'phones']);
+        return;
+      }
+      form.clearErrors(['membership_number', 'membership_type_id']);
+    },
+    [form]
+  );
+
+  const validateCurrentStep = useCallback((): { ok: true } | { ok: false; message: string } => {
+    clearStepFieldErrors(currentStep);
+    const result = validateMemberProfileWizardStep(currentStep, form.getValues());
+    if (!result.ok) {
+      for (const issue of result.issues) {
+        if (issue.path.trim() === '') {
+          continue;
+        }
+        let targetPath = issue.path;
+        /** Step 1 custom array issues can arrive without the `phones.` prefix. */
+        if (currentStep === 1 && /^\d+\./.test(targetPath)) {
+          targetPath = `phones.${targetPath}`;
+        }
+        form.setError(targetPath as never, { type: 'manual', message: issue.message });
+      }
+    }
+    return result;
+  }, [clearStepFieldErrors, currentStep, form]);
 
   const runSavePulse = useCallback(async () => {
     await new Promise<void>((resolve) => {
@@ -185,24 +385,25 @@ export function useProfileCompletionWizard() {
   const saveAndContinue = useCallback(async () => {
     const v = validateCurrentStep();
     if (!v.ok) {
-      setValidationMessage(v.message);
       return;
     }
-    setValidationMessage(null);
+    setSaveErrorMessage(null);
     setSaveStatus('saving');
     try {
+      await persistCurrentStep(currentStep);
       await runSavePulse();
       if (currentStep < PROFILE_WIZARD_STEP_COUNT - 1) {
         setCurrentStep((s) => s + 1);
       }
       setSaveStatus('idle');
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Try again or return to the dashboard.';
+      setSaveErrorMessage(message);
       setSaveStatus('error');
     }
-  }, [currentStep, validateCurrentStep, runSavePulse]);
+  }, [currentStep, validateCurrentStep, runSavePulse, persistCurrentStep]);
 
   const goToPrevious = useCallback(() => {
-    setValidationMessage(null);
     setCurrentStep((s) => Math.max(0, s - 1));
   }, []);
 
@@ -210,31 +411,39 @@ export function useProfileCompletionWizard() {
     if (step < 0 || step >= PROFILE_WIZARD_STEP_COUNT || step > currentStep) {
       return;
     }
-    setValidationMessage(null);
     setCurrentStep(step);
   }, [currentStep]);
 
   const cancel = useCallback(() => {
-    setValidationMessage(null);
     navigate('/dashboard', { replace: false });
   }, [navigate]);
 
   const finalizeWizard = useCallback(async () => {
     const v = validateCurrentStep();
     if (!v.ok) {
-      setValidationMessage(v.message);
       return;
     }
-    setValidationMessage(null);
+    setSaveErrorMessage(null);
+    setSaveStatus('saving');
+    try {
+      await persistCurrentStep(currentStep);
+      await runSavePulse();
+      setSaveStatus('success');
+      const target = buildCompletionPath(eventSlug, formSlug);
+      redirectTimerRef.current = setTimeout(() => {
+        navigate(target, { replace: false });
+      }, 650);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Try again or return to the dashboard.';
+      setSaveErrorMessage(message);
+      setSaveStatus('error');
+    }
+  }, [validateCurrentStep, persistCurrentStep, currentStep, runSavePulse, navigate, eventSlug, formSlug]);
+
+  const skipFinalStep = useCallback(async () => {
     setSaveStatus('saving');
     try {
       await runSavePulse();
-      toast({
-        title: 'Profile saved',
-        description: 'Returning you to your next step.',
-        variant: 'success',
-        duration: 4000,
-      });
       setSaveStatus('success');
       const target = buildCompletionPath(eventSlug, formSlug);
       redirectTimerRef.current = setTimeout(() => {
@@ -243,7 +452,7 @@ export function useProfileCompletionWizard() {
     } catch {
       setSaveStatus('error');
     }
-  }, [validateCurrentStep, runSavePulse, navigate, eventSlug, formSlug]);
+  }, [runSavePulse, navigate, eventSlug, formSlug]);
 
   const completionPathPreview = useMemo(
     () => buildCompletionPath(eventSlug, formSlug),
@@ -266,15 +475,16 @@ export function useProfileCompletionWizard() {
     addressData: addressQuery.addressData,
     mapsPreload,
     saveStatus,
-    validationMessage,
+    saveErrorMessage,
     eventSlug,
     formSlug,
     completionPathPreview,
+    form,
     saveAndContinue,
     goToPrevious,
     goToStep,
     cancel,
     completeProfile: () => void finalizeWizard(),
-    skipFinalStep: () => void finalizeWizard(),
+    skipFinalStep: () => void skipFinalStep(),
   };
 }
