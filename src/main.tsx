@@ -3,7 +3,11 @@ import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@ta
 import { BrowserRouter } from 'react-router-dom';
 import { setupRBAC } from '@solvera/pace-core/rbac';
 import { UnifiedAuthProvider, useUnifiedAuthContext } from '@solvera/pace-core';
-import { InactivityWarningModal, SessionRestorationLoader } from '@solvera/pace-core/components';
+import {
+  InactivityWarningModal,
+  SessionRestorationLoader,
+  ToastProvider,
+} from '@solvera/pace-core/components';
 import { OrganisationServiceProvider } from '@solvera/pace-core/providers';
 import { QueryRetryHandler, queryErrorHandler } from '@solvera/pace-core/utils';
 import { supabaseClient } from '@/lib/supabase';
@@ -46,27 +50,29 @@ if (!root) throw new Error('Root element not found');
 createRoot(root).render(
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
-      <UnifiedAuthProvider
-        supabaseClient={supabaseClient}
-        appName={APP_NAME}
-        idleTimeoutMs={IDLE_TIMEOUT_MS}
-        warnBeforeMs={WARN_BEFORE_MS}
-        onIdleLogout={async () => {
-          await supabaseClient.auth.signOut();
-        }}
-        renderInactivityWarning={({ timeRemaining, onStaySignedIn, onSignOutNow }) => (
-          <InactivityWarningModal
-            isOpen
-            timeRemaining={timeRemaining}
-            onStaySignedIn={onStaySignedIn}
-            onSignOutNow={onSignOutNow}
-          />
-        )}
-      >
-        <SessionRestorationLoader message="Restoring session…">
-          <AppWithOrganisation />
-        </SessionRestorationLoader>
-      </UnifiedAuthProvider>
+      <ToastProvider>
+        <UnifiedAuthProvider
+          supabaseClient={supabaseClient}
+          appName={APP_NAME}
+          idleTimeoutMs={IDLE_TIMEOUT_MS}
+          warnBeforeMs={WARN_BEFORE_MS}
+          onIdleLogout={async () => {
+            await supabaseClient.auth.signOut();
+          }}
+          renderInactivityWarning={({ timeRemaining, onStaySignedIn, onSignOutNow }) => (
+            <InactivityWarningModal
+              isOpen
+              timeRemaining={timeRemaining}
+              onStaySignedIn={onStaySignedIn}
+              onSignOutNow={onSignOutNow}
+            />
+          )}
+        >
+          <SessionRestorationLoader message="Restoring session…">
+            <AppWithOrganisation />
+          </SessionRestorationLoader>
+        </UnifiedAuthProvider>
+      </ToastProvider>
     </BrowserRouter>
   </QueryClientProvider>
 );

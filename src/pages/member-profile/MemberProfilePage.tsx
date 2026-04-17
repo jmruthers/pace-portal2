@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
 import { createGoogleMapsJsAddressProviderAdapter } from '@solvera/pace-core/forms';
@@ -18,14 +18,29 @@ import {
   useMemberProfileData,
 } from '@/hooks/member-profile/useMemberProfileData';
 import { normalizeMembershipStatus, usePersonOperations } from '@/hooks/member-profile/usePersonOperations';
+import { bustCurrentPersonMemberCache } from '@/shared/lib/utils/userUtils';
 import { ProxyModeBanner } from '@/shared/components/ProxyModeBanner';
+
+const PROFILE_DEBUG_LOGS =
+  import.meta.env.DEV || String(import.meta.env.VITE_PROFILE_DEBUG_LOGS ?? '') === 'true';
+
+function profileDebugLog(step: string, data?: Record<string, unknown>): void {
+  if (!PROFILE_DEBUG_LOGS) return;
+  if (data) {
+    console.info(`[member-profile][page] ${step}`, data);
+    return;
+  }
+  console.info(`[member-profile][page] ${step}`);
+}
 
 function MemberProfileContent() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const org = useOrganisationsContextOptional();
   const organisationId = org?.selectedOrganisation?.id ?? null;
+  const medicalSummaryRedirect = searchParams.get('completeMemberFirst') === '1';
 
   const { data, isLoading, isError, error, dataUpdatedAt } = useMemberProfileData();
   const { data: referenceData, isLoading: refLoading } = useMemberAdditionalFields();
@@ -76,6 +91,11 @@ function MemberProfileContent() {
   }, [data]);
 
   const handleSubmit = async (values: MemberProfileFormValues) => {
+    profileDebugLog('submit:start', {
+      organisationId,
+      hasExistingMember: Boolean(data && data !== 'needs_setup' && data.member?.id),
+      hasExistingPerson: Boolean(data && data !== 'needs_setup' && data.person?.id),
+    });
     if (!organisationId) {
       toast({ title: 'Organisation required', description: 'Select an organisation before saving.', variant: 'destructive' });
       return;
@@ -86,13 +106,21 @@ function MemberProfileContent() {
     try {
       const person = data.person;
       const member = data.member;
+      const splittingSharedPostalAddress =
+        !values.postal_same_as_residential &&
+        person.postal_address_id != null &&
+        person.postal_address_id === person.residential_address_id;
       const { residentialAddressId, postalAddressId } = await saveAddressesAndPhones({
         organisationId,
         residential: values.residential,
         postal: values.postal_same_as_residential ? null : values.postal ?? null,
         postalSameAsResidential: values.postal_same_as_residential,
         residentialId: person.residential_address_id,
-        postalId: values.postal_same_as_residential ? person.residential_address_id : person.postal_address_id,
+        postalId: values.postal_same_as_residential
+          ? person.residential_address_id
+          : splittingSharedPostalAddress
+            ? null
+            : person.postal_address_id,
         personId: person.id,
         phones: values.phones,
         existingPhoneIds: data.phones.map((p) => p.id),
@@ -116,21 +144,31 @@ function MemberProfileContent() {
           residential_address_id: residentialAddressId,
           postal_address_id: postalFinalId,
         },
-        member: member
-          ? {
-              membership_type_id: values.membership_type_id,
-              membership_number: values.membership_number ?? null,
-              membership_status: normalizeMembershipStatus(member.membership_status, values.membership_status),
-            }
-          : null,
+        member: {
+          membership_type_id: values.membership_type_id,
+          membership_number: values.membership_number ?? null,
+          membership_status: normalizeMembershipStatus(member?.membership_status ?? null, values.membership_status),
+        },
       });
 
+      if (person.user_id) {
+        bustCurrentPersonMemberCache(person.user_id, organisationId);
+      }
       await queryClient.invalidateQueries({ queryKey: ['memberProfile'] });
       await queryClient.invalidateQueries({ queryKey: ['enhancedLanding'] });
+      profileDebugLog('submit:done', {
+        personId: person.id,
+        memberId: member?.id ?? null,
+        organisationId,
+      });
       toast({ title: 'Profile saved', description: 'Your changes were saved.' });
       navigate('/');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Could not save profile.';
+      profileDebugLog('submit:error', {
+        organisationId,
+        message: msg,
+      });
       toast({ title: 'Save failed', description: msg, variant: 'destructive' });
     } finally {
       setIsSaving(false);
@@ -183,6 +221,15 @@ function MemberProfileContent() {
   return (
     <main className="mx-auto grid max-w-(--app-width) gap-6 p-4">
       <h1>Member profile</h1>
+      {medicalSummaryRedirect ? (
+        <Alert>
+          <AlertTitle>Complete your member profile first</AlertTitle>
+          <AlertDescription>
+            Finish your member profile details before returning to your medical summary. You can use your
+            browser back navigation after saving, or open Medical profile from the menu again.
+          </AlertDescription>
+        </Alert>
+      ) : null}
       <ProxyModeBanner />
       <MemberProfileForm
         formKey={formKey}

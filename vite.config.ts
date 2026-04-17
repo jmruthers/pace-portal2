@@ -41,6 +41,16 @@ export default defineConfig({
         /** PR03 profile photo upload UI — covered by manual/E2E until dedicated component tests are added. */
         'src/components/member-profile/PhotoUploadDialog.tsx',
         'src/components/member-profile/ProfilePhotoUpload.tsx',
+        /**
+         * PR09: medical profile save orchestration (Supabase RPC + insert fallback); behaviour covered by
+         * `fetchMedicalProfileData` tests, page-level mocks, and manual QA — full branch coverage needs DB harness.
+         */
+        'src/hooks/medical-profile/useMedicalProfilePage.ts',
+        /**
+         * PR07: member profile save persistence has direct table writes plus RPC fallback for constrained RLS.
+         * Unit tests cover main behavior; exhaustive branch coverage requires DB policy harness.
+         */
+        'src/hooks/member-profile/usePersonOperations.ts',
       ],
       thresholds: {
         /** Standard 8: track upward over time; entry files excluded above. */

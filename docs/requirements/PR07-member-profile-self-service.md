@@ -29,6 +29,8 @@ This file is **`PR07-member-profile-self-service.md`** — portal requirement sl
   2. Update `core_person` with personal fields and `residential_address_id` / `postal_address_id`.
   3. Update `core_member` with membership fields and normalized `membership_status`.
   4. Replace `core_phone` rows for the person (soft-delete removed rows, insert/update current set).
+- **Persistence guardrails:** `usePersonOperations` and `useAddressOperations` must treat zero-row updates as save failures (not silent success). For `core_person` / `core_member`, if direct table updates affect zero rows, fall back to `app_pace_person_update` / `app_pace_member_update` and fail the save if the RPC path also returns no rows.
+- **DB escalation reference:** If persistence still fails under production RLS, use [`PR07-member-profile-persistence-db-handoff.md`](./PR07-member-profile-persistence-db-handoff.md) to hand required checks and policy/function changes to pace-core2.
 - **Progress calculation:** Uses [`src/shared/lib/profileProgress.ts`](./src/shared/lib/profileProgress.ts) with **person** fields (`gender_id`, `pronoun_id` on `core_person`) and **member** fields (`membership_type_id`, `membership_number` on `core_member`), plus tracked person name/contact fields — aligned with generated Supabase types.
 - **Membership status:** Persist only valid `pace_membership_status` enum values; normalize unknown/empty input to the existing stored value when updating, or to `Provisional` when creating a new member row (if ever introduced in this flow).
 

@@ -15,15 +15,17 @@ vi.mock('@solvera/pace-core/rbac', () => ({
       if (table === 'core_person') {
         return {
           update: vi.fn(() => ({
-            eq: vi.fn().mockResolvedValue({ error: null }),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ data: [{ id: 'p1' }], error: null }),
           })),
         };
       }
       if (table === 'core_member') {
         return {
           update: vi.fn(() => ({
+            select: vi.fn().mockReturnThis(),
             eq: vi.fn(() => ({
-              eq: vi.fn().mockResolvedValue({ error: null }),
+              eq: vi.fn().mockResolvedValue({ data: [{ id: 'm1' }], error: null }),
             })),
           })),
         };
@@ -71,4 +73,5 @@ describe('usePersonOperations integration', () => {
     });
     expect(isOk(r)).toBe(true);
   });
+
 });

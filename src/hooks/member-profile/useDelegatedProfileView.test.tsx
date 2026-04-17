@@ -5,8 +5,20 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as supabaseTyped from '@/lib/supabase-typed';
 import { useDelegatedProfileView } from '@/hooks/member-profile/useDelegatedProfileView';
 
+const authState = vi.hoisted(() => ({
+  userId: 'u1',
+}));
+
+const orgState = vi.hoisted(() => ({
+  organisationId: 'o1',
+}));
+
 vi.mock('@solvera/pace-core/providers', () => ({
-  useOrganisationsContextOptional: () => ({ selectedOrganisation: { id: 'o1' } }),
+  useOrganisationsContextOptional: () => ({ selectedOrganisation: { id: orgState.organisationId } }),
+}));
+
+vi.mock('@solvera/pace-core', () => ({
+  useUnifiedAuthContext: () => ({ user: { id: authState.userId } }),
 }));
 
 const personRow = {
@@ -93,6 +105,8 @@ function wrapper({ children }: { children: ReactNode }) {
 describe('useDelegatedProfileView', () => {
   beforeEach(() => {
     secureMock = buildSecureClient();
+    authState.userId = 'u1';
+    orgState.organisationId = 'o1';
     vi.spyOn(supabaseTyped, 'toTypedSupabase').mockImplementation((c) => c as never);
   });
 
@@ -141,5 +155,23 @@ describe('useDelegatedProfileView', () => {
     const { result } = renderHook(() => useDelegatedProfileView('m1'), { wrapper });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
+  it('scopes query cache by authenticated user id', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const scopedWrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: qc }, children);
+
+    const first = renderHook(() => useDelegatedProfileView('m1'), { wrapper: scopedWrapper });
+    await waitFor(() => expect(first.result.current.isSuccess).toBe(true));
+    expect((secureMock as { rpc: ReturnType<typeof vi.fn> }).rpc).toHaveBeenCalledTimes(1);
+
+    authState.userId = 'u2';
+    secureMock = buildSecureClient();
+    vi.spyOn(supabaseTyped, 'toTypedSupabase').mockImplementation((c) => c as never);
+
+    const second = renderHook(() => useDelegatedProfileView('m1'), { wrapper: scopedWrapper });
+    await waitFor(() => expect(second.result.current.isSuccess).toBe(true));
+    expect((secureMock as { rpc: ReturnType<typeof vi.fn> }).rpc).toHaveBeenCalledTimes(1);
   });
 });

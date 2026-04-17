@@ -72,6 +72,10 @@ const saveFns = vi.hoisted(() => ({
   savePersonMember: vi.fn().mockResolvedValue(undefined),
 }));
 
+const testState = vi.hoisted(() => ({
+  submitValues: null as MemberProfileFormValues | null,
+}));
+
 vi.mock('@/hooks/member-profile/useAddressOperations', () => ({
   useAddressOperations: () => ({ saveAddressesAndPhones: saveFns.saveAddressesAndPhones }),
 }));
@@ -129,6 +133,8 @@ const validSubmitValues: MemberProfileFormValues = {
   phones: [{ phone_number: '+15555550100', phone_type_id: 1 }],
 };
 
+testState.submitValues = validSubmitValues;
+
 vi.mock('@/components/member-profile/MemberProfile/MemberProfileForm', () => ({
   MemberProfileForm: ({
     onSubmit,
@@ -137,7 +143,11 @@ vi.mock('@/components/member-profile/MemberProfile/MemberProfileForm', () => ({
     onSubmit: (v: MemberProfileFormValues) => void | Promise<void>;
     isSubmitting: boolean;
   }) => (
-    <Button type="button" disabled={isSubmitting} onClick={() => void onSubmit(validSubmitValues)}>
+    <Button
+      type="button"
+      disabled={isSubmitting}
+      onClick={() => void onSubmit(testState.submitValues ?? validSubmitValues)}
+    >
       Save profile
     </Button>
   ),
@@ -209,6 +219,7 @@ describe('MemberProfilePage save flow', () => {
     hooks.memberProfile.data = loadedProfile;
     hooks.memberProfile.dataUpdatedAt = 1;
     hooks.reference.data = referenceBundle;
+    testState.submitValues = validSubmitValues;
   });
 
   it('navigates to dashboard after successful save', async () => {
@@ -225,6 +236,40 @@ describe('MemberProfilePage save flow', () => {
     });
     await vi.waitFor(() => {
       expect(navigate).toHaveBeenCalledWith('/');
+    });
+  });
+
+  it('creates a distinct postal address id when splitting a previously shared address', async () => {
+    const user = userEvent.setup();
+    hooks.memberProfile.data = {
+      ...loadedProfile,
+      person: {
+        ...loadedProfile.person,
+        residential_address_id: 'addr-shared',
+        postal_address_id: 'addr-shared',
+      },
+    };
+    testState.submitValues = {
+      ...validSubmitValues,
+      postal_same_as_residential: false,
+      postal: {
+        line1: '99 Postal Ave',
+        locality: 'Mailtown',
+        countryCode: 'US',
+      },
+    };
+
+    renderPage();
+    await user.click(screen.getByRole('button', { name: /save profile/i }));
+
+    await vi.waitFor(() => {
+      expect(saveFns.saveAddressesAndPhones).toHaveBeenCalledWith(
+        expect.objectContaining({
+          residentialId: 'addr-shared',
+          postalId: null,
+          postalSameAsResidential: false,
+        })
+      );
     });
   });
 });

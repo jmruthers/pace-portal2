@@ -12,6 +12,17 @@ import type { Database } from '@/types/pace-database';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 
 type MembershipStatus = Database['public']['Enums']['pace_membership_status'];
+const PROFILE_DEBUG_LOGS =
+  import.meta.env.DEV || String(import.meta.env.VITE_PROFILE_DEBUG_LOGS ?? '') === 'true';
+
+function profileDebugLog(step: string, data?: Record<string, unknown>): void {
+  if (!PROFILE_DEBUG_LOGS) return;
+  if (data) {
+    console.info(`[member-profile][person] ${step}`, data);
+    return;
+  }
+  console.info(`[member-profile][person] ${step}`);
+}
 
 const MEMBERSHIP_STATUS_VALUES: readonly MembershipStatus[] = [
   'Provisional',
@@ -57,8 +68,195 @@ export type UpdatePersonMemberInput = {
     membership_type_id: number | null;
     membership_number: string | null;
     membership_status: MembershipStatus;
-  } | null;
+  };
 };
+
+async function persistPersonWithFallback(
+  client: ReturnType<typeof toTypedSupabase>,
+  input: UpdatePersonMemberInput,
+  personPatch: Database['public']['Tables']['core_person']['Update']
+): Promise<ApiResult<void>> {
+  if (!client) {
+    return err({ code: 'PERSON_NO_CLIENT', message: 'Client is not available.' });
+  }
+  profileDebugLog('direct_person_update:start', { personId: input.personId });
+  const { data: personRows, error: personError } = await client
+    .from('core_person')
+    .update(personPatch)
+    .select('id')
+    .eq('id', input.personId);
+
+  if (personError) {
+    profileDebugLog('direct_person_update:error', { personId: input.personId, error: personError.message });
+    return err({
+      code: 'PERSON_UPDATE',
+      message: personError.message || 'Could not save personal details.',
+    });
+  }
+  profileDebugLog('direct_person_update:done', {
+    personId: input.personId,
+    rowsAffected: personRows?.length ?? 0,
+  });
+  if (personRows && personRows.length > 0) {
+    return ok(undefined);
+  }
+
+  profileDebugLog('rpc_person_update:start', { personId: input.personId });
+  const rpcPerson = await client.rpc('app_pace_person_update', {
+    p_person_id: input.personId,
+    p_first_name: personPatch.first_name ?? undefined,
+    p_last_name: personPatch.last_name ?? undefined,
+    p_middle_name: personPatch.middle_name ?? undefined,
+    p_preferred_name: personPatch.preferred_name ?? undefined,
+    p_email: personPatch.email ?? undefined,
+  });
+  if (rpcPerson.error || !rpcPerson.data || rpcPerson.data.length === 0) {
+    profileDebugLog('rpc_person_update:error', {
+      personId: input.personId,
+      error: rpcPerson.error?.message ?? 'No rows returned',
+    });
+    return err({
+      code: 'PERSON_UPDATE_NO_ROWS',
+      message:
+        rpcPerson.error?.message ||
+        'Profile save was blocked by permissions. Contact support to enable member profile updates.',
+    });
+  }
+  profileDebugLog('rpc_person_update:done', { personId: input.personId, rowsAffected: rpcPerson.data.length });
+  return ok(undefined);
+}
+
+async function persistMemberWithFallback(
+  client: ReturnType<typeof toTypedSupabase>,
+  input: UpdatePersonMemberInput,
+  personPatch: Database['public']['Tables']['core_person']['Update'],
+  memberPatch: Database['public']['Tables']['core_member']['Update']
+): Promise<ApiResult<void>> {
+  if (!client) {
+    return ok(undefined);
+  }
+  if (!input.memberId) return insertMissingMember(client, input, memberPatch);
+  return updateExistingMemberWithFallback(client, input, personPatch, memberPatch);
+}
+
+async function insertMissingMember(
+  client: NonNullable<ReturnType<typeof toTypedSupabase>>,
+  input: UpdatePersonMemberInput,
+  memberPatch: Database['public']['Tables']['core_member']['Update']
+): Promise<ApiResult<void>> {
+  profileDebugLog('member_insert:start', {
+    personId: input.personId,
+    organisationId: input.organisationId,
+  });
+  const { data: inserted, error: insertError } = await client
+    .from('core_member')
+    .upsert(
+      {
+        person_id: input.personId,
+        organisation_id: input.organisationId,
+        membership_type_id: memberPatch.membership_type_id ?? null,
+        membership_number: memberPatch.membership_number ?? null,
+        membership_status: memberPatch.membership_status ?? 'Provisional',
+      },
+      {
+        onConflict: 'person_id,organisation_id',
+      }
+    )
+    .select('id')
+    .single();
+
+  if (insertError || !inserted?.id) {
+    profileDebugLog('member_insert:error', {
+      personId: input.personId,
+      organisationId: input.organisationId,
+      error: insertError?.message ?? 'No row returned',
+    });
+    return err({
+      code: 'MEMBER_INSERT',
+      message:
+        insertError?.message ||
+        'No membership record exists and create was blocked. Ask pace-core2 to enable self-service core_member insert.',
+    });
+  }
+  profileDebugLog('member_insert:done', {
+    personId: input.personId,
+    organisationId: input.organisationId,
+    memberId: inserted.id,
+  });
+  return ok(undefined);
+}
+
+async function updateExistingMemberWithFallback(
+  client: NonNullable<ReturnType<typeof toTypedSupabase>>,
+  input: UpdatePersonMemberInput,
+  personPatch: Database['public']['Tables']['core_person']['Update'],
+  memberPatch: Database['public']['Tables']['core_member']['Update']
+): Promise<ApiResult<void>> {
+  if (!input.memberId) return ok(undefined);
+  profileDebugLog('direct_member_update:start', {
+    memberId: input.memberId,
+    organisationId: input.organisationId,
+  });
+  const { data: memberRows, error: memberError } = await client
+    .from('core_member')
+    .update(memberPatch)
+    .select('id')
+    .eq('id', input.memberId)
+    .eq('organisation_id', input.organisationId);
+
+  if (memberError) {
+    profileDebugLog('direct_member_update:error', {
+      memberId: input.memberId,
+      organisationId: input.organisationId,
+      error: memberError.message,
+    });
+    return err({
+      code: 'MEMBER_UPDATE',
+      message: memberError.message || 'Could not save membership details.',
+    });
+  }
+  profileDebugLog('direct_member_update:done', {
+    memberId: input.memberId,
+    organisationId: input.organisationId,
+    rowsAffected: memberRows?.length ?? 0,
+  });
+  if (memberRows && memberRows.length > 0) {
+    return ok(undefined);
+  }
+
+  profileDebugLog('rpc_member_update:start', {
+    memberId: input.memberId,
+    organisationId: input.organisationId,
+  });
+  const rpcMember = await client.rpc('app_pace_member_update', {
+    p_member_id: input.memberId,
+    p_date_of_birth: personPatch.date_of_birth ?? undefined,
+    p_gender_id: personPatch.gender_id ?? undefined,
+    p_pronoun_id: personPatch.pronoun_id ?? undefined,
+    p_membership_type_id: memberPatch.membership_type_id ?? undefined,
+    p_membership_number: memberPatch.membership_number ?? undefined,
+    p_membership_status: memberPatch.membership_status ?? undefined,
+  });
+  if (rpcMember.error || !rpcMember.data || rpcMember.data.length === 0) {
+    profileDebugLog('rpc_member_update:error', {
+      memberId: input.memberId,
+      organisationId: input.organisationId,
+      error: rpcMember.error?.message ?? 'No rows returned',
+    });
+    return err({
+      code: 'MEMBER_UPDATE_NO_ROWS',
+      message:
+        rpcMember.error?.message ||
+        'Membership save was blocked by permissions. Contact support to enable member profile updates.',
+    });
+  }
+  profileDebugLog('rpc_member_update:done', {
+    memberId: input.memberId,
+    organisationId: input.organisationId,
+    rowsAffected: rpcMember.data.length,
+  });
+  return ok(undefined);
+}
 
 /**
  * Persists `core_person` and `core_member` updates for the member profile flow.
@@ -90,39 +288,18 @@ export function usePersonOperations() {
         updated_by: userId,
       };
 
-      const { error: personError } = await client
-        .from('core_person')
-        .update(personPatch)
-        .eq('id', input.personId);
+      const personResult = await persistPersonWithFallback(client, input, personPatch);
+      if (!isOk(personResult)) return personResult;
 
-      if (personError) {
-        return err({
-          code: 'PERSON_UPDATE',
-          message: personError.message || 'Could not save personal details.',
-        });
-      }
-
-      if (input.memberId && input.member) {
-        const memberPatch: Database['public']['Tables']['core_member']['Update'] = {
-          membership_type_id: input.member.membership_type_id,
-          membership_number: input.member.membership_number?.trim() ?? null,
-          membership_status: input.member.membership_status,
-          updated_at: now,
-          updated_by: userId,
-        };
-        const { error: memberError } = await client
-          .from('core_member')
-          .update(memberPatch)
-          .eq('id', input.memberId)
-          .eq('organisation_id', input.organisationId);
-
-        if (memberError) {
-          return err({
-            code: 'MEMBER_UPDATE',
-            message: memberError.message || 'Could not save membership details.',
-          });
-        }
-      }
+      const memberPatch: Database['public']['Tables']['core_member']['Update'] = {
+        membership_type_id: input.member.membership_type_id,
+        membership_number: input.member.membership_number?.trim() ?? null,
+        membership_status: input.member.membership_status,
+        updated_at: now,
+        updated_by: userId,
+      };
+      const memberResult = await persistMemberWithFallback(client, input, personPatch, memberPatch);
+      if (!isOk(memberResult)) return memberResult;
 
       return ok(undefined);
     } catch (e) {
@@ -132,8 +309,27 @@ export function usePersonOperations() {
 
   const mutation = useMutation({
     mutationFn: async (input: UpdatePersonMemberInput) => {
+      profileDebugLog('save_person_member:start', {
+        personId: input.personId,
+        memberId: input.memberId,
+        organisationId: input.organisationId,
+      });
       const result = await updatePersonMember(input);
-      if (!isOk(result)) throw new Error(result.error.message);
+      if (!isOk(result)) {
+        profileDebugLog('save_person_member:error', {
+          personId: input.personId,
+          memberId: input.memberId,
+          organisationId: input.organisationId,
+          code: result.error.code,
+          message: result.error.message,
+        });
+        throw new Error(`${result.error.code}: ${result.error.message}`);
+      }
+      profileDebugLog('save_person_member:done', {
+        personId: input.personId,
+        memberId: input.memberId,
+        organisationId: input.organisationId,
+      });
     },
   });
 

@@ -89,6 +89,30 @@ vi.mock('@/integrations/google-maps/loadGoogleMapsWithPlaces', () => ({
   loadGoogleMapsWithPlaces: () => Promise.reject(new Error('no key')),
 }));
 
+vi.mock('@/hooks/medical-profile/useMedicalProfilePage', () => ({
+  useMedicalProfilePage: () => ({
+    organisationId: 'org-1',
+    userId: 'u1',
+    gateReady: true,
+    blockedReason: null,
+    load: {
+      data: {
+        profile: null,
+        memberId: 'm1',
+        personId: 'p1',
+        conditions: [],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      dataUpdatedAt: 0,
+    },
+    saveMedicalProfile: vi.fn(),
+    isSaving: false,
+    saveError: null,
+  }),
+}));
+
 const proxyModeImpl = vi.hoisted(() =>
   vi.fn(() => ({
     isProxyActive: false,
@@ -252,8 +276,15 @@ describe('placeholder pages', () => {
     expect(screen.getByRole('heading', { name: /member profile/i })).toBeInTheDocument();
   });
 
-  it('renders medical profile placeholder', () => {
-    render(<MedicalProfilePage />);
+  it('renders medical profile summary shell', () => {
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <MedicalProfilePage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
     expect(screen.getByRole('heading', { name: /medical profile/i })).toBeInTheDocument();
   });
 

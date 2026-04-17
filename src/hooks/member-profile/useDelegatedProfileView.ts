@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { useUnifiedAuthContext } from '@solvera/pace-core';
+import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
 import type { Database } from '@/types/pace-database';
 import { toTypedSupabase } from '@/lib/supabase-typed';
@@ -19,9 +21,12 @@ export type DelegatedProfileViewModel = {
 export function useDelegatedProfileView(memberId: string | null) {
   const secure = useSecureSupabase();
   const client = toTypedSupabase(secure);
+  const { user } = useUnifiedAuthContext();
+  const organisationId = useOrganisationsContextOptional()?.selectedOrganisation?.id ?? null;
+  const authUserId = user?.id ?? null;
 
   return useQuery({
-    queryKey: ['delegatedProfileView', 'v2', memberId],
+    queryKey: ['delegatedProfileView', 'v3', authUserId, organisationId, memberId],
     enabled: Boolean(client && memberId),
     staleTime: 30_000,
     queryFn: async (): Promise<DelegatedProfileViewModel> => {
