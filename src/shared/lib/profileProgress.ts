@@ -3,6 +3,10 @@ import type { Database } from '@/types/pace-database';
 type PersonRow = Database['public']['Tables']['core_person']['Row'];
 type MemberRow = Database['public']['Tables']['core_member']['Row'];
 
+/**
+ * Tracked fields for completion — aligned with Supabase `core_person` / `core_member` columns.
+ * Gender and pronoun live on `core_person`; membership type and number on `core_member`.
+ */
 export type ProfileProgressTracked = {
   person: Pick<
     PersonRow,

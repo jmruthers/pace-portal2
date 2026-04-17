@@ -25,7 +25,7 @@ const ProfileCompletionWizardPage = lazy(async () => {
   return { default: m.ProfileCompletionWizardPage };
 });
 const MemberProfilePage = lazy(async () => {
-  const m = await import('@/pages/MemberProfilePage');
+  const m = await import('@/pages/member-profile/MemberProfilePage');
   return { default: m.MemberProfilePage };
 });
 const MedicalProfilePage = lazy(async () => {
@@ -37,11 +37,11 @@ const AdditionalContactsPage = lazy(async () => {
   return { default: m.AdditionalContactsPage };
 });
 const ProfileViewPage = lazy(async () => {
-  const m = await import('@/pages/ProfileViewPage');
+  const m = await import('@/pages/member-profile/ProfileViewPage');
   return { default: m.ProfileViewPage };
 });
 const ProfileEditProxyPage = lazy(async () => {
-  const m = await import('@/pages/ProfileEditProxyPage');
+  const m = await import('@/pages/member-profile/ProfileEditProxyPage');
   return { default: m.ProfileEditProxyPage };
 });
 const FormFillPage = lazy(async () => {

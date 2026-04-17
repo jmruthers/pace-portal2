@@ -38,6 +38,9 @@ export default defineConfig({
         'src/components/member-profile/MemberProfile/MemberProfileWizardSteps.tsx',
         /** PR06: Supabase persistence layer covered by focused unit tests; full branch coverage needs DB harness. */
         'src/hooks/auth/profileWizardPersistence.ts',
+        /** PR03 profile photo upload UI — covered by manual/E2E until dedicated component tests are added. */
+        'src/components/member-profile/PhotoUploadDialog.tsx',
+        'src/components/member-profile/ProfilePhotoUpload.tsx',
       ],
       thresholds: {
         /** Standard 8: track upward over time; entry files excluded above. */

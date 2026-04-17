@@ -6,6 +6,9 @@ import type { Database } from '@/types/pace-database';
 import { deleteUserDataCacheEntry, getOrCreateCached } from '@/shared/lib/utils/userDataCache';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 
+/** Error code from {@link fetchCurrentPersonMember} when the user has no person record yet. */
+export const NO_PERSON_PROFILE_ERROR_CODE = 'USER_DATA_NOT_FOUND' as const;
+
 export type CurrentPersonMember = {
   person: Database['public']['Tables']['core_person']['Row'];
   member: Database['public']['Tables']['core_member']['Row'] | null;
@@ -109,7 +112,7 @@ async function fallbackPath(
   const personPartial = reduced.data as ReducedPerson | null;
   if (!personPartial?.id) {
     return err({
-      code: 'USER_DATA_NOT_FOUND',
+      code: NO_PERSON_PROFILE_ERROR_CODE,
       message: 'Could not load profile.',
     });
   }
