@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
 import type { Database } from '@/types/pace-database';
 import { toTypedSupabase } from '@/lib/supabase-typed';
@@ -18,18 +17,16 @@ export type DelegatedProfileViewModel = {
  * Loads read-only delegated profile data after server-side access RPC (PR08). Does not set proxy localStorage.
  */
 export function useDelegatedProfileView(memberId: string | null) {
-  const org = useOrganisationsContextOptional();
-  const organisationId = org?.selectedOrganisation?.id ?? null;
   const secure = useSecureSupabase();
   const client = toTypedSupabase(secure);
 
   return useQuery({
-    queryKey: ['delegatedProfileView', 'v1', organisationId, memberId],
-    enabled: Boolean(client && organisationId && memberId),
+    queryKey: ['delegatedProfileView', 'v2', memberId],
+    enabled: Boolean(client && memberId),
     staleTime: 30_000,
     queryFn: async (): Promise<DelegatedProfileViewModel> => {
-      if (!secure || !client || !organisationId || !memberId) {
-        throw new Error('Delegated profile view requires organisation and member context.');
+      if (!secure || !client || !memberId) {
+        throw new Error('Delegated profile view requires member context.');
       }
 
       const rpcResult = (await secure.rpc(
@@ -49,7 +46,6 @@ export function useDelegatedProfileView(memberId: string | null) {
         .from('core_member')
         .select('*')
         .eq('id', memberId)
-        .eq('organisation_id', organisationId)
         .maybeSingle();
 
       if (memberError || !member?.person_id) {

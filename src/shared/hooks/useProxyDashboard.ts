@@ -25,7 +25,7 @@ type EventRow = Database['public']['Tables']['core_events']['Row'];
  */
 export async function fetchDelegatedWorkspace(
   secure: RBACSupabaseClient | null,
-  organisationId: string,
+  organisationId: string | null,
   targetMemberId: string,
   targetPersonId: string
 ): Promise<ApiResult<EnhancedLandingModel>> {
@@ -40,7 +40,6 @@ export async function fetchDelegatedWorkspace(
         .from('core_member')
         .select('*')
         .eq('id', targetMemberId)
-        .eq('organisation_id', organisationId)
         .maybeSingle(),
       client.from('core_person').select('*').eq('id', targetPersonId).maybeSingle(),
     ]);
@@ -62,6 +61,13 @@ export async function fetchDelegatedWorkspace(
         message: 'Delegated member could not be loaded.',
       });
     }
+    const eventsOrgId = member.organisation_id ?? organisationId;
+    if (!eventsOrgId) {
+      return err({
+        code: 'PROXY_DASHBOARD_MEMBER',
+        message: 'Delegated member is missing organisation context.',
+      });
+    }
 
     const personId = person.id;
 
@@ -72,7 +78,7 @@ export async function fetchDelegatedWorkspace(
       client
         .from('core_events')
         .select('*')
-        .eq('organisation_id', organisationId)
+        .eq('organisation_id', eventsOrgId)
         .order('event_date', { ascending: true }),
     ]);
 
@@ -142,13 +148,11 @@ export function useProxyDashboard(params: UseProxyDashboardParams) {
 
   return useQuery({
     queryKey: ['proxyDashboard', 'v1', userId, organisationId, targetMemberId, targetPersonId],
-    enabled: Boolean(
-      client && userId && organisationId && isProxyActive && targetMemberId && targetPersonId
-    ),
+    enabled: Boolean(client && userId && isProxyActive && targetMemberId && targetPersonId),
     staleTime: 60_000,
     queryFn: async (): Promise<EnhancedLandingModel> => {
-      if (!userId || !organisationId || !targetMemberId || !targetPersonId) {
-        throw new Error('Delegated workspace requires organisation and validated proxy context.');
+      if (!userId || !targetMemberId || !targetPersonId) {
+        throw new Error('Delegated workspace requires validated proxy context.');
       }
       const result = await fetchDelegatedWorkspace(
         secure,

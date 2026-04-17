@@ -5,6 +5,7 @@ import {
   useFormContext,
   type AddressProviderAdapter,
 } from '@solvera/pace-core/forms';
+import { useMemo } from 'react';
 import {
   Button,
   Card,
@@ -47,6 +48,26 @@ function MemberProfileFormFields({
   const { control, watch } = useFormContext<MemberProfileFormValues>();
   const { fields, append, remove } = useFieldArray({ control, name: 'phones' });
   const postalSame = watch('postal_same_as_residential');
+  const membershipTypeId = watch('membership_type_id');
+  const genderId = watch('gender_id');
+  const pronounId = watch('pronoun_id');
+
+  const genderNameById = useMemo(
+    () => new Map(referenceData.genderTypes.map((g) => [g.id, g.name])),
+    [referenceData.genderTypes]
+  );
+  const pronounNameById = useMemo(
+    () => new Map(referenceData.pronounTypes.map((p) => [p.id, p.name])),
+    [referenceData.pronounTypes]
+  );
+  const membershipTypeNameById = useMemo(
+    () => new Map(referenceData.membershipTypes.map((m) => [m.id, m.name])),
+    [referenceData.membershipTypes]
+  );
+  const phoneTypeNameById = useMemo(
+    () => new Map(referenceData.phoneTypes.map((t) => [t.id, t.name])),
+    [referenceData.phoneTypes]
+  );
 
   const watched = watch();
   const progress = computeProfileProgress({
@@ -67,7 +88,7 @@ function MemberProfileFormFields({
   const pct = Math.round(progress.completionRatio * 100);
 
   return (
-    <>
+    <article className="grid gap-6">
       <section className="grid gap-2" aria-label="Profile completion">
         <p>Profile completion</p>
         <Progress value={pct} max={100} />
@@ -95,7 +116,9 @@ function MemberProfileFormFields({
                   onValueChange={(v) => field.onChange(v ? Number(v) : 0)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select gender" />
+                    <SelectValue placeholder="Select gender">
+                      {genderId != null && genderId > 0 ? genderNameById.get(genderId) : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {referenceData.genderTypes.map((g) => (
@@ -122,7 +145,11 @@ function MemberProfileFormFields({
                   onValueChange={(v) => field.onChange(v ? Number(v) : 0)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select pronouns" />
+                    <SelectValue placeholder="Select pronouns">
+                      {pronounId != null && pronounId > 0
+                        ? pronounNameById.get(pronounId)
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {referenceData.pronounTypes.map((p) => (
@@ -145,8 +172,8 @@ function MemberProfileFormFields({
         <CardHeader>
           <CardTitle>Contact information</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4">
-          <section aria-label="Residential address">
+        <CardContent className="grid gap-4 lg:grid-cols-2">
+          <section className="grid gap-2" aria-label="Residential address">
             <h3>Residential address</h3>
             <AddressField
               meta={{
@@ -161,23 +188,23 @@ function MemberProfileFormFields({
               componentRestrictions={{ country: ['au', 'nz'] }}
             />
           </section>
-          <Controller
-            control={control}
-            name="postal_same_as_residential"
-            render={({ field }) => (
-              <Label className="grid grid-cols-[auto_1fr] items-center gap-2">
-                <Checkbox
-                  checked={field.value}
-                  onChange={(v) => field.onChange(v)}
-                  aria-label="Postal address same as residential"
-                />
-                <span>Postal address is the same as residential</span>
-              </Label>
-            )}
-          />
-          {!postalSame ? (
-            <section aria-label="Postal address">
-              <h3>Postal address</h3>
+          <section className="grid gap-2" aria-label="Postal address">
+            <h3>Postal address</h3>
+            <Controller
+              control={control}
+              name="postal_same_as_residential"
+              render={({ field }) => (
+                <Label className="grid grid-cols-[auto_1fr] items-center gap-2">
+                  <Checkbox
+                    checked={field.value}
+                    onChange={(v) => field.onChange(v)}
+                    aria-label="Postal address same as residential"
+                  />
+                  <span>Postal address is the same as residential</span>
+                </Label>
+              )}
+            />
+            {!postalSame ? (
               <AddressField
                 meta={{
                   id: 'postal',
@@ -190,10 +217,10 @@ function MemberProfileFormFields({
                 provider={addressProvider}
                 componentRestrictions={{ country: ['au', 'nz'] }}
               />
-            </section>
-          ) : null}
+            ) : null}
+          </section>
 
-          <section className="grid gap-2" aria-label="Phone numbers">
+          <section className="grid gap-2 lg:col-span-2" aria-label="Phone numbers">
             <h3>Phone numbers</h3>
             <ul className="grid gap-3">
               {fields.map((f, index) => (
@@ -215,7 +242,9 @@ function MemberProfileFormFields({
                           onValueChange={(v) => field.onChange(v ? Number(v) : null)}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Type" />
+                            <SelectValue placeholder="Type">
+                              {field.value != null ? phoneTypeNameById.get(field.value) : undefined}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             {referenceData.phoneTypes.map((t) => (
@@ -258,7 +287,7 @@ function MemberProfileFormFields({
         <CardHeader>
           <CardTitle>Membership</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
+        <CardContent className="grid gap-4 lg:grid-cols-3">
           <Controller
             control={control}
             name="membership_type_id"
@@ -270,7 +299,11 @@ function MemberProfileFormFields({
                   onValueChange={(v) => field.onChange(v ? Number(v) : null)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
+                    <SelectValue placeholder="Select type">
+                      {membershipTypeId != null
+                        ? membershipTypeNameById.get(membershipTypeId)
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {referenceData.membershipTypes.map((m) => (
@@ -291,7 +324,7 @@ function MemberProfileFormFields({
             control={control}
             name="membership_status"
             render={({ field, fieldState }) => (
-              <Label className="grid gap-1 md:col-span-2">
+              <Label className="grid gap-1">
                 Membership status
                 <Select value={field.value} onValueChange={(v) => field.onChange(v)}>
                   <SelectTrigger>
@@ -318,7 +351,7 @@ function MemberProfileFormFields({
           </Button>
         </CardFooter>
       </Card>
-    </>
+    </article>
   );
 }
 

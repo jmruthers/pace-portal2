@@ -133,7 +133,7 @@ function ProfileEditProxyContent() {
       <ContactSummaryCard
         person={data.person}
         phones={data.phones}
-        organisationId={organisationId}
+        organisationId={data.member?.organisation_id ?? organisationId}
       />
       <ProfilePrompts profileProgress={data.profileProgress} />
       <EventList eventsByCategory={data.eventsByCategory} />
