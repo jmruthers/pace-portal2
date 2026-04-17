@@ -6,12 +6,9 @@ type MemberRow = Database['public']['Tables']['core_member']['Row'];
 export type ProfileProgressTracked = {
   person: Pick<
     PersonRow,
-    'first_name' | 'last_name' | 'email' | 'date_of_birth' | 'preferred_name'
+    'first_name' | 'last_name' | 'email' | 'date_of_birth' | 'preferred_name' | 'gender_id' | 'pronoun_id'
   > | null;
-  member: Pick<
-    MemberRow,
-    'membership_type_id' | 'gender_id' | 'pronoun_id' | 'membership_number'
-  > | null;
+  member: Pick<MemberRow, 'membership_type_id' | 'membership_number'> | null;
 };
 
 export type ProfileProgressResult = {
@@ -45,21 +42,21 @@ export function computeProfileProgress(input: ProfileProgressTracked): ProfilePr
       'email',
       'date_of_birth',
       'preferred_name',
+      'gender_id',
+      'pronoun_id',
     ];
     for (const k of pkeys) {
       total += 1;
       if (isFilled(p[k])) filled += 1;
     }
   } else {
-    total += 5;
+    total += 7;
   }
 
   const m = input.member;
   if (m) {
     const mkeys: (keyof NonNullable<ProfileProgressTracked['member']>)[] = [
       'membership_type_id',
-      'gender_id',
-      'pronoun_id',
       'membership_number',
     ];
     for (const k of mkeys) {
@@ -67,7 +64,7 @@ export function computeProfileProgress(input: ProfileProgressTracked): ProfilePr
       if (isFilled(m[k])) filled += 1;
     }
   } else {
-    total += 4;
+    total += 2;
   }
 
   const completionRatio = total === 0 ? 0 : filled / total;

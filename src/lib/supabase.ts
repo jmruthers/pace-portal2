@@ -6,13 +6,12 @@
  */
 import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { isSupabaseConfigured } from '@/lib/env';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '';
 
-export { isSupabaseConfigured } from '@/lib/env';
+const hasConfig = Boolean(supabaseUrl && supabasePublishableKey);
 
-export const supabaseClient: SupabaseClient = isSupabaseConfigured
+export const supabaseClient: SupabaseClient = hasConfig
   ? createClient(supabaseUrl, supabasePublishableKey)
   : ({} as SupabaseClient);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ProfilePrompts } from '@/components/member-profile/ProfilePrompts';
 import { ProfileSetupPrompt } from '@/components/member-profile/ProfileSetupPrompt';
 import { PhotoGuidelines } from '@/components/member-profile/PhotoGuidelines';
@@ -28,12 +28,16 @@ describe('member profile composition (PR03)', () => {
   it('ProfileSetupPrompt offers setup navigation', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter>
-        <ProfileSetupPrompt />
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<ProfileSetupPrompt />} />
+          <Route path="/profile-complete" element={<p>Profile wizard</p>} />
+        </Routes>
       </MemoryRouter>
     );
     expect(screen.getByRole('button', { name: /start setup/i })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /start setup/i }));
+    expect(screen.getByText(/profile wizard/i)).toBeInTheDocument();
   });
 
   it('PhotoGuidelines lists format rules', () => {
