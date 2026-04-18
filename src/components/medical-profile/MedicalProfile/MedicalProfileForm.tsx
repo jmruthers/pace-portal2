@@ -175,7 +175,9 @@ function MedicalProfileFormInner({
           <CardTitle>Dietary</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <p>Please select the most appropriate menu for your dietary requirements, even if it's slighty more restrictive than your needs. Only select "Other" if none of the diets work for you.</p>
+          <p>
+            {`Please select the most appropriate menu for your dietary requirements, even if it's slightly more restrictive than your needs. Only select "Other" if none of the diets work for you.`}
+          </p>
           <Controller
             control={control}
             name="menu_selection"

@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { AddressValue } from '@solvera/pace-core/forms';
 import {
   normalizeMembershipStatusForSave,
   persistProfileWizardStep0,
+  persistProfileWizardStep1,
+  persistProfileWizardStep2,
   replacePersonPhones,
+  upsertAddressFromValue,
 } from '@/hooks/auth/profileWizardPersistence';
+import type { CoreAddressRow } from '@/hooks/shared/useAddressData';
 import type { Database } from '@/types/pace-database';
 
 describe('normalizeMembershipStatusForSave', () => {
@@ -195,5 +200,133 @@ describe('persistProfileWizardStep0', () => {
         existingMembershipStatus: null,
       })
     ).rejects.toThrow(/policy violation/);
+  });
+});
+
+const sampleAddress: AddressValue = {
+  line1: '1 Example St',
+  locality: 'Sydney',
+  countryCode: 'AU',
+  formattedAddress: '1 Example St, Sydney',
+  placeId: 'place-test',
+};
+
+describe('upsertAddressFromValue', () => {
+  it('inserts when no existing row', async () => {
+    const single = vi.fn().mockResolvedValue({ data: { id: 'addr-new' }, error: null });
+    const db = {
+      from: vi.fn(() => ({
+        insert: vi.fn(() => ({
+          select: vi.fn(() => ({ single })),
+        })),
+      })),
+    } as unknown as SupabaseClient<Database>;
+
+    const r = await upsertAddressFromValue(db, 'org-1', sampleAddress, null, 'u1');
+    expect(r.id).toBe('addr-new');
+  });
+
+  it('updates when an existing row is provided', async () => {
+    const eq = vi.fn().mockResolvedValue({ error: null });
+    const db = {
+      from: vi.fn(() => ({
+        update: vi.fn(() => ({ eq })),
+      })),
+    } as unknown as SupabaseClient<Database>;
+
+    const existing = {
+      id: 'addr-1',
+      place_id: 'manual:abc',
+      full_address: 'Old',
+      street_number: null,
+      route: 'Old',
+      suburb: 'Sydney',
+      state: 'NSW',
+      postcode: '2000',
+      country: 'AU',
+      lat: null,
+      lng: null,
+      created_at: null,
+      created_by: null,
+      deleted_at: null,
+      updated_at: null,
+      updated_by: null,
+      organisation_id: 'org-1',
+    } as unknown as CoreAddressRow;
+
+    const r = await upsertAddressFromValue(db, 'org-1', sampleAddress, existing, 'u1');
+    expect(r.id).toBe('addr-1');
+  });
+});
+
+describe('persistProfileWizardStep1', () => {
+  it('persists residential address and updates person phones', async () => {
+    const single = vi.fn().mockResolvedValue({ data: { id: 'addr-r' }, error: null });
+    const personEq = vi.fn().mockResolvedValue({ error: null });
+    const from = vi.fn((table: string) => {
+      if (table === 'core_address') {
+        return {
+          insert: vi.fn(() => ({
+            select: vi.fn(() => ({ single })),
+          })),
+        };
+      }
+      if (table === 'core_person') {
+        return {
+          update: vi.fn(() => ({ eq: personEq })),
+        };
+      }
+      if (table === 'core_phone') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              is: vi.fn().mockResolvedValue({ data: [], error: null }),
+            })),
+          })),
+          insert: vi.fn().mockResolvedValue({ error: null }),
+        };
+      }
+      return {};
+    });
+
+    const db = { from } as unknown as SupabaseClient<Database>;
+
+    await persistProfileWizardStep1({
+      db,
+      organisationId: 'org-1',
+      userId: 'u1',
+      personId: 'p1',
+      values: {
+        residential: sampleAddress,
+        postal_same_as_residential: true,
+        postal: undefined,
+        phones: [{ phone_number: '0400 000 000', phone_type_id: 1 }],
+      },
+      residentialRow: null,
+      postalRow: null,
+    });
+
+    expect(personEq).toHaveBeenCalled();
+  });
+});
+
+describe('persistProfileWizardStep2', () => {
+  it('updates membership fields', async () => {
+    const eq = vi.fn().mockResolvedValue({ error: null });
+    const db = {
+      from: vi.fn(() => ({
+        update: vi.fn(() => ({ eq })),
+      })),
+    } as unknown as SupabaseClient<Database>;
+
+    await persistProfileWizardStep2({
+      db,
+      userId: 'u1',
+      memberId: 'm1',
+      values: { membership_number: 'N1', membership_type_id: 1 },
+      existingMembershipStatus: 'Active',
+    });
+
+    expect(eq).toHaveBeenCalled();
   });
 });

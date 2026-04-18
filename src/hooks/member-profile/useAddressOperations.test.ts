@@ -114,4 +114,43 @@ describe('useAddressOperations', () => {
     expect(out.postalAddressId).toBe('addr-existing-by-place');
     expect(insert).not.toHaveBeenCalled();
   });
+
+  it('persists separate postal address when not same as residential', async () => {
+    let lookupCalls = 0;
+    lookupMaybeSingle.mockImplementation(async () => {
+      lookupCalls += 1;
+      if (lookupCalls === 1) {
+        return { data: null, error: null };
+      }
+      return { data: null, error: null };
+    });
+
+    const qc = new QueryClient();
+    const { result } = renderHook(() => useAddressOperations(), { wrapper: wrapper(qc) });
+
+    const out = await result.current.saveAddressesAndPhones({
+      organisationId: 'o1',
+      residential: {
+        line1: '1 St',
+        locality: 'Sydney',
+        countryCode: 'AU',
+        placeId: 'place-res',
+      },
+      postal: {
+        line1: '2 Post',
+        locality: 'Parramatta',
+        countryCode: 'AU',
+        placeId: 'place-post',
+      },
+      postalSameAsResidential: false,
+      residentialId: null,
+      postalId: null,
+      personId: 'p1',
+      phones: [{ phone_number: '0400', phone_type_id: 1 }],
+      existingPhoneIds: [],
+    });
+
+    expect(out.residentialAddressId).toBe('addr-new');
+    expect(out.postalAddressId).toBe('addr-new');
+  });
 });
