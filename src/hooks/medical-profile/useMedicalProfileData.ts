@@ -14,13 +14,16 @@ export type MedicalConditionSummaryRow = Pick<
   'id' | 'name' | 'custom_name' | 'severity' | 'medical_alert' | 'is_active'
 >;
 
+/** Full condition row from `get_medi_conditions` RPC (PR10/PR11). */
+export type MediConditionDetail = Database['public']['Functions']['get_medi_conditions']['Returns'][number];
+
 export type MedicalProfileLoadModel = {
   profile: MediProfileRow | null;
   /** `data_medi_profile_get.diet_type_name` when the profile came from RPC (helps label when id formats differ). */
   dietTypeNameFromRpc: string | null;
   memberId: string;
   personId: string;
-  conditions: MedicalConditionSummaryRow[];
+  conditions: MediConditionDetail[];
 };
 
 function mapRpcToRow(r: MediRpcRow): MediProfileRow {
@@ -107,21 +110,17 @@ export async function fetchMedicalProfileData(
       dietTypeNameFromRpc = null;
     }
 
-    let conditions: MedicalConditionSummaryRow[] = [];
+    let conditions: MediConditionDetail[] = [];
     if (profile?.id) {
-      const cond = await client
-        .from('medi_condition')
-        .select('id, name, custom_name, severity, medical_alert, is_active')
-        .eq('profile_id', profile.id)
-        .order('created_at', { ascending: false });
-
-      if (cond.error) {
+      // eslint-disable-next-line pace-core-compliance/rpc-naming-pattern -- database RPC name (PR09/PR10)
+      const rpcCond = await client.rpc('get_medi_conditions', { p_profile_id: profile.id });
+      if (rpcCond.error) {
         return err({
           code: 'MEDICAL_CONDITION_SUMMARY',
-          message: cond.error.message || 'Could not load condition summary.',
+          message: rpcCond.error.message || 'Could not load conditions.',
         });
       }
-      conditions = (cond.data ?? []) as MedicalConditionSummaryRow[];
+      conditions = (rpcCond.data ?? []) as MediConditionDetail[];
     }
 
     return ok({

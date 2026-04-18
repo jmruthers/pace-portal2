@@ -154,6 +154,9 @@ function MedicalProfileContent() {
         dietTypes={medicalRef.dietTypes ?? []}
         menuLabelHint={editor.load.data?.dietTypeNameFromRpc ?? null}
         conditions={conditions}
+        profileId={editor.load.data?.profile?.id ?? null}
+        organisationId={organisationId}
+        appId={editor.appId ?? null}
         isSubmitting={editor.isSaving}
         onSubmit={handleSubmit}
       />

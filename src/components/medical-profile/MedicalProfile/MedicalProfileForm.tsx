@@ -29,8 +29,8 @@ import { computeMedicalProfileProgress } from '@/shared/lib/medicalProfileProgre
 import {
   type MedicalProfileFormValues,
 } from '@/utils/medical-profile/validation';
-import { MedicalProfileDisplay } from '@/components/medical-profile/MedicalProfile/MedicalProfileDisplay';
-import type { MedicalConditionSummaryRow } from '@/hooks/medical-profile/useMedicalProfileData';
+import { MedicalConditionsSection } from '@/components/medical-profile/MedicalConditionsSection';
+import type { MediConditionDetail } from '@/hooks/medical-profile/useMedicalProfileData';
 
 const MENU_SELECT_NONE = '__menu_none__';
 
@@ -41,7 +41,10 @@ export type MedicalProfileFormProps = {
   dietTypes: readonly CakeDietTypeRow[];
   /** From `data_medi_profile_get` when the select value does not match option ids (display only). */
   menuLabelHint?: string | null;
-  conditions: MedicalConditionSummaryRow[];
+  conditions: MediConditionDetail[];
+  profileId: string | null;
+  organisationId: string | null;
+  appId: string | null;
   isSubmitting: boolean;
   onSubmit: (values: MedicalProfileFormValues) => void | Promise<void>;
 };
@@ -102,11 +105,17 @@ function DietDescriptionsDialog({
 
 function MedicalProfileFormInner({
   conditions,
+  profileId,
+  organisationId,
+  appId,
   isSubmitting,
   dietTypes,
   menuLabelHint,
 }: {
-  conditions: MedicalConditionSummaryRow[];
+  conditions: MediConditionDetail[];
+  profileId: string | null;
+  organisationId: string | null;
+  appId: string | null;
   isSubmitting: boolean;
   dietTypes: readonly CakeDietTypeRow[];
   menuLabelHint: string | null | undefined;
@@ -300,7 +309,12 @@ function MedicalProfileFormInner({
         </CardFooter>
       </Card>
 
-      <MedicalProfileDisplay conditions={conditions} />
+      <MedicalConditionsSection
+        conditions={conditions}
+        profileId={profileId}
+        organisationId={organisationId}
+        appId={appId}
+      />
     </article>
   );
 }
@@ -312,6 +326,9 @@ export function MedicalProfileForm({
   dietTypes,
   menuLabelHint,
   conditions,
+  profileId,
+  organisationId,
+  appId,
   isSubmitting,
   onSubmit,
 }: MedicalProfileFormProps) {
@@ -324,6 +341,9 @@ export function MedicalProfileForm({
     >
       <MedicalProfileFormInner
         conditions={conditions}
+        profileId={profileId}
+        organisationId={organisationId}
+        appId={appId}
         isSubmitting={isSubmitting}
         dietTypes={dietTypes}
         menuLabelHint={menuLabelHint}

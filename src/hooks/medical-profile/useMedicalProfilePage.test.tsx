@@ -56,6 +56,10 @@ vi.mock('@/shared/hooks/useProxyMode', () => ({
   }),
 }));
 
+vi.mock('@/shared/hooks/useResolvedAppId', () => ({
+  useResolvedAppId: () => 'app-test-id',
+}));
+
 vi.mock('@/hooks/medical-profile/useMedicalProfileData', async () => {
   const actual = await vi.importActual<typeof import('@/hooks/medical-profile/useMedicalProfileData')>(
     '@/hooks/medical-profile/useMedicalProfileData'

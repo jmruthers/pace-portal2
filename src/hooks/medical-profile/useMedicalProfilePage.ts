@@ -7,6 +7,7 @@ import type { Database } from '@/types/pace-database';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 import { useProxyMode } from '@/shared/hooks/useProxyMode';
 import { useMemberProfileData } from '@/hooks/member-profile/useMemberProfileData';
+import { useResolvedAppId } from '@/shared/hooks/useResolvedAppId';
 import { fetchMedicalProfileData, useMedicalProfileData } from '@/hooks/medical-profile/useMedicalProfileData';
 import type { MedicalProfileFormValues } from '@/utils/medical-profile/validation';
 
@@ -106,6 +107,7 @@ export function useMedicalProfilePage() {
   const { user } = useUnifiedAuthContext();
   const org = useOrganisationsContextOptional();
   const organisationId = org?.selectedOrganisation?.id ?? null;
+  const appId = useResolvedAppId();
   const secure = useSecureSupabase();
   const client = toTypedSupabase(secure);
   const queryClient = useQueryClient();
@@ -150,6 +152,7 @@ export function useMedicalProfilePage() {
 
   return {
     organisationId,
+    appId,
     userId: user?.id ?? null,
     effectiveMemberId,
     gateReady: isReady,
@@ -158,5 +161,8 @@ export function useMedicalProfilePage() {
     saveMedicalProfile: saveMutation.mutateAsync,
     isSaving: saveMutation.isPending,
     saveError: saveMutation.error,
+    supabase: secure,
+    typedClient: client,
+    queryClient,
   };
 }

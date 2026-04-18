@@ -17,14 +17,14 @@ This file is **`PR10-medical-conditions-crud.md`** — portal requirement slice 
 
 ## Acceptance criteria
 
-- [ ] Users can add a medical condition and see it appear in the list.
-- [ ] Users can edit a medical condition and persist changes.
-- [ ] Users can delete a medical condition and the list refreshes.
-- [ ] Condition cards preserve the current high-signal summary information.
-- [ ] Condition type selection remains usable and searchable.
-- [ ] The slice clearly excludes file upload and file cleanup ownership.
-- [ ] Add and edit use a modal-based condition editor unless implementation density forces the documented inline fallback.
-- [ ] Pace-core equivalents are used where available.
+- [x] Users can add a medical condition and see it appear in the list.
+- [x] Users can edit a medical condition and persist changes.
+- [x] Users can delete a medical condition and the list refreshes.
+- [x] Condition cards preserve the current high-signal summary information.
+- [x] Condition type selection remains usable and searchable.
+- [x] The slice clearly excludes file upload and file cleanup ownership.
+- [x] Add and edit use a modal-based condition editor unless implementation density forces the documented inline fallback.
+- [x] Pace-core equivalents are used where available.
 
 ## API / Contract
 
