@@ -16,6 +16,8 @@ export type MedicalConditionSummaryRow = Pick<
 
 export type MedicalProfileLoadModel = {
   profile: MediProfileRow | null;
+  /** `data_medi_profile_get.diet_type_name` when the profile came from RPC (helps label when id formats differ). */
+  dietTypeNameFromRpc: string | null;
   memberId: string;
   personId: string;
   conditions: MedicalConditionSummaryRow[];
@@ -25,13 +27,11 @@ function mapRpcToRow(r: MediRpcRow): MediProfileRow {
   return {
     id: r.id,
     person_id: r.person_id,
-    carer_name: r.carer_name,
     created_at: null,
     created_by: null,
     data_retention_until: r.data_retention_until,
+    diet_type_id: r.diet_type_id,
     dietary_comments: r.dietary_comments,
-    has_carer: r.has_carer,
-    has_dietary_requirements: r.has_dietary_requirements,
     health_care_card_expiry: r.health_care_card_expiry,
     health_care_card_number: r.health_care_card_number,
     health_fund_name: r.health_fund_name,
@@ -40,7 +40,6 @@ function mapRpcToRow(r: MediRpcRow): MediProfileRow {
     last_tetanus_date: r.last_tetanus_date,
     medicare_expiry: r.medicare_expiry,
     medicare_number: r.medicare_number,
-    menu_selection: r.menu_selection,
     requires_support: r.requires_support,
     support_details: r.support_details,
     updated_at: null,
@@ -89,7 +88,12 @@ export async function fetchMedicalProfileData(
     }
 
     const rpcRows = (rpc.data ?? []) as MediRpcRow[];
-    let profile: MediProfileRow | null = rpcRows[0] ? mapRpcToRow(rpcRows[0]) : null;
+    const firstRpc = rpcRows[0];
+    let profile: MediProfileRow | null = firstRpc ? mapRpcToRow(firstRpc) : null;
+    let dietTypeNameFromRpc: string | null = null;
+    if (firstRpc?.diet_type_name?.trim()) {
+      dietTypeNameFromRpc = firstRpc.diet_type_name.trim();
+    }
 
     if (!profile) {
       const direct = await client.from('medi_profile').select('*').eq('person_id', personId).maybeSingle();
@@ -100,6 +104,7 @@ export async function fetchMedicalProfileData(
         });
       }
       profile = direct.data;
+      dietTypeNameFromRpc = null;
     }
 
     let conditions: MedicalConditionSummaryRow[] = [];
@@ -121,6 +126,7 @@ export async function fetchMedicalProfileData(
 
     return ok({
       profile,
+      dietTypeNameFromRpc,
       memberId,
       personId,
       conditions,

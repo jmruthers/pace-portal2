@@ -13,7 +13,7 @@ import { useReferenceData } from '@/shared/hooks/useReferenceData';
 import { bustCurrentPersonMemberCache, fetchCurrentPersonMember } from '@/shared/lib/utils/userUtils';
 import { NO_PERSON_PROFILE_ERROR_CODE } from '@/shared/hooks/useEnhancedLanding';
 import { toTypedSupabase } from '@/lib/supabase-typed';
-import { buildCompletionPath } from '@/hooks/auth/profileWizardShell';
+import { buildCompletionPath, validateShellStep } from '@/hooks/auth/profileWizardShell';
 import {
   buildMemberProfileFormDefaults,
   emptyMemberProfileFormValues,
@@ -91,6 +91,7 @@ function combineWizardShellError(
 }
 
 /* eslint-disable complexity -- PR06 wizard orchestrates queries, form reset, maps preload, and step persistence in one hook; split tracked as follow-up. */
+/* eslint-disable max-lines-per-function */
 export function useProfileCompletionWizard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -372,9 +373,24 @@ export function useProfileCompletionWizard() {
         }
         form.setError(targetPath as never, { type: 'manual', message: issue.message });
       }
+      return result;
     }
-    return result;
-  }, [clearStepFieldErrors, currentStep, form]);
+    if (currentStep === 0 || currentStep === 1) {
+      const shell = validateShellStep(currentStep, {
+        person,
+        phones,
+        addressUnresolved: addressQuery.addressData.isUnresolved,
+      });
+      if (!shell.ok) {
+        form.setError(currentStep === 0 ? ('root' as never) : ('residential' as never), {
+          type: 'manual',
+          message: shell.message,
+        });
+        return { ok: false, message: shell.message };
+      }
+    }
+    return { ok: true };
+  }, [clearStepFieldErrors, currentStep, form, person, phones, addressQuery.addressData.isUnresolved]);
 
   const runSavePulse = useCallback(async () => {
     await new Promise<void>((resolve) => {
@@ -488,3 +504,4 @@ export function useProfileCompletionWizard() {
     skipFinalStep: () => void skipFinalStep(),
   };
 }
+/* eslint-enable max-lines-per-function */

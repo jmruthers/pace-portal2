@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { useQuery } from '@tanstack/react-query';
 import { useUnifiedAuthContext } from '@solvera/pace-core';
+import { err, isOk, ok, type ApiResult } from '@solvera/pace-core/types';
 import { isSupabaseConfigured } from '@/lib/env';
 import type { Database } from '@/types/pace-database';
 
@@ -37,23 +38,30 @@ function parseLinkedProfileRows(rows: unknown): LinkedProfileRow[] {
 export async function enrichLinkedProfilesWithMemberIds(
   client: SupabaseClient<Database>,
   rows: LinkedProfileRow[]
-): Promise<LinkedProfileRow[]> {
-  if (rows.length === 0) return rows;
-  if (rows.every((row) => Boolean(row.member_id))) return rows;
+): Promise<ApiResult<LinkedProfileRow[]>> {
+  if (rows.length === 0) return ok([]);
+  if (rows.every((row) => Boolean(row.member_id))) return ok(rows);
 
   const personIds = [...new Set(rows.filter((r) => !r.member_id).map((r) => r.person_id))];
-  if (personIds.length === 0) return rows;
+  if (personIds.length === 0) return ok(rows);
 
   const { data: members, error } = await client
     .from('core_member')
     .select('id, person_id, organisation_id')
     .in('person_id', personIds);
 
-  if (error || !members?.length) {
-    return rows;
+  if (error) {
+    return err({
+      code: 'LINKED_PROFILE_MEMBER_LOOKUP',
+      message: error.message || 'Could not resolve member ids for linked profiles.',
+    });
   }
 
-  return rows.map((row) => {
+  if (!members?.length) {
+    return ok(rows);
+  }
+
+  const enriched = rows.map((row) => {
     if (row.member_id) return row;
     const candidates = members.filter((m) => m.person_id === row.person_id);
     if (candidates.length === 0) return row;
@@ -73,6 +81,7 @@ export async function enrichLinkedProfilesWithMemberIds(
     }
     return row;
   });
+  return ok(enriched);
 }
 
 /**
@@ -112,7 +121,11 @@ export function useLinkedProfiles() {
       });
       if (rpcError) throw rpcError;
       const parsed = parseLinkedProfileRows(rows);
-      return enrichLinkedProfilesWithMemberIds(client, parsed);
+      const enriched = await enrichLinkedProfilesWithMemberIds(client, parsed);
+      if (!isOk(enriched)) {
+        throw new Error(enriched.error.message);
+      }
+      return enriched.data;
     },
   });
 }

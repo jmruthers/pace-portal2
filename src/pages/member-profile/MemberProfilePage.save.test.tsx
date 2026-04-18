@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { err } from '@solvera/pace-core/types';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -89,7 +90,13 @@ vi.mock('@/hooks/member-profile/usePersonOperations', async (importOriginal) => 
 });
 
 vi.mock('@/integrations/google-maps/loadGoogleMapsWithPlaces', () => ({
-  loadGoogleMapsWithPlaces: () => Promise.reject(new Error('no key')),
+  loadGoogleMapsWithPlaces: () =>
+    Promise.resolve(
+      err({
+        code: 'GOOGLE_MAPS_NOT_CONFIGURED',
+        message: 'Google Maps API key is not configured.',
+      }),
+    ),
 }));
 
 vi.mock('@/shared/hooks/useProxyMode', () => ({
@@ -189,6 +196,9 @@ const loadedProfile = {
     membership_number: '1',
     membership_type_id: 1,
     membership_status: 'Active' as const,
+    joined_at: '2020-01-01',
+    valid_from: '2020-01-01',
+    valid_to: null,
     created_at: null,
     created_by: null,
     deleted_at: null,

@@ -5,10 +5,12 @@ import { Alert, AlertDescription, AlertTitle, LoadingSpinner } from '@solvera/pa
 import { useToast } from '@solvera/pace-core/hooks';
 import { AccessDenied, PagePermissionGuard } from '@solvera/pace-core/rbac';
 import { MedicalProfileForm } from '@/components/medical-profile/MedicalProfile/MedicalProfileForm';
+import { useMedicalReferenceData } from '@/hooks/medical-profile/useMedicalReferenceData';
 import { useMedicalProfilePage } from '@/hooks/medical-profile/useMedicalProfilePage';
 import { ProxyModeBanner } from '@/shared/components/ProxyModeBanner';
 import { useProxyMode } from '@/shared/hooks/useProxyMode';
 import {
+  createMedicalProfileSchema,
   mapMediProfileRowToFormValues,
   type MedicalProfileFormValues,
 } from '@/utils/medical-profile/validation';
@@ -19,6 +21,8 @@ function MedicalProfileContent() {
   const org = useOrganisationsContextOptional();
   const organisationId = org?.selectedOrganisation?.id ?? null;
   const proxy = useProxyMode();
+  /** Member reference lookups plus active `cake_diettype` rows for the dietary menu select. */
+  const medicalRef = useMedicalReferenceData();
   const editor = useMedicalProfilePage();
 
   useEffect(() => {
@@ -31,14 +35,20 @@ function MedicalProfileContent() {
     }
   }, [editor.blockedReason, navigate]);
 
+  const formSchema = useMemo(
+    () => createMedicalProfileSchema(medicalRef.dietTypes ?? []),
+    [medicalRef.dietTypes]
+  );
+
   const formKey = useMemo(() => {
     const p = editor.load.data?.profile;
-    return p ? `${p.id}-${editor.load.dataUpdatedAt}` : 'new';
-  }, [editor.load.data?.profile, editor.load.dataUpdatedAt]);
+    const n = medicalRef.dietTypes?.length ?? 0;
+    return p ? `${p.id}-${editor.load.dataUpdatedAt}-d${n}` : `new-d${n}`;
+  }, [editor.load.data?.profile, editor.load.dataUpdatedAt, medicalRef.dietTypes?.length]);
 
   const defaultValues = useMemo(() => {
-    return mapMediProfileRowToFormValues(editor.load.data?.profile ?? null);
-  }, [editor.load.data?.profile]);
+    return mapMediProfileRowToFormValues(editor.load.data?.profile ?? null, medicalRef.dietTypes);
+  }, [editor.load.data?.profile, medicalRef.dietTypes]);
 
   const handleSubmit = async (values: MedicalProfileFormValues) => {
     try {
@@ -98,6 +108,27 @@ function MedicalProfileContent() {
     );
   }
 
+  if (medicalRef.dietTypesLoading && medicalRef.dietTypes == null) {
+    return (
+      <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
+        <LoadingSpinner label="Loading diet options…" />
+      </main>
+    );
+  }
+
+  if (medicalRef.dietTypesError) {
+    return (
+      <main className="grid gap-4 px-4">
+        <Alert variant="destructive">
+          <AlertTitle>Diet options</AlertTitle>
+          <AlertDescription>
+            {medicalRef.dietTypesError.message ?? 'Could not load diet options.'}
+          </AlertDescription>
+        </Alert>
+      </main>
+    );
+  }
+
   if (editor.load.isError) {
     return (
       <main className="grid gap-4 px-4">
@@ -118,7 +149,10 @@ function MedicalProfileContent() {
       <ProxyModeBanner />
       <MedicalProfileForm
         formKey={formKey}
+        schema={formSchema}
         defaultValues={defaultValues}
+        dietTypes={medicalRef.dietTypes ?? []}
+        menuLabelHint={editor.load.data?.dietTypeNameFromRpc ?? null}
         conditions={conditions}
         isSubmitting={editor.isSaving}
         onSubmit={handleSubmit}

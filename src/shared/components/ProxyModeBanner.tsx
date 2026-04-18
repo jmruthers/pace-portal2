@@ -58,8 +58,8 @@ export function ProxyModeBanner() {
     <Alert>
       <AlertTitle>Delegated context active</AlertTitle>
       <AlertDescription>
-        You are working on behalf of {who}. Delegated tools use the profile edit route for this member;
-        self-service member profile still updates only your own record.
+        You are working on behalf of {who}. Use linked-profile and delegated workspace routes so changes apply to
+        this member; keep using your own dashboard for your account.
       </AlertDescription>
     </Alert>
   );

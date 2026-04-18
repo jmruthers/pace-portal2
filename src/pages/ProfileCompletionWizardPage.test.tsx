@@ -2,6 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useZodForm } from '@solvera/pace-core/hooks';
+
+vi.mock('@solvera/pace-core/hooks', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@solvera/pace-core/hooks')>();
+  return {
+    ...mod,
+    useToast: () => ({ toast: vi.fn() }),
+  };
+});
 import {
   emptyMemberProfileFormValues,
   memberProfileWizardSchema,

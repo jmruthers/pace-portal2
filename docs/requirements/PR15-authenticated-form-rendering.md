@@ -12,13 +12,13 @@ This file is **`PR15-authenticated-form-rendering.md`** — portal requirement s
 - Purpose and scope: rebuild the authenticated event form experience so a signed-in user can see the current event and form header, edit prefilled values, satisfy profile confirmation requirements, and resume in-progress form work behind a clean implementation boundary.
 - Dependencies: `pace-core` form, input, alert, loading, card, button, and file-display primitives; form metadata and field-data hooks; profile-completion utilities; proxy-mode context; draft-application support.
 - Standards: 01 Project Structure, 02 Architecture, 03 Security/RBAC, 04 API/Tech Stack, 05 pace-core Compliance, 07 Visual, 08 Testing/Documentation.
-- Current baseline behavior: the page gates access behind auth and profile completion, bypasses the profile gate in preview or proxy scenarios, loads the form by event and form slug, fetches event header data, renders profile confirmation sections, creates a draft application for event forms, and uses the shared `/:eventSlug/:formSlug` route to decide whether the user sees public landing behavior or authenticated form behavior.
-- Rebuild delta: keep the authenticated page and renderer in the same slice but keep the wrapper thin, preserve the profile-completion gate and proxy bypass, make the public-versus-authenticated route transition explicit, drop preview-mode behavior from the rebuild scope, preserve dynamic field rendering and confirmation blocks, add a non-crashing fallback for unsupported field types, persist draft responses so the form can resume cleanly, and explicitly leave pace-core dynamic event or organisation palette theming out of this rebuild wave unless a later requirement adds it.
+- Current baseline behavior: the page gates access behind auth and profile completion, bypasses the profile gate in preview or proxy scenarios, loads the form by event and form slug, fetches event header data, renders profile confirmation sections, and creates/reuses draft application state for event forms.
+- Rebuild delta: keep the authenticated page and renderer in the same slice but keep the wrapper thin, preserve the profile-completion gate and proxy bypass, align routes with authenticated handoff behavior (no implicit public form rendering in this slice), drop preview-mode behavior from the rebuild scope, preserve dynamic field rendering and confirmation blocks, add a non-crashing fallback for unsupported field types, persist draft responses so the form can resume cleanly, and explicitly leave pace-core dynamic event or organisation palette theming out of this rebuild wave unless a later requirement adds it.
 
 ## Acceptance criteria
 
 - [ ] The authenticated form page loads the correct event and form header for the resolved slugs.
-- [ ] Public and authenticated behavior on the shared route is explicit rather than implicit.
+- [ ] Auth-required handoff and authenticated behavior on event form routes are explicit rather than implicit.
 - [ ] Existing values load into the form where a matching table/column exists.
 - [ ] Required profile confirmation sections render when configured.
 - [ ] Draft applications are created or reused for event forms.
@@ -53,7 +53,7 @@ This file is **`PR15-authenticated-form-rendering.md`** — portal requirement s
 ## Verification
 
 - Verify the authenticated `/:eventSlug/:formSlug` route loads the correct event and form and renders the form header, description, and field set.
-- Verify the shared route still routes unauthenticated users into the public landing experience and authenticated users into the form experience.
+- Verify unauthenticated access to event form routes uses auth-required handoff and authenticated users land in the form experience.
 - Verify profile-completion gating, proxy bypass, and draft-resume behavior on the same route.
 
 ## Testing requirements
@@ -63,7 +63,7 @@ This file is **`PR15-authenticated-form-rendering.md`** — portal requirement s
 
 ## Slice boundaries
 
-- **PR15** owns authenticated `/:eventSlug/:formSlug` behavior: `FormFillPage`, `FormRenderer`, field/prefill, draft restore, and profile gate (with proxy bypass). **PR14** owns the public landing on the same route, dashboard event cards, and sign-in handoff. **PR16** owns submit orchestration and `ApiResult` persistence; see [PR16-event-application-submission.md](./PR16-event-application-submission.md).
+- **PR15** owns authenticated event-form rendering behavior (`/:eventSlug/application` and `/:eventSlug/:formSlug` form branch): `FormFillPage`, `FormRenderer`, field/prefill, draft restore, and profile gate (with proxy bypass). **PR14** owns dashboard event cards and participant event-hub handoff. **PR16** owns submit orchestration and `ApiResult` persistence; see [PR16-event-application-submission.md](./PR16-event-application-submission.md).
 
 ## Do not
 

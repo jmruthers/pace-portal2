@@ -10,16 +10,17 @@ import {
 } from '@/components/member-profile/MemberProfile/addressMapping';
 import type { MemberProfileFormPhone, MemberProfileFormValues } from '@/components/member-profile/MemberProfile/memberProfileWizardSchema';
 import type { CoreAddressRow } from '@/hooks/shared/useAddressData';
+import { normalizeMembershipStatus } from '@/hooks/member-profile/usePersonOperations';
 
 export type PaceMembershipStatus = Database['public']['Enums']['pace_membership_status'];
 
 /**
- * Preserves an existing status when present; otherwise defaults to `Active` (DB enum casing).
+ * Same normalization as self-service member profile saves (PR06 / PR07).
  */
 export function normalizeMembershipStatusForSave(
   current: PaceMembershipStatus | null | undefined
 ): PaceMembershipStatus {
-  return current ?? 'Active';
+  return normalizeMembershipStatus(current, null);
 }
 
 function mergeAddressPayload(
@@ -44,7 +45,7 @@ function mergeAddressPayload(
  */
 export async function upsertAddressFromValue(
   db: SupabaseClient<Database>,
-  organisationId: string,
+  _organisationId: string,
   value: AddressValue,
   existingRow: CoreAddressRow | null,
   userId: string | null
@@ -58,7 +59,6 @@ export async function upsertAddressFromValue(
 
   const audit = {
     updated_by: userId,
-    organisation_id: organisationId,
   };
 
   if (existingRow != null) {
@@ -81,7 +81,6 @@ export async function upsertAddressFromValue(
     .from('core_address')
     .insert({
       ...payload,
-      organisation_id: organisationId,
       created_by: userId,
       updated_by: userId,
     })
@@ -275,6 +274,7 @@ export async function persistProfileWizardStep0(input: PersistWizardStep0Input):
 
 export type PersistWizardStep1Values = {
   residential: AddressValue;
+  postal_same_as_residential: boolean;
   postal?: AddressValue;
   phones: MemberProfileFormPhone[];
 };
@@ -301,7 +301,9 @@ export async function persistProfileWizardStep1(input: PersistWizardStep1Input):
   );
 
   let postalId: string | null = null;
-  if (values.postal != null && !isAddressValueEmpty(values.postal)) {
+  if (values.postal_same_as_residential) {
+    postalId = residentialResult.id;
+  } else if (values.postal != null && !isAddressValueEmpty(values.postal)) {
     const pid = await upsertAddressFromValue(db, organisationId, values.postal, postalRow, userId);
     postalId = pid.id;
   }

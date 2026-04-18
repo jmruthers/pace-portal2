@@ -355,6 +355,10 @@ function MemberProfileFormFields({
   );
 }
 
+/**
+ * PR07 self-service editor: pace-core `Form` with Zod (`memberProfileSchema`) — same RHF+Zod bridge as
+ * `useZodForm`, suited to the multi-card layout; the profile-completion wizard uses `useZodForm` directly.
+ */
 export function MemberProfileForm({
   formKey,
   defaultValues,

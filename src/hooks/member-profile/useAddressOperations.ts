@@ -29,7 +29,7 @@ function profileDebugLog(step: string, data?: Record<string, unknown>): void {
 
 function buildAddressPayload(
   value: AddressValue,
-  organisationId: string,
+  _organisationId: string,
   userId: string | null
 ): Omit<AddressInsert, 'id'> {
   const placeId =
@@ -43,7 +43,6 @@ function buildAddressPayload(
       .join(', ');
   return {
     place_id: placeId,
-    organisation_id: organisationId,
     full_address: full.length > 0 ? full : null,
     street_number: null,
     route: value.line1.trim(),

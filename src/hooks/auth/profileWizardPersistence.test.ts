@@ -8,9 +8,9 @@ import {
 import type { Database } from '@/types/pace-database';
 
 describe('normalizeMembershipStatusForSave', () => {
-  it('defaults to Active when absent', () => {
-    expect(normalizeMembershipStatusForSave(null)).toBe('Active');
-    expect(normalizeMembershipStatusForSave(undefined)).toBe('Active');
+  it('defaults to Provisional when absent (aligned with self-service)', () => {
+    expect(normalizeMembershipStatusForSave(null)).toBe('Provisional');
+    expect(normalizeMembershipStatusForSave(undefined)).toBe('Provisional');
   });
 
   it('preserves an existing status', () => {

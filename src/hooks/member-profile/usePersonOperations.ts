@@ -26,10 +26,11 @@ function profileDebugLog(step: string, data?: Record<string, unknown>): void {
 
 const MEMBERSHIP_STATUS_VALUES: readonly MembershipStatus[] = [
   'Provisional',
-  'Cancelled',
   'Active',
   'Suspended',
+  'Lapsed',
   'Resigned',
+  'Revoked',
 ] as const;
 
 /**

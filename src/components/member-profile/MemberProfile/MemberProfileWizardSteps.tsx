@@ -7,6 +7,7 @@ import {
 } from '@solvera/pace-core/forms';
 import {
   Button,
+  Checkbox,
   FormField,
   Input,
   Label,
@@ -16,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@solvera/pace-core/components';
+import { Trash2 } from '@solvera/pace-core/icons';
 import type { ReferenceDataBundle } from '@/shared/hooks/useReferenceData';
 import type { GoogleMapsPreloadState } from '@/hooks/auth/useProfileCompletionWizard';
 import {
@@ -50,7 +52,7 @@ export function MemberProfileWizardSteps({
 }: MemberProfileWizardStepsProps) {
   const { control: typedControl, watch, setValue } = useFormContext<MemberProfileFormValues>();
   const addressControl = typedControl as never;
-  const postal = watch('postal');
+  const postalSameAsResidential = watch('postal_same_as_residential');
 
   const addressProvider = useMemo(() => {
     if (mapsPreload.phase !== 'ready' || !mapsPreload.result.ok) {
@@ -63,14 +65,6 @@ export function MemberProfileWizardSteps({
   }, [mapsPreload]);
 
   const { fields, append, remove } = useFieldArray({ control: typedControl, name: 'phones' });
-
-  const addPostal = useCallback(() => {
-    setValue('postal', emptyAddressValue(), { shouldDirty: true, shouldValidate: true });
-  }, [setValue]);
-
-  const clearPostal = useCallback(() => {
-    setValue('postal', undefined, { shouldDirty: true, shouldValidate: true });
-  }, [setValue]);
 
   const addPhoneRow = useCallback(() => {
     append({ phone_number: '', phone_type_id: null });
@@ -189,13 +183,28 @@ export function MemberProfileWizardSteps({
             showAddressSearch={addressProvider != null}
             componentRestrictions={addressProvider != null ? { country: ['au', 'nz'] } : undefined}
           />
-          {postal == null ? (
-            <fieldset className="grid gap-2 border-0 p-0">
-              <Button type="button" variant="outline" onClick={addPostal}>
-                Add a separate postal address
-              </Button>
-            </fieldset>
-          ) : (
+          <Controller
+            name="postal_same_as_residential"
+            control={typedControl}
+            render={({ field }) => (
+              <Label className="grid grid-cols-[auto_1fr] items-center gap-2">
+                <Checkbox
+                  checked={field.value}
+                  onChange={(v) => {
+                    field.onChange(v);
+                    if (v) {
+                      setValue('postal', undefined, { shouldDirty: true, shouldValidate: true });
+                    } else {
+                      setValue('postal', emptyAddressValue(), { shouldDirty: true, shouldValidate: true });
+                    }
+                  }}
+                  aria-label="Postal address same as residential"
+                />
+                <span>Postal address is the same as residential</span>
+              </Label>
+            )}
+          />
+          {!postalSameAsResidential ? (
             <fieldset className="grid min-w-0 gap-2 border-0 p-0">
               <AddressField
                 meta={postalMeta}
@@ -205,25 +214,26 @@ export function MemberProfileWizardSteps({
                 showAddressSearch={addressProvider != null}
                 componentRestrictions={addressProvider != null ? { country: ['au', 'nz'] } : undefined}
               />
-              <Button type="button" variant="outline" className="md:justify-self-end" onClick={clearPostal}>
-                Remove postal address
-              </Button>
             </fieldset>
-          )}
+          ) : null}
         </fieldset>
 
         <fieldset className="grid gap-3 border-0 p-0" aria-label="Phone numbers">
           {fields.map((f, index) => (
             <article
               key={f.id}
-              className="grid gap-2 rounded-md border border-sec-200 p-3 md:grid-cols-2 md:items-start"
+              className={
+                fields.length > 1
+                  ? 'grid gap-2 rounded-md border border-sec-200 p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-center'
+                  : 'grid gap-2 rounded-md border border-sec-200 p-3 md:grid-cols-2 md:items-start'
+              }
             >
-              <section>
+              <section className="min-w-0">
                 <Controller
                   name={`phones.${index}.phone_number` as const}
                   control={typedControl}
                   render={({ field, fieldState }) => (
-                    <>
+                    <section className="grid gap-1">
                       <Label className="grid gap-1" aria-invalid={fieldState.invalid}>
                         Phone number {index + 1}
                         {index === 0 ? ' *' : ''}
@@ -238,11 +248,11 @@ export function MemberProfileWizardSteps({
                       {fieldState.error?.message != null ? (
                         <p role="alert">{String(fieldState.error.message)}</p>
                       ) : null}
-                    </>
+                    </section>
                   )}
                 />
               </section>
-              <section>
+              <section className="min-w-0">
                 <Controller
                   name={`phones.${index}.phone_type_id` as const}
                   control={typedControl}
@@ -270,9 +280,15 @@ export function MemberProfileWizardSteps({
                 />
               </section>
               {fields.length > 1 ? (
-                <section className="md:col-span-2 md:justify-self-end">
-                  <Button type="button" variant="outline" onClick={() => remove(index)}>
-                    Remove phone
+                <section className="grid place-items-center">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Remove phone number ${index + 1}`}
+                    onClick={() => remove(index)}
+                  >
+                    <Trash2 />
                   </Button>
                 </section>
               ) : null}

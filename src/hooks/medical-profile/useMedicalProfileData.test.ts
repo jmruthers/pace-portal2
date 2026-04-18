@@ -8,11 +8,11 @@ const profileRpcRow = {
   access_level: 'read',
   id: 'mp1',
   person_id: 'p1',
-  carer_name: '',
   data_retention_until: '',
+  diet_type_id: '1',
+  diet_type_name: 'Standard',
+  diettype_description: '',
   dietary_comments: '',
-  has_carer: false,
-  has_dietary_requirements: false,
   health_care_card_expiry: '',
   health_care_card_number: '',
   health_fund_name: '',
@@ -21,7 +21,6 @@ const profileRpcRow = {
   last_tetanus_date: '',
   medicare_expiry: '',
   medicare_number: '',
-  menu_selection: '',
   requires_support: false,
   support_details: '',
 };
@@ -85,6 +84,8 @@ describe('fetchMedicalProfileData', () => {
     expect(isOk(r)).toBe(true);
     if (isOk(r)) {
       expect(r.data.profile?.id).toBe('mp1');
+      expect(r.data.profile?.diet_type_id).toBe('1');
+      expect(r.data.dietTypeNameFromRpc).toBe('Standard');
       expect(r.data.conditions).toHaveLength(1);
       expect(r.data.conditions[0]?.name).toBe('Asthma');
     }

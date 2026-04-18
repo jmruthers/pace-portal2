@@ -33,17 +33,19 @@ The app consumes `@solvera/pace-core` for app layout, auth, RBAC, common UI prim
 - **Delegated access and proxy mode** – Linked-profile and proxy-aware routes for viewing or editing a member’s in-scope portal data on their behalf.
 - **Medical profile** – Medical summary data, medical-condition CRUD, and action-plan file lifecycle management.
 - **Additional contacts** – Listing, creation, matching, linking, editing, and deletion of additional contacts, including proxy-aware flows.
-- **Events and forms** – Public event/form landing, authenticated dynamic form rendering, draft/resume behavior, and final application submission.
+- **Events and forms** – Authenticated event participant workflows including event hub, dynamic form rendering, draft/resume behavior, and final application submission (member-facing side of BASE registration workflows per cross-app alignment in [PR00-portal-architecture.md](./PR00-portal-architecture.md)).
+- **Cross-module participant workflows** – Additional member journeys driven by BASE configuration (application progress, activity booking, token approvals) are in scope for pace-portal as the single member-facing app and are specified in PR18–PR20. Organiser/operator UI stays in BASE.
+- **MVP scope guardrails** – Event lead/EOI and org lead/EOI participant journeys are out of MVP in this wave.
 
 The current rebuild wave **intentionally excludes** billing profile, payment gateway integration, stored payment methods, and public invoice payment. Placeholder deferred slices for a future payments wave are documented in [PR00-portal-architecture.md](./PR00-portal-architecture.md) (deferred payment placeholders).
 
 ### Initial scope and product decisions
 
-- **Canonical requirements:** [PR00-portal-architecture.md](./PR00-portal-architecture.md) and [PR01](./PR01-app-shell-routing.md)–[PR16](./PR16-event-application-submission.md) define **what to build** (routes, flows, UI behavior, slice ownership). A reference implementation may exist elsewhere; where code and these PR docs disagree, **update the PR docs or the code deliberately**—do not treat undocumented code as overriding silent requirements.
+- **Canonical requirements:** [PR00-portal-architecture.md](./PR00-portal-architecture.md) and [PR01](./PR01-app-shell-routing.md)–[PR20](./PR20-token-approval-host.md) define **what to build** (routes, flows, UI behavior, slice ownership). A reference implementation may exist elsewhere; where code and these PR docs disagree, **update the PR docs or the code deliberately**—do not treat undocumented code as overriding silent requirements.
 - **Consuming repository standards:** Environment variables, CI, test layout, full Supabase schema/RPC specifications, and repo-wide engineering policy are **not** duplicated under [`docs/requirements/portal/`](./); they are defined by the **target repository** that implements this app. **Canonical portal execution specs** for this program live in this folder (`PR00`–`PR16`).
 - **Information architecture:** Slight preference to preserve current IA and page set. Consolidation or splitting is allowed when it clearly improves UX or SOLID boundaries; record changes in the relevant PR slice doc.
 - **Visual direction:** No external design system beyond the current portal and `@solvera/pace-core`. Capture composition in slice requirements; cite **Standard 07: Visual** (see [PR00-portal-architecture.md](./PR00-portal-architecture.md) standards note) where UI is involved.
-- **Event selector (required redesign):** Event workflow state must be explicit as **Apply**, **Resume**, or **Manage**; **Resume** when `base_application.status = 'draft'` routes on the same path as **Apply**; **Manage** when status is not `draft`; management stays **modal-based**; UI shows event name, logo, dates, application status, and active published forms **without grouping by `context_id`**. Detailed contracts live in [PR14-event-landing-handoff.md](./PR14-event-landing-handoff.md) and [PR03-dashboard-composition.md](./PR03-dashboard-composition.md).
+- **Event selector and participant event hub (required redesign):** Event workflow state must be explicit as **Apply**, **Resume**, or **Manage/Open**; **Resume** when `base_application.status = 'draft'` routes on the same path as **Apply**; when status is non-`draft`, route to the participant event hub page (`/:eventSlug`) where members see key event details and links to event workflows/forms. The hub should support name, logo, dates, participant blurb, admin email, website (where available), and workflow/checklist links. Detailed contracts start in [PR14-event-selector-and-hub.md](./PR14-event-selector-and-hub.md) and [PR03-dashboard-composition.md](./PR03-dashboard-composition.md), with follow-up slices for hub/detail workflows.
 - **pace-core imports:** Use verified entrypoints for `@solvera/pace-core` as summarized in [PR00-portal-architecture.md](./PR00-portal-architecture.md) (cross-cutting contracts). Prefer `useZodForm` from `@solvera/pace-core/hooks` for Zod-backed forms where slices require it.
 
 ---
@@ -54,7 +56,7 @@ The current rebuild wave **intentionally excludes** billing profile, payment gat
 
 - Rebuild the active non-payment portal experience as clear, implementation-ready requirement slices without losing behavioral fidelity from the current app.
 - Use `@solvera/pace-core` as the default source of layout, auth, RBAC, and common UI primitives; keep app-specific code only where no equivalent exists.
-- Preserve public vs protected route behavior, organisation context semantics, proxy-mode behavior, and shared-schema compatibility unless a PR slice explicitly changes them.
+- Preserve protected route behavior, organisation context semantics, proxy-mode behavior, and shared-schema compatibility unless a PR slice explicitly changes them.
 - Keep event workflow states explicit (**Apply** / **Resume** / **Manage**) per the briefing above.
 - Keep deliverables small enough for focused implementation, review, testing, and validation.
 
@@ -66,6 +68,7 @@ The current rebuild wave **intentionally excludes** billing profile, payment gat
 - Broad product redesign beyond the event-selector changes above and cleanup needed to align with pace-core standards.
 - **Preview mode** for event forms is out of scope for the rebuild (see [PR15-authenticated-form-rendering.md](./PR15-authenticated-form-rendering.md)).
 - Full self-service sign-up and post-sign-up bootstrap on `/register` are **not** in the active wave ([PR04-register-placeholder.md](./PR04-register-placeholder.md)).
+- Org signup is expected to require dedicated workflow-side effects and is tracked as a follow-up requirement set (TEAM + portal); it is not finalized by PR01–PR20.
 
 ---
 
@@ -100,7 +103,7 @@ pace-portal is a **standalone consuming app** with application code at repo root
 
 - This file – product-level brief.
 - [PR00-portal-architecture.md](./PR00-portal-architecture.md) – bounded-context architecture.
-- [PR01](./PR01-app-shell-routing.md)–[PR16](./PR16-event-application-submission.md) – numbered requirement slices (execution contracts).
+- [PR01](./PR01-app-shell-routing.md)–[PR20](./PR20-token-approval-host.md) – numbered requirement slices (execution contracts).
 - [PR00-portal-pace-core-candidates.md](./PR00-portal-pace-core-candidates.md) – optional pace-core2 enhancements suggested by portal slices (non-normative).
 
 ---
@@ -124,7 +127,7 @@ pace-portal is a **standalone consuming app** with application code at repo root
 
 - **Schema and migrations** – This repo does not create or alter Supabase schema, RLS policies, or database functions unless a future requirement explicitly assigns ownership.
 - **Payment and billing (active wave)** – Billing profile, payment gateway, stored payment methods, public invoice payment, Mint payment integration, and payment edge functions are deferred.
-- **Shell-only misread** – “Shell” in a narrow sense means bootstrap + RBAC + layout without the full feature set; the full feature set is defined in PR01–PR16.
+- **Shell-only misread** – “Shell” in a narrow sense means bootstrap + RBAC + layout without the full feature set; the full feature set is defined in PR01–PR20.
 
 ---
 
@@ -140,15 +143,15 @@ pace-portal is a **standalone consuming app** with application code at repo root
 ## Explicit exclusions for this wave
 
 - Payment, billing, invoice routes and UI (including `SmartBillingCard` on dashboard and delegated workspace).
-- Dynamic per-event or per-organisation palette theming (`applyPalette`, `getPaletteFromEvent`, etc.) unless a future PR explicitly adds it ([PR14](./PR14-event-landing-handoff.md), [PR15](./PR15-authenticated-form-rendering.md)).
-- Event route `/:eventSlug/:formSlug` is **not** guarded by `PagePermissionGuard`; public landing is intentional (see architecture cross-cutting RBAC summary).
+- Dynamic per-event or per-organisation palette theming (`applyPalette`, `getPaletteFromEvent`, etc.) unless a future PR explicitly adds it ([PR14](./PR14-event-selector-and-hub.md), [PR15](./PR15-authenticated-form-rendering.md)).
+- Event workflow routes require authenticated member context by default; unauthenticated access uses sign-in handoff with return URL (see architecture cross-cutting route model).
 - **Login history:** Record via `recordLogin` from `@solvera/pace-core/login-history` as specified in [PR02-shared-services-hooks.md](./PR02-shared-services-hooks.md).
 
 ---
 
 ## Requirements traceability
 
-- **Canonical execution specs:** [PR01](./PR01-app-shell-routing.md) through [PR16](./PR16-event-application-submission.md).
+- **Canonical execution specs:** [PR01](./PR01-app-shell-routing.md) through [PR20](./PR20-token-approval-host.md).
 
 ---
 

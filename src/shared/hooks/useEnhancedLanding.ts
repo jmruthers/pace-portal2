@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useUnifiedAuthContext } from '@solvera/pace-core';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
@@ -16,8 +17,12 @@ import {
   ok,
   type ApiResult,
 } from '@solvera/pace-core/types';
-import { toTypedSupabase } from '@/lib/supabase-typed';
-
+import { toTypedSupabase, toSupabaseClientLike } from '@/lib/supabase-typed';
+import { distinctEligibleEventIds } from '@/shared/lib/dashboardEventVisibility';
+import {
+  resolveDashboardEventLogoUrls,
+  type EventLogoRefRow,
+} from '@/shared/lib/eventDashboardLogos';
 /** Re-export for modules that imported this constant from `useEnhancedLanding`. */
 export { NO_PERSON_PROFILE_ERROR_CODE } from '@/shared/lib/utils/userUtils';
 
@@ -25,9 +30,18 @@ type MediRow = Database['public']['Tables']['medi_profile']['Row'] | null;
 type PhoneRow = Database['public']['Tables']['core_phone']['Row'];
 type EventRow = Database['public']['Tables']['core_events']['Row'];
 
+/**
+ * Event row plus optional resolved logo URL for the dashboard card (`core_file_references` for
+ * `core_events` + storage public/signed URL). pace-core `data_user_events_get.event_logo` also
+ * returns a storage path for RPC consumers.
+ */
+export type DashboardEvent = EventRow & { event_logo?: string | null };
+
 /** Groups organisation events by `registration_scope` for dashboard sections (testable). */
-export function groupEventsByRegistrationScope(events: EventRow[]): Record<string, EventRow[]> {
-  const eventsByCategory: Record<string, EventRow[]> = {};
+export function groupEventsByRegistrationScope(
+  events: DashboardEvent[]
+): Record<string, DashboardEvent[]> {
+  const eventsByCategory: Record<string, DashboardEvent[]> = {};
   for (const ev of events) {
     const cat = ev.registration_scope || 'default';
     if (!eventsByCategory[cat]) eventsByCategory[cat] = [];
@@ -58,7 +72,7 @@ export type EnhancedLandingModel = {
   phones: PhoneRow[];
   additionalContacts: AdditionalContactRow[];
   /** Events grouped by `registration_scope` as category buckets. */
-  eventsByCategory: Record<string, EventRow[]>;
+  eventsByCategory: Record<string, DashboardEvent[]>;
   profileProgress: ProfileProgressResult;
   /** True when no `core_person` row exists for the user in org context (dashboard setup prompt). */
   needsProfileSetup: boolean;
@@ -79,11 +93,13 @@ export function createEmptyEnhancedLandingModel(needsProfileSetup: boolean): Enh
 
 /**
  * Loads dashboard landing aggregate (profile, phones, medical, contacts, events). Exported for tests and direct orchestration; TanStack consumers should use {@link useEnhancedLanding}.
+ * @param accessibleOrganisationIds Organisations the user may access; events are listed for all of these (not only the selected org).
  */
 export async function fetchEnhancedLanding(
   secure: RBACSupabaseClient | null,
   userId: string,
-  organisationId: string
+  organisationId: string,
+  accessibleOrganisationIds: string[]
 ): Promise<ApiResult<EnhancedLandingModel>> {
   try {
     const client = toTypedSupabase(secure);
@@ -105,14 +121,21 @@ export async function fetchEnhancedLanding(
     const { person, member } = pm.data;
     const personId = person.id;
 
-    const [medi, phones, contacts, events] = await Promise.all([
+    const eventOrgIds =
+      accessibleOrganisationIds.length > 0 ? accessibleOrganisationIds : [organisationId];
+
+    const [medi, phones, contacts, forms] = await Promise.all([
       client.from('medi_profile').select('*').eq('person_id', personId).maybeSingle(),
       client.from('core_phone').select('*').eq('person_id', personId).is('deleted_at', null),
       client.rpc('data_pace_contacts_list', { p_user_id: userId }),
-      client.from('core_events').select('*').eq('organisation_id', organisationId).order('event_date', { ascending: true }),
+      client
+        .from('core_forms')
+        .select('event_id, status, is_active, opens_at, closes_at')
+        .in('organisation_id', eventOrgIds)
+        .eq('status', 'published'),
     ]);
 
-    const firstError = medi.error ?? phones.error ?? contacts.error ?? events.error;
+    const firstError = medi.error ?? phones.error ?? contacts.error ?? forms.error;
     if (firstError) {
       return err({
         code: 'ENHANCED_LANDING_QUERY',
@@ -122,7 +145,56 @@ export async function fetchEnhancedLanding(
 
     const contactRows = (contacts.data ?? []) as AdditionalContactRow[];
 
-    const eventRows = events.data ?? [];
+    const eligibleEventIds = distinctEligibleEventIds(forms.data ?? [], new Date());
+
+    const events =
+      eligibleEventIds.length === 0
+        ? { data: [] as EventRow[], error: null }
+        : await client
+            .from('core_events')
+            .select('*')
+            .in('event_id', eligibleEventIds)
+            .in('organisation_id', eventOrgIds)
+            .order('event_date', { ascending: true });
+
+    if (events.error) {
+      return err({
+        code: 'ENHANCED_LANDING_QUERY',
+        message: events.error.message || 'Could not load dashboard data.',
+      });
+    }
+
+    const eventList = (events.data ?? []) as EventRow[];
+    const eventIds = eventList.map((e) => e.event_id);
+
+    let logoUrlByEventId = new Map<string, string>();
+    if (eventIds.length > 0) {
+      const refsRes = await client
+        .from('core_file_references')
+        .select('record_id, file_path, is_public, file_metadata, created_at')
+        .eq('table_name', 'core_events')
+        .in('record_id', eventIds);
+
+      if (refsRes.error) {
+        return err({
+          code: 'ENHANCED_LANDING_QUERY',
+          message: refsRes.error.message || 'Could not load dashboard data.',
+        });
+      }
+
+      const storageClient = toSupabaseClientLike(secure) as Parameters<
+        typeof resolveDashboardEventLogoUrls
+      >[0];
+      logoUrlByEventId = await resolveDashboardEventLogoUrls(
+        storageClient,
+        (refsRes.data ?? []) as EventLogoRefRow[]
+      );
+    }
+
+    const eventRows: DashboardEvent[] = eventList.map((e) => ({
+      ...e,
+      event_logo: logoUrlByEventId.get(e.event_id) ?? null,
+    }));
     const eventsByCategory = groupEventsByRegistrationScope(eventRows);
 
     const progress = computeProfileProgress({
@@ -171,20 +243,36 @@ export function useEnhancedLanding() {
 
   const userId = user?.id ?? null;
   const organisationId = org?.selectedOrganisation?.id ?? null;
+  const accessibleOrganisationIds = useMemo(
+    () => (org?.organisations ?? []).map((o) => o.id).filter(Boolean),
+    [org?.organisations]
+  );
 
-  return useQuery({
-    queryKey: ['enhancedLanding', 'v1', userId, organisationId],
+  const query = useQuery({
+    queryKey: ['enhancedLanding', 'v3', userId, organisationId, accessibleOrganisationIds.join(',')],
     enabled: Boolean(client && userId && organisationId),
     staleTime: 60_000,
-    queryFn: async (): Promise<EnhancedLandingModel> => {
+    queryFn: async (): Promise<ApiResult<EnhancedLandingModel>> => {
       if (!userId || !organisationId) {
-        throw new Error('Landing data requires organisation context.');
+        return err({
+          code: 'ENHANCED_LANDING_CONTEXT',
+          message: 'Landing data requires organisation context.',
+        });
       }
-      const result = await fetchEnhancedLanding(secure, userId, organisationId);
-      if (!isOk(result)) {
-        throw new Error(result.error.message);
-      }
-      return result.data;
+      return fetchEnhancedLanding(secure, userId, organisationId, accessibleOrganisationIds);
     },
   });
+
+  const apiError = query.data && !isOk(query.data) ? query.data.error : null;
+  return {
+    ...query,
+    data: query.data && isOk(query.data) ? query.data.data : undefined,
+    error: apiError
+      ? new Error(apiError.message)
+      : query.error instanceof Error
+        ? query.error
+        : null,
+    isError: Boolean(apiError) || query.isError,
+    isSuccess: query.isSuccess && !apiError,
+  };
 }

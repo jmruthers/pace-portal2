@@ -6,6 +6,7 @@ import { createGoogleMapsJsAddressProviderAdapter } from '@solvera/pace-core/for
 import type { AddressProviderAdapter } from '@solvera/pace-core/forms';
 import { Alert, AlertDescription, AlertTitle, LoadingSpinner } from '@solvera/pace-core/components';
 import { useToast } from '@solvera/pace-core/hooks';
+import { isOk } from '@solvera/pace-core/types';
 import { AccessDenied, PagePermissionGuard } from '@solvera/pace-core/rbac';
 import { MemberProfileForm } from '@/components/member-profile/MemberProfile/MemberProfileForm';
 import type { MemberProfileFormValues } from '@/components/member-profile/MemberProfile/MemberProfileForm';
@@ -59,22 +60,20 @@ function MemberProfileContent() {
       return;
     }
     let cancelled = false;
-    void loadGoogleMapsWithPlaces()
-      .then(() => {
-        if (cancelled) return;
+    void loadGoogleMapsWithPlaces().then((result) => {
+      if (cancelled) return;
+      if (isOk(result)) {
         setMapsReady(true);
         try {
           setAddressProvider(createGoogleMapsJsAddressProviderAdapter());
         } catch {
           setAddressProvider(null);
         }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setMapsReady(false);
-          setAddressProvider(null);
-        }
-      });
+      } else {
+        setMapsReady(false);
+        setAddressProvider(null);
+      }
+    });
     return () => {
       cancelled = true;
     };

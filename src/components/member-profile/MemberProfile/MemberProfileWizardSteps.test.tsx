@@ -11,12 +11,10 @@ import { MemberProfileWizardSteps } from '@/components/member-profile/MemberProf
 import type { ReferenceDataBundle } from '@/shared/hooks/useReferenceData';
 
 const refBundle: ReferenceDataBundle = {
-  phoneTypes: [{ id: 1, name: 'Mobile', organisation_id: 'o', created_at: null, created_by: null, updated_at: null, updated_by: null }],
-  membershipTypes: [
-    { id: 1, name: 'Standard', organisation_id: 'o', is_active: true, created_at: null, created_by: null, updated_at: null, updated_by: null, min_age: null, max_age: null },
-  ],
-  genderTypes: [{ id: 1, name: 'Woman', organisation_id: 'o', created_at: null, created_by: null, updated_at: null, updated_by: null }],
-  pronounTypes: [{ id: 1, name: 'She/her', organisation_id: 'o', created_at: null, created_by: null, updated_at: null, updated_by: null }],
+  phoneTypes: [{ id: 1, name: 'Mobile', created_at: null, created_by: null, updated_at: null, updated_by: null }] as never,
+  membershipTypes: [{ id: 1, name: 'Standard', created_at: null, created_by: null, updated_at: null, updated_by: null }] as never,
+  genderTypes: [{ id: 1, name: 'Woman', created_at: null, created_by: null, updated_at: null, updated_by: null }] as never,
+  pronounTypes: [{ id: 1, name: 'She/her', created_at: null, created_by: null, updated_at: null, updated_by: null }] as never,
 };
 
 function Harness(props: { step: number }) {

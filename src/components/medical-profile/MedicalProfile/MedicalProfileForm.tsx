@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Controller, useFormContext } from '@solvera/pace-core/forms';
+import type { z } from '@solvera/pace-core/utils';
 import {
   Button,
   Card,
@@ -7,40 +9,132 @@ import {
   CardHeader,
   CardTitle,
   Checkbox,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogPortal,
   Form,
   FormField,
   Label,
   Progress,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Textarea,
 } from '@solvera/pace-core/components';
+import { findDietTypeById, type CakeDietTypeRow } from '@/hooks/medical-profile/cakeDietTypes';
 import { computeMedicalProfileProgress } from '@/shared/lib/medicalProfileProgress';
 import {
-  medicalProfileSchema,
   type MedicalProfileFormValues,
 } from '@/utils/medical-profile/validation';
 import { MedicalProfileDisplay } from '@/components/medical-profile/MedicalProfile/MedicalProfileDisplay';
 import type { MedicalConditionSummaryRow } from '@/hooks/medical-profile/useMedicalProfileData';
 
+const MENU_SELECT_NONE = '__menu_none__';
+
 export type MedicalProfileFormProps = {
   formKey: string;
   defaultValues: MedicalProfileFormValues;
+  schema: z.ZodType<MedicalProfileFormValues>;
+  dietTypes: readonly CakeDietTypeRow[];
+  /** From `data_medi_profile_get` when the select value does not match option ids (display only). */
+  menuLabelHint?: string | null;
   conditions: MedicalConditionSummaryRow[];
   isSubmitting: boolean;
   onSubmit: (values: MedicalProfileFormValues) => void | Promise<void>;
 };
 
+function DietDescriptionsDialog({
+  open,
+  onOpenChange,
+  dietTypes,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  dietTypes: readonly CakeDietTypeRow[];
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogPortal>
+        <DialogContent>
+          <DialogBody>
+            <h2 id="diet-descriptions-title">Diet menu options</h2>
+            <section
+              className="max-h-[min(60vh,480px)] overflow-auto"
+              aria-label="Diet descriptions table"
+            >
+              <table className="w-full border-collapse border border-sec-200" aria-labelledby="diet-descriptions-title">
+                <thead>
+                  <tr>
+                    <th scope="col" className="border border-sec-200 p-2">
+                      Name
+                    </th>
+                    <th scope="col" className="border border-sec-200 p-2">
+                      Description
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dietTypes.map((d) => (
+                    <tr key={d.diettype_id}>
+                      <td className="border border-sec-200 p-2 align-top">{d.diettype_name}</td>
+                      <td className="border border-sec-200 p-2 align-top">
+                        {d.diettype_description?.trim() ? <p>{d.diettype_description}</p> : <p>—</p>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+            <p>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Close
+              </Button>
+            </p>
+          </DialogBody>
+        </DialogContent>
+      </DialogPortal>
+    </Dialog>
+  );
+}
+
 function MedicalProfileFormInner({
   conditions,
   isSubmitting,
+  dietTypes,
+  menuLabelHint,
 }: {
   conditions: MedicalConditionSummaryRow[];
   isSubmitting: boolean;
+  dietTypes: readonly CakeDietTypeRow[];
+  menuLabelHint: string | null | undefined;
 }) {
   const ctx = useFormContext<MedicalProfileFormValues>();
-  const { watch } = ctx;
+  const { watch, setValue, control } = ctx;
   const watched = watch();
-  const progress = computeMedicalProfileProgress(watched);
+  const menuSelection = watch('menu_selection');
+  const progress = computeMedicalProfileProgress(watched, dietTypes);
   const pct = Math.round(progress.completionRatio * 100);
+  const selectedDiet = findDietTypeById(dietTypes, menuSelection);
+  const isOtherDiet = selectedDiet?.diettype_code === 'OT';
+  const [descriptionsOpen, setDescriptionsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOtherDiet) {
+      setValue('dietary_comments', '', { shouldValidate: true, shouldDirty: true });
+    }
+  }, [isOtherDiet, setValue]);
+
+  /** If DB stores a UUID but options use short ids, align form value so the Select matches an item. */
+  useEffect(() => {
+    const row = findDietTypeById(dietTypes, menuSelection);
+    const trimmed = menuSelection.trim();
+    if (row && row.diettype_id !== trimmed) {
+      setValue('menu_selection', row.diettype_id, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [dietTypes, menuSelection, setValue]);
 
   return (
     <article className="grid gap-6">
@@ -81,32 +175,73 @@ function MedicalProfileFormInner({
           <CardTitle>Dietary</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
+          <p>Please select the most appropriate menu for your dietary requirements, even if it's slighty more restrictive than your needs. Only select "Other" if none of the diets work for you.</p>
           <Controller
-            control={ctx.control}
-            name="has_dietary_requirements"
-            render={({ field }) => (
-              <Label className="grid grid-cols-[auto_1fr] items-center gap-2">
-                <Checkbox checked={field.value} onChange={(v) => field.onChange(v)} />
-                Dietary requirements
-              </Label>
-            )}
+            control={control}
+            name="menu_selection"
+            render={({ field, fieldState }) => {
+              const selectedRow = findDietTypeById(dietTypes, field.value);
+              const valueForSelect = selectedRow?.diettype_id ?? field.value;
+              const menuTriggerLabel =
+                field.value.trim() === ''
+                  ? undefined
+                  : (selectedRow?.diettype_name ?? menuLabelHint ?? undefined);
+              return (
+                <section
+                  className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,50%)_auto] md:items-center md:gap-4"
+                  aria-label="Menu selection"
+                >
+                  <fieldset className="m-0 min-w-0 w-full border-0 p-0">
+                    <Select
+                      value={valueForSelect.trim() === '' ? MENU_SELECT_NONE : valueForSelect}
+                      onValueChange={(v) => field.onChange(v === MENU_SELECT_NONE ? '' : v)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a menu">{menuTriggerLabel}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={MENU_SELECT_NONE}>Not selected</SelectItem>
+                        {dietTypes.map((d) => (
+                          <SelectItem key={d.diettype_id} value={d.diettype_id}>
+                            {d.diettype_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {fieldState.error?.message != null ? (
+                      <p role="alert">{String(fieldState.error.message)}</p>
+                    ) : null}
+                  </fieldset>
+                  <Button type="button" variant="link" onClick={() => setDescriptionsOpen(true)}>
+                    View diet descriptions
+                  </Button>
+                </section>
+              );
+            }}
           />
-          <Controller
-            control={ctx.control}
-            name="dietary_comments"
-            render={({ field, fieldState }) => (
-              <Label className="grid gap-1">
-                Dietary comments
-                <Textarea value={field.value} onChange={(v) => field.onChange(v)} />
-                {fieldState.error?.message != null ? (
-                  <p role="alert">{String(fieldState.error.message)}</p>
-                ) : null}
-              </Label>
-            )}
-          />
-          <FormField<MedicalProfileFormValues> name="menu_selection" label="Menu selection" />
+          {isOtherDiet ? (
+            <Controller
+              control={control}
+              name="dietary_comments"
+              render={({ field, fieldState }) => (
+                <Label className="grid gap-1">
+                  Dietary comments
+                  <Textarea value={field.value} onChange={(v) => field.onChange(v)} />
+                  {fieldState.error?.message != null ? (
+                    <p role="alert">{String(fieldState.error.message)}</p>
+                  ) : null}
+                </Label>
+              )}
+            />
+          ) : null}
         </CardContent>
       </Card>
+
+      <DietDescriptionsDialog
+        open={descriptionsOpen}
+        onOpenChange={setDescriptionsOpen}
+        dietTypes={dietTypes}
+      />
 
       <Card>
         <CardHeader>
@@ -114,7 +249,7 @@ function MedicalProfileFormInner({
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <Controller
-            control={ctx.control}
+            control={control}
             name="is_fully_immunised"
             render={({ field }) => (
               <Label className="grid grid-cols-[auto_1fr] items-center gap-2">
@@ -129,11 +264,11 @@ function MedicalProfileFormInner({
 
       <Card>
         <CardHeader>
-          <CardTitle>Support and carer</CardTitle>
+          <CardTitle>Support</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
           <Controller
-            control={ctx.control}
+            control={control}
             name="requires_support"
             render={({ field }) => (
               <Label className="grid grid-cols-[auto_1fr] items-center gap-2">
@@ -143,7 +278,7 @@ function MedicalProfileFormInner({
             )}
           />
           <Controller
-            control={ctx.control}
+            control={control}
             name="support_details"
             render={({ field, fieldState }) => (
               <Label className="grid gap-1">
@@ -155,17 +290,6 @@ function MedicalProfileFormInner({
               </Label>
             )}
           />
-          <Controller
-            control={ctx.control}
-            name="has_carer"
-            render={({ field }) => (
-              <Label className="grid grid-cols-[auto_1fr] items-center gap-2">
-                <Checkbox checked={field.value} onChange={(v) => field.onChange(v)} />
-                Has carer
-              </Label>
-            )}
-          />
-          <FormField<MedicalProfileFormValues> name="carer_name" label="Carer name" />
         </CardContent>
         <CardFooter className="text-right">
           <Button type="submit" variant="default" disabled={isSubmitting}>
@@ -182,6 +306,9 @@ function MedicalProfileFormInner({
 export function MedicalProfileForm({
   formKey,
   defaultValues,
+  schema,
+  dietTypes,
+  menuLabelHint,
   conditions,
   isSubmitting,
   onSubmit,
@@ -189,11 +316,16 @@ export function MedicalProfileForm({
   return (
     <Form<MedicalProfileFormValues>
       key={formKey}
-      schema={medicalProfileSchema}
+      schema={schema}
       defaultValues={defaultValues}
       onSubmit={onSubmit}
     >
-      <MedicalProfileFormInner conditions={conditions} isSubmitting={isSubmitting} />
+      <MedicalProfileFormInner
+        conditions={conditions}
+        isSubmitting={isSubmitting}
+        dietTypes={dietTypes}
+        menuLabelHint={menuLabelHint}
+      />
     </Form>
   );
 }

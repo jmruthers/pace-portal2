@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { err } from '@solvera/pace-core/types';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -86,7 +87,13 @@ vi.mock('@/hooks/member-profile/usePersonOperations', () => ({
 }));
 
 vi.mock('@/integrations/google-maps/loadGoogleMapsWithPlaces', () => ({
-  loadGoogleMapsWithPlaces: () => Promise.reject(new Error('no key')),
+  loadGoogleMapsWithPlaces: () =>
+    Promise.resolve(
+      err({
+        code: 'GOOGLE_MAPS_NOT_CONFIGURED',
+        message: 'Google Maps API key is not configured.',
+      }),
+    ),
 }));
 
 vi.mock('@/hooks/medical-profile/useMedicalProfilePage', () => ({
@@ -289,7 +296,11 @@ describe('placeholder pages', () => {
   });
 
   it('renders additional contacts placeholder', () => {
-    render(<AdditionalContactsPage />);
+    render(
+      <MemoryRouter>
+        <AdditionalContactsPage />
+      </MemoryRouter>
+    );
     expect(screen.getByRole('heading', { name: /additional contacts/i })).toBeInTheDocument();
   });
 
@@ -337,9 +348,13 @@ describe('placeholder pages', () => {
     expect(screen.getByRole('heading', { name: /delegated workspace/i })).toBeInTheDocument();
   });
 
-  it('renders public form fill branch when unauthenticated', () => {
-    render(<FormFillPage eventSlug="evt" formSlug="frm" />);
-    expect(screen.getByRole('heading', { name: /event form/i })).toBeInTheDocument();
-    expect(screen.getByText(/public landing/i)).toBeInTheDocument();
+  it('redirects unauthenticated users to login with return URL (PR01 handoff)', async () => {
+    const { MemoryRouter } = await import('react-router-dom');
+    render(
+      <MemoryRouter initialEntries={['/evt/frm']}>
+        <FormFillPage eventSlug="evt" formSlug="frm" />
+      </MemoryRouter>
+    );
+    expect(await screen.findByText(/redirecting to sign in/i)).toBeInTheDocument();
   });
 });

@@ -14,7 +14,7 @@ import { supabaseClient } from '@/lib/supabase';
 import './app.css';
 import App from './App';
 
-/** Required for `useOrganisationsContextOptional` / selected org; profile wizard and org-scoped RPCs depend on it. */
+/** Required for selected org/event context in headers, guards, and dashboard hooks. */
 function AppWithOrganisation() {
   const { user, session } = useUnifiedAuthContext();
   return (

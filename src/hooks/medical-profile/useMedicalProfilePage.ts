@@ -21,15 +21,12 @@ function mapFormToRpcPayload(values: MedicalProfileFormValues, profileId: string
     p_health_care_card_expiry: emptyToUndef(values.health_care_card_expiry),
     p_health_fund_name: emptyToUndef(values.health_fund_name),
     p_health_fund_number: emptyToUndef(values.health_fund_number),
-    p_has_dietary_requirements: values.has_dietary_requirements,
+    p_diet_type_id: emptyToUndef(values.menu_selection),
     p_dietary_comments: emptyToUndef(values.dietary_comments),
-    p_menu_selection: emptyToUndef(values.menu_selection),
     p_is_fully_immunised: values.is_fully_immunised,
     p_last_tetanus_date: emptyToUndef(values.last_tetanus_date),
     p_requires_support: values.requires_support,
     p_support_details: emptyToUndef(values.support_details),
-    p_has_carer: values.has_carer,
-    p_carer_name: emptyToUndef(values.carer_name),
   };
 }
 
@@ -46,21 +43,18 @@ function emptyToNull(s: string): string | null {
 function buildInsertRow(personId: string, values: MedicalProfileFormValues): MediInsert {
   return {
     person_id: personId,
+    diet_type_id: values.menu_selection.trim(),
     medicare_number: emptyToNull(values.medicare_number),
     medicare_expiry: emptyToNull(values.medicare_expiry),
     health_care_card_number: emptyToNull(values.health_care_card_number),
     health_care_card_expiry: emptyToNull(values.health_care_card_expiry),
     health_fund_name: emptyToNull(values.health_fund_name),
     health_fund_number: emptyToNull(values.health_fund_number),
-    has_dietary_requirements: values.has_dietary_requirements,
     dietary_comments: emptyToNull(values.dietary_comments),
-    menu_selection: emptyToNull(values.menu_selection),
     is_fully_immunised: values.is_fully_immunised,
     last_tetanus_date: emptyToNull(values.last_tetanus_date),
     requires_support: values.requires_support,
     support_details: emptyToNull(values.support_details),
-    has_carer: values.has_carer,
-    carer_name: emptyToNull(values.carer_name),
   };
 }
 
@@ -123,6 +117,9 @@ export function useMedicalProfilePage() {
     mutationFn: async (values: MedicalProfileFormValues) => {
       if (!client || !organisationId || !effectiveMemberId || !user?.id) {
         throw new Error('Cannot save medical profile without full context.');
+      }
+      if (values.menu_selection.trim() === '') {
+        throw new Error('Select a menu before saving.');
       }
 
       const load = await fetchMedicalProfileData(secure, effectiveMemberId, organisationId);

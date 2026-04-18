@@ -135,7 +135,10 @@ function ProfileEditProxyContent() {
         phones={data.phones}
         organisationId={data.member?.organisation_id ?? organisationId}
       />
-      <ProfilePrompts profileProgress={data.profileProgress} />
+      <ProfilePrompts
+        profileProgress={data.profileProgress}
+        navContext={{ kind: 'delegated', memberId }}
+      />
       <EventList eventsByCategory={data.eventsByCategory} />
       <Button type="button" variant="secondary" onClick={() => navigate('/')}>
         Back to dashboard

@@ -1,7 +1,8 @@
-import { lazy, Suspense, useMemo } from 'react';
-import { Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useMemo } from 'react';
+import { Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useSessionRestoration } from '@solvera/pace-core/hooks';
-import { ProtectedRoute, LoadingSpinner } from '@solvera/pace-core/components';
+import { ProtectedRoute, LoadingSpinner, SessionRestorationLoader } from '@solvera/pace-core/components';
+import { supabaseClient } from '@/lib/supabase';
 import { AppErrorBoundary } from '@/shared/components/AppErrorBoundary';
 import { OrganisationLoadingGate } from '@/shared/components/OrganisationLoadingGate';
 import { PortalAuthenticatedLayout } from '@/shared/components/PortalAuthenticatedLayout';
@@ -52,6 +53,14 @@ const NotFoundPage = lazy(async () => {
   const m = await import('@/pages/NotFoundPage');
   return { default: m.NotFoundPage };
 });
+const EventHubPlaceholderPage = lazy(async () => {
+  const m = await import('@/pages/public/EventWorkflowPlaceholders');
+  return { default: m.EventHubPlaceholderPage };
+});
+const EventApplicationPlaceholderPage = lazy(async () => {
+  const m = await import('@/pages/public/EventWorkflowPlaceholders');
+  return { default: m.EventApplicationPlaceholderPage };
+});
 
 function RouteLoadingFallback() {
   return (
@@ -77,11 +86,9 @@ function ProtectedRouteWithRedirect() {
     <ProtectedRoute
       loginPath={loginPath}
       loadingFallback={
-        <main className="grid min-h-screen place-items-center px-4" aria-busy="true">
-          <section className="grid place-items-center gap-4">
-            <LoadingSpinner label="Loading…" />
-          </section>
-        </main>
+        <SessionRestorationLoader message="Checking authentication…">
+          <main className="min-h-screen" aria-busy="true" />
+        </SessionRestorationLoader>
       }
     />
   );
@@ -90,6 +97,30 @@ function ProtectedRouteWithRedirect() {
 function SessionRestorationHookProbe() {
   useSessionRestoration();
   return null;
+}
+
+/**
+ * Shell-level redirect for auth teardown events (idle timeout, explicit sign-out, session expiry).
+ */
+function useSessionAuthRedirector() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const { data } = supabaseClient.auth.onAuthStateChange((event) => {
+      if (event !== 'SIGNED_OUT') {
+        return;
+      }
+      if (location.pathname === '/login' || location.pathname === '/register') {
+        return;
+      }
+      navigate('/login', { replace: true });
+    });
+    return () => {
+      data.subscription.unsubscribe();
+    };
+  }, [location.pathname, navigate]);
+
 }
 
 function EventFormRoute() {
@@ -112,6 +143,8 @@ function ProfileCompleteRoute() {
 }
 
 export default function App() {
+  useSessionAuthRedirector();
+
   return (
     <AppErrorBoundary>
       <SessionRestorationHookProbe />
@@ -133,7 +166,9 @@ export default function App() {
               </Route>
             </Route>
           </Route>
+          <Route path="/:eventSlug/application" element={<EventApplicationPlaceholderPage />} />
           <Route path="/:eventSlug/:formSlug" element={<EventFormRoute />} />
+          <Route path="/:eventSlug" element={<EventHubPlaceholderPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { isErr, isOk } from '@solvera/pace-core/types';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -49,7 +50,8 @@ describe('enrichLinkedProfilesWithMemberIds', () => {
     const from = vi.fn();
     const client = { from } as never;
     const out = await enrichLinkedProfilesWithMemberIds(client, []);
-    expect(out).toEqual([]);
+    expect(isOk(out)).toBe(true);
+    if (isOk(out)) expect(out.data).toEqual([]);
     expect(from).not.toHaveBeenCalled();
   });
 
@@ -59,7 +61,8 @@ describe('enrichLinkedProfilesWithMemberIds', () => {
     const rows = [baseRow({ member_id: 'm1' })];
     const out = await enrichLinkedProfilesWithMemberIds(client, rows);
     expect(from).not.toHaveBeenCalled();
-    expect(out[0]?.member_id).toBe('m1');
+    expect(isOk(out)).toBe(true);
+    if (isOk(out)) expect(out.data[0]?.member_id).toBe('m1');
   });
 
   it('returns rows unchanged when member lookup returns nothing', async () => {
@@ -70,7 +73,8 @@ describe('enrichLinkedProfilesWithMemberIds', () => {
     const client = { from } as never;
     const rows = [baseRow()];
     const out = await enrichLinkedProfilesWithMemberIds(client, rows);
-    expect(out[0]?.member_id).toBeUndefined();
+    expect(isOk(out)).toBe(true);
+    if (isOk(out)) expect(out.data[0]?.member_id).toBeUndefined();
   });
 
   it('matches organisation_id when multiple candidates exist', async () => {
@@ -87,7 +91,8 @@ describe('enrichLinkedProfilesWithMemberIds', () => {
     const client = { from } as never;
     const rows = [baseRow({ organisation_id: 'org-a' })];
     const out = await enrichLinkedProfilesWithMemberIds(client, rows);
-    expect(out[0]?.member_id).toBe('right');
+    expect(isOk(out)).toBe(true);
+    if (isOk(out)) expect(out.data[0]?.member_id).toBe('right');
   });
 
   it('uses a single candidate when organisation_id is absent', async () => {
@@ -101,10 +106,11 @@ describe('enrichLinkedProfilesWithMemberIds', () => {
     const client = { from } as never;
     const rows = [baseRow()];
     const out = await enrichLinkedProfilesWithMemberIds(client, rows);
-    expect(out[0]?.member_id).toBe('only');
+    expect(isOk(out)).toBe(true);
+    if (isOk(out)) expect(out.data[0]?.member_id).toBe('only');
   });
 
-  it('returns rows unchanged when core_member query errors', async () => {
+  it('returns err when core_member query errors', async () => {
     const from = vi.fn(() => ({
       select: vi.fn().mockReturnThis(),
       in: vi.fn().mockResolvedValue({ data: null, error: { message: 'db' } }),
@@ -112,7 +118,8 @@ describe('enrichLinkedProfilesWithMemberIds', () => {
     const client = { from } as never;
     const rows = [baseRow()];
     const out = await enrichLinkedProfilesWithMemberIds(client, rows);
-    expect(out[0]?.member_id).toBeUndefined();
+    expect(isErr(out)).toBe(true);
+    if (isErr(out)) expect(out.error.code).toBe('LINKED_PROFILE_MEMBER_LOOKUP');
   });
 
   it('does not guess member_id when multiple candidates share person_id without organisation_id', async () => {
@@ -129,7 +136,8 @@ describe('enrichLinkedProfilesWithMemberIds', () => {
     const client = { from } as never;
     const rows = [baseRow()];
     const out = await enrichLinkedProfilesWithMemberIds(client, rows);
-    expect(out[0]?.member_id).toBeUndefined();
+    expect(isOk(out)).toBe(true);
+    if (isOk(out)) expect(out.data[0]?.member_id).toBeUndefined();
   });
 });
 

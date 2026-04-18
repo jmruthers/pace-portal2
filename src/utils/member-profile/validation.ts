@@ -33,7 +33,14 @@ export const memberProfileSchema = z
     postal: addressValueSchema.optional().nullable(),
     membership_type_id: z.number().int().positive().nullable(),
     membership_number: z.string().optional().nullable(),
-    membership_status: z.enum(['Provisional', 'Cancelled', 'Active', 'Suspended', 'Resigned']),
+    membership_status: z.enum([
+      'Provisional',
+      'Active',
+      'Suspended',
+      'Lapsed',
+      'Resigned',
+      'Revoked',
+    ]),
     phones: z.array(memberProfilePhoneSchema).min(1, 'Add at least one phone number.'),
   })
   .superRefine((data, ctx) => {

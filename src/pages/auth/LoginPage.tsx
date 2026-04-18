@@ -10,8 +10,10 @@ export function LoginPage() {
   const redirectTo = searchParams.get('redirect') ?? '/';
 
   return (
-    <>
-      <PaceLoginPage appName={APP_NAME} onSuccessRedirectPath={redirectTo} />
+    <section className="grid min-h-dvh grid-rows-[minmax(0,1fr)_auto]">
+      <article className="grid min-h-0 place-content-center [&>main]:min-h-0" aria-label="Sign in">
+        <PaceLoginPage appName={APP_NAME} onSuccessRedirectPath={redirectTo} />
+      </article>
       <nav
         aria-label="Account creation"
         className="mx-auto grid w-full max-w-(--app-width) justify-items-center pb-8"
@@ -20,6 +22,6 @@ export function LoginPage() {
           Need an account? <Link to="/register">Register</Link>
         </p>
       </nav>
-    </>
+    </section>
   );
 }

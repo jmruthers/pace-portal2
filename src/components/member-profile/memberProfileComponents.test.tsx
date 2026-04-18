@@ -25,6 +25,32 @@ describe('member profile composition (PR03)', () => {
     }
   });
 
+  it('ProfilePrompts delegated context routes member profile to profile edit', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProfilePrompts
+                profileProgress={{ completionRatio: 0.5, totalFields: 9, filledFields: 4 }}
+                navContext={{ kind: 'delegated', memberId: 'm-delegated' }}
+              />
+            }
+          />
+          <Route path="/profile/edit/:memberId" element={<p>Edit delegated target</p>} />
+          <Route path="/member-profile" element={<p>Self service</p>} />
+          <Route path="/medical-profile" element={<p>Medical</p>} />
+          <Route path="/additional-contacts" element={<p>Contacts</p>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    const opens = screen.getAllByRole('button', { name: /^open$/i });
+    await user.click(opens[0]!);
+    expect(screen.getByText(/edit delegated target/i)).toBeInTheDocument();
+  });
+
   it('ProfileSetupPrompt offers setup navigation', async () => {
     const user = userEvent.setup();
     render(

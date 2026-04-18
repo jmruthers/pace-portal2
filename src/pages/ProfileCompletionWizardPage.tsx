@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { FormProvider, type UseFormReturn } from '@solvera/pace-core/forms';
 import {
   Alert,
@@ -13,6 +14,7 @@ import {
   LoadingSpinner,
   Progress,
 } from '@solvera/pace-core/components';
+import { useToast } from '@solvera/pace-core/hooks';
 import type { MemberProfileFormValues } from '@/components/member-profile/MemberProfile/memberProfileWizardSchema';
 import { MemberProfileWizardSteps } from '@/components/member-profile/MemberProfile/MemberProfileWizardSteps';
 import { useProfileCompletionWizard } from '@/hooks/auth/useProfileCompletionWizard';
@@ -27,8 +29,20 @@ import { useProfileCompletionWizard } from '@/hooks/auth/useProfileCompletionWiz
  */
 export function ProfileCompletionWizardPage() {
   const w = useProfileCompletionWizard();
+  const { toast } = useToast();
+  const prevSaveStatus = useRef(w.saveStatus);
   const isLast = w.currentStep === w.totalSteps - 1;
   const stepTitle = w.stepLabels[w.currentStep] ?? 'Profile';
+
+  useEffect(() => {
+    if (w.saveStatus === 'success' && prevSaveStatus.current !== 'success') {
+      toast({
+        title: 'Profile saved',
+        description: 'Taking you to the next screen…',
+      });
+    }
+    prevSaveStatus.current = w.saveStatus;
+  }, [w.saveStatus, toast]);
 
   return (
     <section aria-label="Profile completion wizard" className="mx-auto grid w-full max-w-(--app-width) gap-4 px-4 py-6">

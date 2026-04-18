@@ -16,7 +16,6 @@ function makeRow(partial: Partial<CoreAddressRow>): CoreAddressRow {
     full_address: null,
     lat: null,
     lng: null,
-    organisation_id: null,
     place_id: 'ChIJx',
     postcode: '2000',
     route: 'George St',

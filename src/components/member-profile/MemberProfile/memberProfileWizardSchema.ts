@@ -84,7 +84,9 @@ export const memberProfileWizardFormSchema = z.object({
   gender_id: z.number().nullable(),
   pronoun_id: z.number().nullable(),
   residential: addressValueSchemaLoose,
-  /** When omitted, the person has no separate postal address. */
+  /** When true, `postal` is ignored and the person uses the residential address for mail. */
+  postal_same_as_residential: z.boolean(),
+  /** When omitted, the person has no separate postal address (same as residential). */
   postal: addressValueSchemaLoose.optional(),
   phones: phonesFormSchema,
   membership_number: z.string().nullable(),
@@ -100,23 +102,60 @@ export type MemberProfileStepValidationIssue = {
   message: string;
 };
 
-const memberProfileWizardStep0Schema = memberProfileWizardFormSchema.pick({
-  first_name: true,
-  last_name: true,
-  middle_name: true,
-  preferred_name: true,
-  email: true,
-  date_of_birth: true,
-  gender_id: true,
-  pronoun_id: true,
-});
+const memberProfileWizardStep0Schema = memberProfileWizardFormSchema
+  .pick({
+    first_name: true,
+    last_name: true,
+    middle_name: true,
+    preferred_name: true,
+    email: true,
+    date_of_birth: true,
+    gender_id: true,
+    pronoun_id: true,
+  })
+  .superRefine((val, ctx) => {
+    if (val.gender_id == null || val.gender_id <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Gender is required.',
+        path: ['gender_id'],
+      });
+    }
+    if (val.pronoun_id == null || val.pronoun_id <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Pronouns are required.',
+        path: ['pronoun_id'],
+      });
+    }
+  });
 
 /** Step 1 “save” validation (strict contact rules). */
-const memberProfileWizardStep1StrictSchema = z.object({
-  residential: addressValueSchemaRequired,
-  postal: postalAddressSchema,
-  phones: phonesWithContactRule,
-});
+const memberProfileWizardStep1StrictSchema = z
+  .object({
+    residential: addressValueSchemaRequired,
+    postal_same_as_residential: z.boolean(),
+    postal: postalAddressSchema,
+    phones: phonesWithContactRule,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.postal_same_as_residential) {
+      if (data.postal == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Postal address is required.',
+          path: ['postal'],
+        });
+        return;
+      }
+      const parsed = addressValueSchemaRequired.safeParse(data.postal);
+      if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+          ctx.addIssue({ ...issue, path: ['postal', ...issue.path] });
+        }
+      }
+    }
+  });
 
 const memberProfileWizardStep2Schema = memberProfileWizardFormSchema.pick({
   membership_number: true,
@@ -162,6 +201,9 @@ export function buildMemberProfileFormDefaults(input: {
         }))
       : [{ phone_number: '', phone_type_id: null }];
 
+  const postalSameAsResidential =
+    person.postal_address_id == null || person.postal_address_id === person.residential_address_id;
+
   return {
     first_name: person.first_name ?? '',
     last_name: person.last_name ?? '',
@@ -172,6 +214,7 @@ export function buildMemberProfileFormDefaults(input: {
     gender_id: person.gender_id ?? null,
     pronoun_id: person.pronoun_id ?? null,
     residential: residential != null ? coreAddressRowToAddressValue(residential) : emptyAddressValue(),
+    postal_same_as_residential: postalSameAsResidential,
     postal: postal != null ? coreAddressRowToAddressValue(postal) : undefined,
     phones: phoneRows,
     membership_number: member?.membership_number ?? null,
@@ -190,6 +233,7 @@ export function emptyMemberProfileFormValues(): MemberProfileFormValues {
     gender_id: null,
     pronoun_id: null,
     residential: emptyAddressValue(),
+    postal_same_as_residential: true,
     postal: undefined,
     phones: [{ phone_number: '', phone_type_id: null }],
     membership_number: null,

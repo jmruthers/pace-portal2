@@ -8,6 +8,15 @@ import { MedicalProfilePage } from '@/pages/medical-profile/MedicalProfilePage';
 
 const mockNavigate = vi.fn();
 
+const mockDietTypes = [
+  {
+    diettype_id: '1',
+    diettype_code: 'ST',
+    diettype_name: 'Standard',
+    diettype_description: 'Nut free',
+  },
+];
+
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>();
   return {
@@ -34,6 +43,15 @@ vi.mock('@solvera/pace-core/hooks', () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 
+vi.mock('@/hooks/medical-profile/useMedicalReferenceData', () => ({
+  useMedicalReferenceData: () => ({
+    dietTypes: mockDietTypes,
+    dietTypesLoading: false,
+    dietTypesError: null,
+    dietTypesIsError: false,
+  }),
+}));
+
 const editor = vi.hoisted(() =>
   vi.fn(() => ({
     organisationId: 'org-1',
@@ -42,10 +60,40 @@ const editor = vi.hoisted(() =>
     blockedReason: null as 'needs_member_profile' | 'proxy_invalid' | 'no_organisation' | null,
     load: {
       data: {
-        profile: null,
+        profile: {
+          id: 'mp1',
+          person_id: 'p1',
+          created_at: null,
+          created_by: null,
+          data_retention_until: null,
+          diet_type_id: '1',
+          dietary_comments: null,
+          health_care_card_expiry: null,
+          health_care_card_number: null,
+          health_fund_name: null,
+          health_fund_number: null,
+          is_fully_immunised: false,
+          last_tetanus_date: null,
+          medicare_expiry: null,
+          medicare_number: null,
+          requires_support: false,
+          support_details: null,
+          updated_at: null,
+          updated_by: null,
+        },
         memberId: 'm1',
         personId: 'p1',
-        conditions: [{ id: 'c1', name: 'Asthma', custom_name: null, severity: 'High', medical_alert: true, is_active: true }],
+        conditions: [
+          {
+            id: 'c1',
+            name: 'Asthma',
+            custom_name: null,
+            severity: 'High',
+            medical_alert: true,
+            is_active: true,
+          },
+        ],
+        dietTypeNameFromRpc: null,
       },
       isLoading: false,
       isError: false,
@@ -86,7 +134,27 @@ describe('MedicalProfilePage', () => {
       blockedReason: null,
       load: {
         data: {
-          profile: null,
+          profile: {
+            id: 'mp1',
+            person_id: 'p1',
+            created_at: null,
+            created_by: null,
+            data_retention_until: null,
+            diet_type_id: '1',
+            dietary_comments: null,
+            health_care_card_expiry: null,
+            health_care_card_number: null,
+            health_fund_name: null,
+            health_fund_number: null,
+            is_fully_immunised: false,
+            last_tetanus_date: null,
+            medicare_expiry: null,
+            medicare_number: null,
+            requires_support: false,
+            support_details: null,
+            updated_at: null,
+            updated_by: null,
+          },
           memberId: 'm1',
           personId: 'p1',
           conditions: [
@@ -99,6 +167,7 @@ describe('MedicalProfilePage', () => {
               is_active: true,
             },
           ],
+          dietTypeNameFromRpc: null,
         },
         isLoading: false,
         isError: false,
@@ -134,10 +203,11 @@ describe('MedicalProfilePage', () => {
       load: {
         data: {
           profile: null,
+          dietTypeNameFromRpc: null,
           memberId: 'm1',
           personId: 'p1',
           conditions: [],
-        },
+        } as never,
         isLoading: false,
         isError: false,
         error: null,
@@ -174,10 +244,31 @@ describe('MedicalProfilePage', () => {
       blockedReason: null,
       load: {
         data: {
-          profile: null,
+          profile: {
+            id: 'mp1',
+            person_id: 'p1',
+            created_at: null,
+            created_by: null,
+            data_retention_until: null,
+            diet_type_id: '1',
+            dietary_comments: null,
+            health_care_card_expiry: null,
+            health_care_card_number: null,
+            health_fund_name: null,
+            health_fund_number: null,
+            is_fully_immunised: false,
+            last_tetanus_date: null,
+            medicare_expiry: null,
+            medicare_number: null,
+            requires_support: false,
+            support_details: null,
+            updated_at: null,
+            updated_by: null,
+          },
           memberId: 'm1',
           personId: 'p1',
           conditions: [],
+          dietTypeNameFromRpc: null,
         },
         isLoading: false,
         isError: false,
