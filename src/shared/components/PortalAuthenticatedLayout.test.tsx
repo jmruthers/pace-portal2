@@ -18,6 +18,14 @@ vi.mock('@/shared/hooks/useAvailableApps', () => ({
   }),
 }));
 
+vi.mock('@solvera/pace-core/components', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@solvera/pace-core/components')>();
+  return {
+    ...actual,
+    ContextSelector: () => <div data-testid="context-selector-stub" />,
+  };
+});
+
 describe('PortalAuthenticatedLayout', () => {
   it('renders application header chrome with AppSwitcher region', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

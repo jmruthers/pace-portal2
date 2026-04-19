@@ -19,7 +19,10 @@ const person = {
   middle_name: null,
   preferred_name: null,
   date_of_birth: null,
-  address_id: null,
+  gender_id: null,
+  pronoun_id: null,
+  residential_address_id: null,
+  postal_address_id: null,
   created_at: null,
   created_by: null,
   deleted_at: null,
@@ -44,5 +47,13 @@ describe('ContactSummaryCard', () => {
       />
     );
     expect(screen.getByText(/2 phone number/i)).toBeInTheDocument();
+  });
+
+  it('hides profile photo upload when readOnly', () => {
+    render(
+      <ContactSummaryCard person={person} phones={[]} organisationId="org-1" readOnly />
+    );
+    expect(screen.queryByTestId('photo-upload')).not.toBeInTheDocument();
+    expect(screen.getByText(/Sam Lee/)).toBeInTheDocument();
   });
 });

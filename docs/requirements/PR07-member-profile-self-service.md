@@ -17,13 +17,13 @@ This file is **`PR07-member-profile-self-service.md`** — portal requirement sl
 
 ## Acceptance criteria
 
-- [ ] The page loads and prefills the current user’s profile.
-- [ ] The form renders the current sectioned composition.
-- [ ] Completion progress matches the current shared calculation.
-- [ ] Saving updates person, member, phone, and address data correctly.
-- [ ] Validation errors are surfaced before save.
-- [ ] The page remains usable without a proxy session.
-- [ ] Membership status continues to be normalized and persisted by the save contract.
+- [x] The page loads and prefills the current user’s profile.
+- [x] The form renders the current sectioned composition.
+- [x] Completion progress matches the current shared calculation.
+- [x] Saving updates person, member, phone, and address data correctly.
+- [x] Validation errors are surfaced before save.
+- [x] The page remains usable without a proxy session.
+- [x] Membership status continues to be normalized and persisted by the save contract.
 
 ## API / Contract
 

@@ -59,4 +59,21 @@ describe('useProfilePhotoFileRows', () => {
     expect(result.current.fetchStatus).toBe('idle');
     expect(mockRpc).not.toHaveBeenCalled();
   });
+
+  it('retries without org scope when org-scoped list is empty', async () => {
+    mockRpc
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({
+        data: [{ id: 'f1', file_path: 'p/a.jpg', file_metadata: {}, is_public: false, created_at: 't' }],
+        error: null,
+      });
+
+    const { result } = renderHook(() => useProfilePhotoFileRows('person-1', 'org-1', true), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
+    expect(result.current.data?.length).toBe(1);
+    expect(mockRpc).toHaveBeenCalledTimes(2);
+  });
 });

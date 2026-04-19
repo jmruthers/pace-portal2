@@ -1,0 +1,44 @@
+{
+  "description": "Standard 8 coverage ownership: hooks/utils/components + explicit critical paths (100%).",
+  "groups": [
+    {
+      "id": "hooks",
+      "label": "Hooks (app + shared)",
+      "prefixes": ["src/hooks/", "src/shared/hooks/"],
+      "statements": 0.79,
+      "lines": 0.79
+    },
+    {
+      "id": "utils",
+      "label": "Utils (app + shared/lib/utils)",
+      "prefixes": ["src/utils/", "src/shared/lib/utils/"],
+      "statements": 0.9,
+      "lines": 0.9
+    },
+    {
+      "id": "components",
+      "label": "Components (app + shared)",
+      "prefixes": ["src/components/", "src/shared/components/"],
+      "statements": 0.7,
+      "lines": 0.7
+    }
+  ],
+  "criticalPaths": [
+    {
+      "path": "src/shared/hooks/useProxyMode.ts",
+      "label": "Delegated / proxy mode detection"
+    },
+    {
+      "path": "src/pages/member-profile/ProfileViewPage.tsx",
+      "label": "Member profile view (RBAC surfaces)"
+    },
+    {
+      "path": "src/pages/member-profile/ProfileEditProxyPage.tsx",
+      "label": "Delegated profile edit"
+    },
+    {
+      "path": "src/lib/supabase.ts",
+      "label": "Supabase client bootstrap"
+    }
+  ]
+}

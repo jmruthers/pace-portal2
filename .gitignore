@@ -20,6 +20,9 @@ audit/*.md
 # Test coverage
 coverage/
 
+# Playwright / runner artifacts
+test-results/
+
 # IDE / OS
 .idea/
 .vscode/

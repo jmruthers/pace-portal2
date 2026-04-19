@@ -18,14 +18,14 @@ This file is **`PR06-wizard-field-details.md`** — portal requirement slice **P
 
 ## Acceptance criteria
 
-- [ ] Each step renders the current field groups faithfully.
-- [ ] Step 1 validates the required personal fields.
-- [ ] Step 2 validates at least one phone number and a residential address.
-- [ ] Step 3 remains optional but persists correctly.
-- [ ] Existing data is loaded into the relevant fields before editing begins.
-- [ ] Address selection updates both the displayed address and the saved address record.
-- [ ] Phone rows can be added, edited, and removed.
-- [ ] The save contract preserves the current `membership_status` normalization behavior.
+- [x] Each step renders the current field groups faithfully.
+- [x] Step 1 validates the required personal fields.
+- [x] Step 2 validates at least one phone number and a residential address.
+- [x] Step 3 remains optional but persists correctly.
+- [x] Existing data is loaded into the relevant fields before editing begins.
+- [x] Address selection updates both the displayed address and the saved address record.
+- [x] Phone rows can be added, edited, and removed.
+- [x] The save contract preserves the current `membership_status` normalization behavior.
 
 ## API / Contract
 

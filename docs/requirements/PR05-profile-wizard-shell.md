@@ -18,19 +18,20 @@ This file is **`PR05-profile-wizard-shell.md`** — portal requirement slice **P
 
 ## Acceptance criteria
 
-- [ ] `/profile-complete` renders only for authenticated users behind the current page guard.
-- [ ] The wizard shows a stable 3-step shell with progress feedback and clear current-step state.
-- [ ] Existing profile data is prefilling the shell when available.
-- [ ] Validation prevents advancing when shell-level required checks fail.
-- [ ] Save and continue behavior preserves the current redirect outcomes for event handoff and dashboard completion.
-- [ ] Loading, validation failure, save failure, and cancel states are represented clearly.
+- [x] `/profile-complete` renders only for authenticated users behind the current page guard.
+- [x] The wizard shows a stable 3-step shell with progress feedback and clear current-step state.
+- [x] Existing profile data is prefilling the shell when available.
+- [x] Validation prevents advancing when shell-level required checks fail.
+- [x] Save and continue behavior preserves the current redirect outcomes for event handoff and dashboard completion.
+- [x] Loading, validation failure, save failure, and cancel states are represented clearly.
 
 ## API / Contract
 
 - Public exports: `/profile-complete`, `ProfileCompletionWizardPage`, `useProfileCompletionWizard`, `useReferenceData`, `fetchUserData`, `usePhoneNumbers`, `useAddressData`, and `loadGoogleMapsWithPlaces`.
 - File paths: `src/pages/auth/ProfileCompletionWizardPage.tsx`, `src/hooks/auth/useProfileCompletionWizard.ts`, `src/shared/hooks/useReferenceData.ts`, `src/shared/lib/utils/userUtils.ts`, `src/hooks/contacts/usePhoneNumbers.ts`, `src/hooks/shared/useAddressData.ts`, `src/integrations/google-maps/loader.ts`.
 - Data contracts: `core_person`, `core_member`, `core_phone`, and `core_address` are the persistence seams behind the shell; query-param handoff uses `eventSlug`, `formSlug`, and the `fromWizard=true` return flag.
-- Permission and context contracts: authenticated route, `PagePermissionGuard`, current user/session context, and event-form handoff context are required; this shell does not own its own organisation or RBAC policy.
+- Permission and context contracts: authenticated route, current user/session context, and event-form handoff context are required; this shell does not own its own organisation or RBAC policy.
+- **Implementation note (pace-portal):** `/profile-complete` is wrapped by the PR01 `ProtectedRoute` and `ProfileCompleteLayout` rather than `PagePermissionGuard`, because `rbac_check_permission_simplified` / `rbac_permissions_get` can block onboarding when `profile-complete` page rows are absent. Access remains authenticated-only; use `PagePermissionGuard` here only once RBAC page metadata guarantees non-blocking roles.
 - Ownership rule: edits in this slice should stay limited to the exported page shell, shell-level loading and redirect behavior, progress and action-row orchestration, and the `useProfileCompletionWizard` surface that coordinates steps. Step body rendering, field-level validation, and save-shape detail belong to PR06 even when they live behind the same hook.
 
 ## Visual specification

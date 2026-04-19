@@ -17,15 +17,15 @@ This file is **`PR08-proxy-delegated-editing.md`** — portal requirement slice 
 
 ## Acceptance criteria
 
-- [ ] Linked profiles navigate to the correct view or edit route based on permission.
-- [ ] Proxy sessions are validated before delegated editing proceeds.
-- [ ] Invalid proxy state is cleared rather than persisted.
-- [ ] The read-only page shows profile data and edit affordance only when permitted.
-- [ ] The edit proxy page shows delegated context clearly.
-- [ ] Local proxy state alone is insufficient to authorize a protected delegated read or write.
-- [ ] Delegated flows expose enough acting-user and target-member context for downstream audit attribution.
-- [ ] Delegated users can reach the **same in-scope portal capabilities for the target member** as self-service (see **Delegated module reach** below) once proxy context is **server-valid**; navigation may differ by route (e.g. `/profile/edit/:memberId` workspace vs `/member-profile`) but **data scope and feature set** must not be narrower than the target member’s rebuild scope, excluding billing/payment.
-- [ ] Billing/payment/invoice UI, including the current `SmartBillingCard`, is excluded from the rebuilt delegated workspace.
+- [x] Linked profiles navigate to the correct view or edit route based on permission.
+- [x] Proxy sessions are validated before delegated editing proceeds.
+- [x] Invalid proxy state is cleared rather than persisted.
+- [x] The read-only page shows profile data and edit affordance only when permitted.
+- [x] The edit proxy page shows delegated context clearly.
+- [x] Local proxy state alone is insufficient to authorize a protected delegated read or write.
+- [x] Delegated flows expose enough acting-user and target-member context for downstream audit attribution.
+- [x] Delegated users can reach the **same in-scope portal capabilities for the target member** as self-service (see **Delegated module reach** below) once proxy context is **server-valid**; navigation may differ by route (e.g. `/profile/edit/:memberId` workspace vs `/member-profile`) but **data scope and feature set** must not be narrower than the target member’s rebuild scope, excluding billing/payment.
+- [x] Billing/payment/invoice UI, including the current `SmartBillingCard`, is excluded from the rebuilt delegated workspace.
 
 ## API / Contract
 
@@ -46,7 +46,7 @@ Use this table to resolve “same in-scope modules” without open-ended interpr
 | Medical summary & conditions | `/medical-profile` | Same bounded context with hooks resolving **target member** in proxy mode | PR09, PR10 |
 | Action-plan files | Within medical / condition flows | Same as member for `T`; file lifecycle per PR11 | PR10, PR11 |
 | Additional contacts | `/additional-contacts` | Same flows; duplicate detection vs **`T`** in proxy mode | PR12, PR13 |
-| Event landing & selector | `/:eventSlug/:formSlug` (public branch), dashboard cards | Same event/form behavior; handoff and CTAs per PR14; authenticated form and submit attribute to **`T`** when proxy requires it | PR14–PR16 |
+| Event selector, hub, and form routes | `/:eventSlug`, `/:eventSlug/application`, `/:eventSlug/:formSlug`, dashboard cards | Same event/form behavior; handoff and CTAs per PR14; authenticated form and submit attribute to **`T`** when proxy requires it | PR14–PR16 |
 
 If a future slice adds a new protected route, extend this matrix in the same table format—do not rely on vague “parity with legacy” wording alone.
 

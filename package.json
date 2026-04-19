@@ -9,7 +9,10 @@
     "type-check": "tsc -b",
     "test": "vitest --testTimeout=10000",
     "test:run": "vitest run --testTimeout=10000",
-    "test:coverage": "vitest run --coverage --coverage.provider=istanbul --testTimeout=10000",
+    "test:coverage:run": "vitest run --coverage --coverage.provider=istanbul --testTimeout=10000",
+    "test:coverage:check": "node scripts/check-coverage.mjs",
+    "test:coverage": "npm run test:coverage:run && npm run test:coverage:check",
+    "test:coverage:enforce": "npm run test:coverage",
     "lint": "eslint .",
     "preview": "vite preview",
     "setup": "node node_modules/@solvera/pace-core/scripts/setup.cjs",
@@ -28,6 +31,7 @@
     "@tanstack/react-query": "^5.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-hook-form": "^7.53.0",
     "react-router-dom": "^6.0.0 || ^7.0.0"
   },
   "devDependencies": {

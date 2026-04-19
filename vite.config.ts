@@ -1,49 +1,18 @@
-import { defineConfig } from 'vitest/config';
+import path from 'path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import path from 'path';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [
     tailwindcss(),
     react(),
   ],
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./src/test/setup.ts'],
-    testTimeout: 10_000,
-    hookTimeout: 10_000,
-    teardownTimeout: 10_000,
-    coverage: {
-      provider: 'istanbul',
-      reporter: ['text', 'html'],
-      include: ['src/**/*.{ts,tsx}'],
-      exclude: [
-        '**/node_modules/**',
-        'src/**/*.test.{ts,tsx}',
-        'src/test/**',
-        'src/types/**',
-        'src/vite-env.d.ts',
-        /** Entry and env-only wiring; behaviour covered by integration smoke tests elsewhere. */
-        'src/main.tsx',
-        'src/App.tsx',
-        'src/lib/supabase.ts',
-      ],
-      thresholds: {
-        /** Standard 8: track upward over time; entry files excluded above. */
-        statements: 76,
-        branches: 62,
-        functions: 72,
-        lines: 77,
-      },
-    },
-  },
-  // Pre-bundle `cookie` (CJS) so `import { parse } from 'cookie'` in react-router works in the browser.
-  // Excluding react-router-dom skips that pre-bundle and triggers "does not provide export named: parse".
   optimizeDeps: {
-    exclude: ['@solvera/pace-core'],
-    include: ['cookie', 'react-router', 'react-router-dom'],
+    // React Router pulls CJS-only deps with named imports (`parse`/`serialize`, `splitCookiesString`).
+    // Pre-bundle so the browser gets ESM interop.
+    include: ['cookie', 'set-cookie-parser'],
+    exclude: ['@solvera/pace-core', 'react-router-dom'],
   },
   resolve: {
     alias: {

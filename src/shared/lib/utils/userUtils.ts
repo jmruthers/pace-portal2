@@ -3,8 +3,11 @@ import type { ApiResult } from '@solvera/pace-core/types';
 import { err, ok } from '@solvera/pace-core/types';
 import type { RBACSupabaseClient } from '@solvera/pace-core/rbac';
 import type { Database } from '@/types/pace-database';
-import { getOrCreateCached } from '@/shared/lib/utils/userDataCache';
+import { deleteUserDataCacheEntry, getOrCreateCached } from '@/shared/lib/utils/userDataCache';
 import { toTypedSupabase } from '@/lib/supabase-typed';
+
+/** Error code from {@link fetchCurrentPersonMember} when the user has no person record yet. */
+export const NO_PERSON_PROFILE_ERROR_CODE = 'USER_DATA_NOT_FOUND' as const;
 
 export type CurrentPersonMember = {
   person: Database['public']['Tables']['core_person']['Row'];
@@ -20,6 +23,11 @@ type ReducedPerson = Pick<
 
 function cacheKey(userId: string, organisationId: string): string {
   return `personMember:${userId}:${organisationId}`;
+}
+
+/** Clears the cached {@link fetchCurrentPersonMember} snapshot so the next read refetches from Supabase. */
+export function bustCurrentPersonMemberCache(userId: string, organisationId: string): void {
+  deleteUserDataCacheEntry(cacheKey(userId, organisationId));
 }
 
 /**
@@ -104,7 +112,7 @@ async function fallbackPath(
   const personPartial = reduced.data as ReducedPerson | null;
   if (!personPartial?.id) {
     return err({
-      code: 'USER_DATA_NOT_FOUND',
+      code: NO_PERSON_PROFILE_ERROR_CODE,
       message: 'Could not load profile.',
     });
   }
@@ -138,3 +146,6 @@ async function fallbackPath(
     usedReducedFieldFallback: true,
   });
 }
+
+/** PR05 contract name for {@link fetchCurrentPersonMember}. */
+export const fetchUserData = fetchCurrentPersonMember;

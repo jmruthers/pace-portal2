@@ -44,6 +44,7 @@ export function PortalAuthenticatedLayout() {
         logoHref="/"
         navItems={PORTAL_NAV_ITEMS}
         appSwitcherItems={appSwitcherItems}
+        showContextSelector
         userFullName={fullName}
         userEmail={email}
         onUserMenuSignOut={handleSignOut}

@@ -18,6 +18,9 @@ export type ReferenceDataBundle = {
   pronounTypes: Database['public']['Tables']['core_pronoun_type']['Row'][];
 };
 
+/** Requirement name for PR06 / wizard docs; same shape as {@link ReferenceDataBundle}. */
+export type MemberProfileReferenceData = ReferenceDataBundle;
+
 /** Exported for tests — loads all reference tables in parallel. */
 export async function fetchReferenceDataBundle(
   client: SupabaseClient<Database>
@@ -59,20 +62,32 @@ export function useReferenceData() {
   const secure = useSecureSupabase();
   const db = toTypedSupabase(secure);
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['referenceData', 'v1'],
     enabled: Boolean(db),
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: Number.POSITIVE_INFINITY,
-    queryFn: async (): Promise<ReferenceDataBundle> => {
+    queryFn: async (): Promise<ApiResult<ReferenceDataBundle>> => {
       if (!db) {
-        throw new Error('Reference data requires an authenticated client.');
+        return err({
+          code: 'REFERENCE_DATA_CONTEXT',
+          message: 'Reference data requires an authenticated client.',
+        });
       }
-      const result = await fetchReferenceDataBundle(db);
-      if (!isOk(result)) {
-        throw new Error(result.error.message);
-      }
-      return result.data;
+      return fetchReferenceDataBundle(db);
     },
   });
+
+  const apiError = query.data && !isOk(query.data) ? query.data.error : null;
+  return {
+    ...query,
+    data: query.data && isOk(query.data) ? query.data.data : undefined,
+    error: apiError
+      ? new Error(apiError.message)
+      : query.error instanceof Error
+        ? query.error
+        : null,
+    isError: Boolean(apiError) || query.isError,
+    isSuccess: query.isSuccess && !apiError,
+  };
 }

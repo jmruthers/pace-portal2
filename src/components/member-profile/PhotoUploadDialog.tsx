@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, FileUpload } from '@solvera/pace-core/components';
+import { Alert, AlertDescription, AlertTitle, Button, FileUpload } from '@solvera/pace-core/components';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
 import { toSupabaseClientLike } from '@/lib/supabase-typed';
 import {
@@ -35,12 +35,16 @@ export function PhotoUploadDialog({
   const supabase = toSupabaseClientLike(secure);
   const queryClient = useQueryClient();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     const d = dialogRef.current;
     if (!d) return;
     if (open) {
       if (!d.open) d.showModal();
+      // Reset server error when the dialog is shown again (sync with imperative dialog element).
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear stale upload message when reopening
+      setUploadError(null);
     } else if (d.open) {
       d.close();
     }
@@ -59,6 +63,12 @@ export function PhotoUploadDialog({
           <h2>Update profile photo</h2>
         </header>
         <PhotoGuidelines />
+        {uploadError ? (
+          <Alert variant="destructive">
+            <AlertTitle>Upload failed</AlertTitle>
+            <AlertDescription>{uploadError}</AlertDescription>
+          </Alert>
+        ) : null}
         <FileUpload
           supabase={supabase}
           table_name="core_person"
@@ -73,7 +83,15 @@ export function PhotoUploadDialog({
           maxSize={PROFILE_PHOTO_MAX_BYTES}
           multiple={false}
           label="Choose image"
+          onUploadError={(error) => {
+            const msg =
+              error && typeof error === 'object' && 'message' in error
+                ? String((error as Error).message)
+                : 'Could not upload the image. Try again or contact support.';
+            setUploadError(msg);
+          }}
           onUploadSuccess={() => {
+            setUploadError(null);
             void queryClient.invalidateQueries({ queryKey: ['enhancedLanding'] });
             void queryClient.invalidateQueries({ queryKey: ['profilePhoto'] });
             onOpenChange(false);

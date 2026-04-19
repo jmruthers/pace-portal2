@@ -48,3 +48,9 @@ export function resetUserDataCacheForTests(): void {
   stores.clear();
   inflight.clear();
 }
+
+/** Drops one logical cache entry (e.g. after a profile mutation that must bypass TTL). */
+export function deleteUserDataCacheEntry(key: string): void {
+  stores.delete(key);
+  inflight.delete(key);
+}

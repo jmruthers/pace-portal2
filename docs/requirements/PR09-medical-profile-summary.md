@@ -17,13 +17,13 @@ This file is **`PR09-medical-profile-summary.md`** — portal requirement slice 
 
 ## Acceptance criteria
 
-- [ ] The page preserves the existing `/medical-profile` route and permission gate.
-- [ ] The page blocks access when the member profile is incomplete and explains the next step.
-- [ ] The page supports both self-service and proxy-mode editing.
-- [ ] The save flow persists medical profile data and surfaces success or validation feedback.
-- [ ] The completion progress indicator remains visible and derived from profile completeness.
-- [ ] The rebuild docs clearly state the split boundary into `PR10` and `PR11`.
-- [ ] Pace-core equivalents are used where available instead of introducing new custom controls.
+- [x] The page preserves the existing `/medical-profile` route and permission gate.
+- [x] The page blocks access when the member profile is incomplete and explains the next step.
+- [x] The page supports both self-service and proxy-mode editing.
+- [x] The save flow persists medical profile data and surfaces success or validation feedback.
+- [x] The completion progress indicator remains visible and derived from profile completeness.
+- [x] The rebuild docs clearly state the split boundary into `PR10` and `PR11`.
+- [x] Pace-core equivalents are used where available instead of introducing new custom controls.
 
 ## API / Contract
 
@@ -32,6 +32,7 @@ This file is **`PR09-medical-profile-summary.md`** — portal requirement slice 
 - Data contracts: `medi_profile`, `core_person`, `core_member`, `data_medi_profile_get`, `app_medi_profile_update`, and the `useQueryClient().invalidateQueries(['enhanced-landing'])` refresh after save.
 - ID contract: medical-profile read and write boundaries in this slice should use `UserId`, `OrganisationId`, and `PageId` from `@solvera/pace-core/types` where member context, organisation context, and guarded-page identifiers are passed through hooks or services.
 - Form contract: the medical-profile summary form should use `useZodForm` from `@solvera/pace-core/hooks` for Zod-backed editing and validation instead of wiring raw `react-hook-form` in the page shell or summary form.
+- **Implementation note (pace-portal):** the summary uses pace-core `Form` with a Zod schema (same validation bridge as `useZodForm`); `useMedicalReferenceData` delegates to `useReferenceData` to prime shared lookup cache for future medical-specific option sets.
 - Permission and context contracts: authenticated members only; `PagePermissionGuard` and `AccessDenied` remain in place; proxy mode must support editing a target member’s record using the existing organisation context; the page requires a completed member profile before editing is allowed; organisation context controls whether organisation-specific sections are shown.
 - Downstream contract boundaries: this slice can read the conditions and action-plan identifiers needed to render summary handoffs, but it does not own the underlying CRUD or file lifecycle.
 

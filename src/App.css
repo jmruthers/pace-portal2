@@ -1,13 +1,22 @@
 /*
  * Canonical consuming-app Tailwind v4 entry (Standard 7 Part A).
+ *
+ * Setup once: copy to src/app.css in your app. @source paths are relative to THIS file;
+ * if app.css lives elsewhere, adjust the path to node_modules (see Standard 7).
+ *
+ * Import only ./app.css from main.tsx — do not import core.css again from JS.
+ * Validate: npm run validate (pace-core audit checks structure and palettes).
  */
 
 @import "tailwindcss";
 
+/* @source directives for Tailwind v4 content scanning (paths relative to this file) */
 @source "./**/*.{js,ts,jsx,tsx}";
 @source "../node_modules/@solvera/pace-core/src/**/*.{js,ts,jsx,tsx}";
 
 @import "@solvera/pace-core/styles/core.css";
+
+/* Suite layout width token (--app-width) is defined in pace-core core.css. Do not redefine it here. */
 
 @theme static {
   /* Solvera green */
@@ -61,5 +70,4 @@
     background-repeat: no-repeat;
     background-attachment: fixed;
   }
-
 }
