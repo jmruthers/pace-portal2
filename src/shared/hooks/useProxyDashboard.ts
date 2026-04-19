@@ -20,6 +20,38 @@ type MediRow = Database['public']['Tables']['medi_profile']['Row'] | null;
 type PhoneRow = Database['public']['Tables']['core_phone']['Row'];
 type EventRow = Database['public']['Tables']['core_events']['Row'];
 
+function mapAdditionalContactRows(
+  rows: Array<Record<string, unknown>>
+): AdditionalContactRow[] {
+  return rows
+    .map((row) => {
+      const rawTypeId = row.contact_type_id;
+      const parsedTypeId =
+        typeof rawTypeId === 'number'
+          ? rawTypeId
+          : typeof rawTypeId === 'string'
+            ? Number.parseInt(rawTypeId, 10)
+            : Number.NaN;
+      if (!Number.isFinite(parsedTypeId)) return null;
+
+      return {
+        contact_id: String(row.contact_id ?? ''),
+        contact_person_id: String(row.contact_person_id ?? ''),
+        contact_type_id: parsedTypeId,
+        contact_type_name: String(row.contact_type_name ?? ''),
+        email: String(row.email ?? ''),
+        first_name: String(row.first_name ?? ''),
+        last_name: String(row.last_name ?? ''),
+        member_id: String(row.member_id ?? ''),
+        organisation_id: String(row.organisation_id ?? ''),
+        permission_type: String(row.permission_type ?? ''),
+        phone_number: String(row.phone_number ?? ''),
+        phone_type: String(row.phone_type ?? ''),
+      };
+    })
+    .filter((row): row is AdditionalContactRow => row != null);
+}
+
 /**
  * Loads dashboard-equivalent data for a delegated target member (PR08). Access must already be validated (e.g. {@link useProxyMode}).
  */
@@ -90,7 +122,9 @@ export async function fetchDelegatedWorkspace(
       });
     }
 
-    const contactRows = (memberContacts.data ?? []) as AdditionalContactRow[];
+    const contactRows = mapAdditionalContactRows(
+      (memberContacts.data ?? []) as Array<Record<string, unknown>>
+    );
     const eventRows = (events.data ?? []) as EventRow[];
     const eventsByCategory = groupEventsByRegistrationScope(eventRows);
 

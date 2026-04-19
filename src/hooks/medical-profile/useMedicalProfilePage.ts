@@ -7,6 +7,7 @@ import type { Database } from '@/types/pace-database';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 import { useProxyMode } from '@/shared/hooks/useProxyMode';
 import { useMemberProfileData } from '@/hooks/member-profile/useMemberProfileData';
+import { useResolvedAppId } from '@/shared/hooks/useResolvedAppId';
 import { fetchMedicalProfileData, useMedicalProfileData } from '@/hooks/medical-profile/useMedicalProfileData';
 import type { MedicalProfileFormValues } from '@/utils/medical-profile/validation';
 
@@ -25,8 +26,6 @@ function mapFormToRpcPayload(values: MedicalProfileFormValues, profileId: string
     p_dietary_comments: emptyToUndef(values.dietary_comments),
     p_is_fully_immunised: values.is_fully_immunised,
     p_last_tetanus_date: emptyToUndef(values.last_tetanus_date),
-    p_requires_support: values.requires_support,
-    p_support_details: emptyToUndef(values.support_details),
   };
 }
 
@@ -53,8 +52,6 @@ function buildInsertRow(personId: string, values: MedicalProfileFormValues): Med
     dietary_comments: emptyToNull(values.dietary_comments),
     is_fully_immunised: values.is_fully_immunised,
     last_tetanus_date: emptyToNull(values.last_tetanus_date),
-    requires_support: values.requires_support,
-    support_details: emptyToNull(values.support_details),
   };
 }
 
@@ -106,6 +103,7 @@ export function useMedicalProfilePage() {
   const { user } = useUnifiedAuthContext();
   const org = useOrganisationsContextOptional();
   const organisationId = org?.selectedOrganisation?.id ?? null;
+  const appId = useResolvedAppId();
   const secure = useSecureSupabase();
   const client = toTypedSupabase(secure);
   const queryClient = useQueryClient();
@@ -150,6 +148,7 @@ export function useMedicalProfilePage() {
 
   return {
     organisationId,
+    appId,
     userId: user?.id ?? null,
     effectiveMemberId,
     gateReady: isReady,
@@ -158,5 +157,8 @@ export function useMedicalProfilePage() {
     saveMedicalProfile: saveMutation.mutateAsync,
     isSaving: saveMutation.isPending,
     saveError: saveMutation.error,
+    supabase: secure,
+    typedClient: client,
+    queryClient,
   };
 }

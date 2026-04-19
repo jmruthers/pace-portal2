@@ -21,15 +21,40 @@ const profileRpcRow = {
   last_tetanus_date: '',
   medicare_expiry: '',
   medicare_number: '',
-  requires_support: false,
-  support_details: '',
+};
+
+const mediConditionRpcRow = {
+  id: 'c1',
+  condition_type_id: 1,
+  created_at: '',
+  created_by: '',
+  diagnosed_by: '',
+  diagnosed_date: '',
+  emergency_protocol: '',
+  is_active: true,
+  medical_alert: true,
+  medications_and_aids: '',
+  name: 'Asthma',
+  notes: '',
+  profile_id: 'mp1',
+  action_plan_date: null,
+  action_plan_file_id: null,
+  severity: 'Severe' as const,
+  treatment: '',
+  triggers: '',
+  updated_at: '',
+  updated_by: '',
 };
 
 function buildClient() {
-  const rpc = vi.fn((name: string, args: { p_member_id?: string }) => {
+  const rpc = vi.fn((name: string, args: { p_member_id?: string; p_profile_id?: string }) => {
     if (name === 'data_medi_profile_get') {
       expect(args.p_member_id).toBe('m1');
       return Promise.resolve({ data: [profileRpcRow], error: null });
+    }
+    if (name === 'get_medi_conditions') {
+      expect(args.p_profile_id).toBe('mp1');
+      return Promise.resolve({ data: [mediConditionRpcRow], error: null });
     }
     return Promise.resolve({ data: null, error: null });
   });
@@ -40,25 +65,6 @@ function buildClient() {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: { person_id: 'p1' }, error: null }),
-      };
-    }
-    if (table === 'medi_condition') {
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({
-          data: [
-            {
-              id: 'c1',
-              name: 'Asthma',
-              custom_name: null,
-              severity: 'High',
-              medical_alert: true,
-              is_active: true,
-            },
-          ],
-          error: null,
-        }),
       };
     }
     return {};

@@ -19,7 +19,7 @@ const sampleEvent = {
   event_email: null,
   event_venue: null,
   expected_participants: null,
-  is_visible: null,
+  is_visible: true,
   public_readable: true,
   participant_admin_email: null,
   participant_blurb: null,

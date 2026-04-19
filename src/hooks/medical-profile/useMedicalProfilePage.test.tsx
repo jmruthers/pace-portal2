@@ -56,6 +56,10 @@ vi.mock('@/shared/hooks/useProxyMode', () => ({
   }),
 }));
 
+vi.mock('@/shared/hooks/useResolvedAppId', () => ({
+  useResolvedAppId: () => 'app-test-id',
+}));
+
 vi.mock('@/hooks/medical-profile/useMedicalProfileData', async () => {
   const actual = await vi.importActual<typeof import('@/hooks/medical-profile/useMedicalProfileData')>(
     '@/hooks/medical-profile/useMedicalProfileData'
@@ -209,8 +213,6 @@ describe('useMedicalProfilePage save', () => {
         menu_selection: '   ',
         is_fully_immunised: false,
         last_tetanus_date: '',
-        requires_support: false,
-        support_details: '',
       })
     ).rejects.toThrow(/select a menu/i);
   });
@@ -242,8 +244,6 @@ describe('useMedicalProfilePage save', () => {
       menu_selection: 'd1',
       is_fully_immunised: false,
       last_tetanus_date: '',
-      requires_support: false,
-      support_details: '',
     });
 
     await waitFor(() => {
@@ -285,8 +285,6 @@ describe('useMedicalProfilePage save', () => {
       menu_selection: 'd1',
       is_fully_immunised: false,
       last_tetanus_date: '',
-      requires_support: false,
-      support_details: '',
     });
 
     await waitFor(() => {

@@ -132,6 +132,19 @@ export function useAddressOperations() {
             organisationId,
             error: error.message,
           });
+          // Same race/visibility pattern as insert: another row may already own this place_id.
+          if (error.code === '23505') {
+            const duplicateLookup = await resolveExistingAddressByPlaceId(client, payload.place_id);
+            if (isOk(duplicateLookup) && duplicateLookup.data && duplicateLookup.data !== existingId) {
+              profileDebugLog('address_update:duplicate_reuse_by_place_id', {
+                existingId,
+                matchedId: duplicateLookup.data,
+                placeId: payload.place_id,
+                organisationId,
+              });
+              return ok(duplicateLookup.data);
+            }
+          }
           return err({ code: 'ADDRESS_UPDATE', message: error.message || 'Could not update address.' });
         }
         profileDebugLog('address_update:done', {

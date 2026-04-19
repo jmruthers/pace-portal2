@@ -30,7 +30,6 @@ export function computeMedicalProfileProgress(
     nonEmpty(values.health_care_card_number) || nonEmpty(values.health_care_card_expiry),
     dietSlot,
     values.is_fully_immunised || nonEmpty(values.last_tetanus_date),
-    values.requires_support ? nonEmpty(values.support_details) : true,
   ];
 
   const totalFields = slots.length;

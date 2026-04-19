@@ -29,8 +29,8 @@ import { computeMedicalProfileProgress } from '@/shared/lib/medicalProfileProgre
 import {
   type MedicalProfileFormValues,
 } from '@/utils/medical-profile/validation';
-import { MedicalProfileDisplay } from '@/components/medical-profile/MedicalProfile/MedicalProfileDisplay';
-import type { MedicalConditionSummaryRow } from '@/hooks/medical-profile/useMedicalProfileData';
+import { MedicalConditionsSection } from '@/components/medical-profile/MedicalConditionsSection';
+import type { MediConditionDetail } from '@/hooks/medical-profile/useMedicalProfileData';
 
 const MENU_SELECT_NONE = '__menu_none__';
 
@@ -41,7 +41,10 @@ export type MedicalProfileFormProps = {
   dietTypes: readonly CakeDietTypeRow[];
   /** From `data_medi_profile_get` when the select value does not match option ids (display only). */
   menuLabelHint?: string | null;
-  conditions: MedicalConditionSummaryRow[];
+  conditions: MediConditionDetail[];
+  profileId: string | null;
+  organisationId: string | null;
+  appId: string | null;
   isSubmitting: boolean;
   onSubmit: (values: MedicalProfileFormValues) => void | Promise<void>;
 };
@@ -102,11 +105,17 @@ function DietDescriptionsDialog({
 
 function MedicalProfileFormInner({
   conditions,
+  profileId,
+  organisationId,
+  appId,
   isSubmitting,
   dietTypes,
   menuLabelHint,
 }: {
-  conditions: MedicalConditionSummaryRow[];
+  conditions: MediConditionDetail[];
+  profileId: string | null;
+  organisationId: string | null;
+  appId: string | null;
   isSubmitting: boolean;
   dietTypes: readonly CakeDietTypeRow[];
   menuLabelHint: string | null | undefined;
@@ -176,7 +185,7 @@ function MedicalProfileFormInner({
         </CardHeader>
         <CardContent className="grid gap-4">
           <p>
-            {`Please select the most appropriate menu for your dietary requirements, even if it's slightly more restrictive than your needs. Only select "Other" if none of the diets work for you.`}
+            {`Please select the most appropriate menu for your dietary requirements, even if it's slightly more restrictive than your needs. Only select "Other" if none of the menus work for you.`}
           </p>
           <Controller
             control={control}
@@ -215,7 +224,7 @@ function MedicalProfileFormInner({
                     ) : null}
                   </fieldset>
                   <Button type="button" variant="link" onClick={() => setDescriptionsOpen(true)}>
-                    View diet descriptions
+                    View menu descriptions
                   </Button>
                 </section>
               );
@@ -265,34 +274,6 @@ function MedicalProfileFormInner({
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Support</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <Controller
-            control={control}
-            name="requires_support"
-            render={({ field }) => (
-              <Label className="grid grid-cols-[auto_1fr] items-center gap-2">
-                <Checkbox checked={field.value} onChange={(v) => field.onChange(v)} />
-                Requires support
-              </Label>
-            )}
-          />
-          <Controller
-            control={control}
-            name="support_details"
-            render={({ field, fieldState }) => (
-              <Label className="grid gap-1">
-                Support details
-                <Textarea value={field.value} onChange={(v) => field.onChange(v)} />
-                {fieldState.error?.message != null ? (
-                  <p role="alert">{String(fieldState.error.message)}</p>
-                ) : null}
-              </Label>
-            )}
-          />
-        </CardContent>
         <CardFooter className="text-right">
           <Button type="submit" variant="default" disabled={isSubmitting}>
             {isSubmitting ? 'Saving…' : 'Save medical profile'}
@@ -300,7 +281,12 @@ function MedicalProfileFormInner({
         </CardFooter>
       </Card>
 
-      <MedicalProfileDisplay conditions={conditions} />
+      <MedicalConditionsSection
+        conditions={conditions}
+        profileId={profileId}
+        organisationId={organisationId}
+        appId={appId}
+      />
     </article>
   );
 }
@@ -312,6 +298,9 @@ export function MedicalProfileForm({
   dietTypes,
   menuLabelHint,
   conditions,
+  profileId,
+  organisationId,
+  appId,
   isSubmitting,
   onSubmit,
 }: MedicalProfileFormProps) {
@@ -324,6 +313,9 @@ export function MedicalProfileForm({
     >
       <MedicalProfileFormInner
         conditions={conditions}
+        profileId={profileId}
+        organisationId={organisationId}
+        appId={appId}
         isSubmitting={isSubmitting}
         dietTypes={dietTypes}
         menuLabelHint={menuLabelHint}

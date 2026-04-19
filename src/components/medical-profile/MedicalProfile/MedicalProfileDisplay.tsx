@@ -37,7 +37,7 @@ export function MedicalProfileDisplay({ conditions }: MedicalProfileDisplayProps
           ) : (
             <ul className="grid gap-2">
               {conditions.map((c) => {
-                const label = (c.custom_name ?? c.name ?? 'Condition').trim();
+                const label = (c.name ?? 'Condition').trim();
                 const inactive = c.is_active === false;
                 return (
                   <li key={c.id} className="grid gap-1 border border-sec-200 rounded-md">

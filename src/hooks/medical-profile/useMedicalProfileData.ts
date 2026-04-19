@@ -11,8 +11,11 @@ type MediRpcRow = Database['public']['Functions']['data_medi_profile_get']['Retu
 
 export type MedicalConditionSummaryRow = Pick<
   Database['public']['Tables']['medi_condition']['Row'],
-  'id' | 'name' | 'custom_name' | 'severity' | 'medical_alert' | 'is_active'
+  'id' | 'name' | 'severity' | 'medical_alert' | 'is_active'
 >;
+
+/** Full condition row from `get_medi_conditions` RPC (PR10/PR11). */
+export type MediConditionDetail = Database['public']['Functions']['get_medi_conditions']['Returns'][number];
 
 export type MedicalProfileLoadModel = {
   profile: MediProfileRow | null;
@@ -20,7 +23,7 @@ export type MedicalProfileLoadModel = {
   dietTypeNameFromRpc: string | null;
   memberId: string;
   personId: string;
-  conditions: MedicalConditionSummaryRow[];
+  conditions: MediConditionDetail[];
 };
 
 function mapRpcToRow(r: MediRpcRow): MediProfileRow {
@@ -40,8 +43,6 @@ function mapRpcToRow(r: MediRpcRow): MediProfileRow {
     last_tetanus_date: r.last_tetanus_date,
     medicare_expiry: r.medicare_expiry,
     medicare_number: r.medicare_number,
-    requires_support: r.requires_support,
-    support_details: r.support_details,
     updated_at: null,
     updated_by: null,
   };
@@ -107,21 +108,17 @@ export async function fetchMedicalProfileData(
       dietTypeNameFromRpc = null;
     }
 
-    let conditions: MedicalConditionSummaryRow[] = [];
+    let conditions: MediConditionDetail[] = [];
     if (profile?.id) {
-      const cond = await client
-        .from('medi_condition')
-        .select('id, name, custom_name, severity, medical_alert, is_active')
-        .eq('profile_id', profile.id)
-        .order('created_at', { ascending: false });
-
-      if (cond.error) {
+      // eslint-disable-next-line pace-core-compliance/rpc-naming-pattern -- database RPC name (PR09/PR10)
+      const rpcCond = await client.rpc('get_medi_conditions', { p_profile_id: profile.id });
+      if (rpcCond.error) {
         return err({
           code: 'MEDICAL_CONDITION_SUMMARY',
-          message: cond.error.message || 'Could not load condition summary.',
+          message: rpcCond.error.message || 'Could not load conditions.',
         });
       }
-      conditions = (cond.data ?? []) as MedicalConditionSummaryRow[];
+      conditions = (rpcCond.data ?? []) as MediConditionDetail[];
     }
 
     return ok({

@@ -55,6 +55,7 @@ vi.mock('@/hooks/medical-profile/useMedicalReferenceData', () => ({
 const editor = vi.hoisted(() =>
   vi.fn(() => ({
     organisationId: 'org-1',
+    appId: 'app-1',
     userId: 'u1',
     gateReady: true,
     blockedReason: null as 'needs_member_profile' | 'proxy_invalid' | 'no_organisation' | null,
@@ -76,8 +77,6 @@ const editor = vi.hoisted(() =>
           last_tetanus_date: null,
           medicare_expiry: null,
           medicare_number: null,
-          requires_support: false,
-          support_details: null,
           updated_at: null,
           updated_by: null,
         },
@@ -87,8 +86,7 @@ const editor = vi.hoisted(() =>
           {
             id: 'c1',
             name: 'Asthma',
-            custom_name: null,
-            severity: 'High',
+            severity: 'Severe',
             medical_alert: true,
             is_active: true,
           },
@@ -103,6 +101,9 @@ const editor = vi.hoisted(() =>
     saveMedicalProfile: vi.fn().mockResolvedValue(undefined),
     isSaving: false,
     saveError: null,
+    supabase: null,
+    typedClient: null,
+    queryClient: {},
   }))
 );
 
@@ -129,6 +130,7 @@ describe('MedicalProfilePage', () => {
     vi.clearAllMocks();
     editor.mockImplementation(() => ({
       organisationId: 'org-1',
+      appId: 'app-1',
       userId: 'u1',
       gateReady: true,
       blockedReason: null,
@@ -150,8 +152,6 @@ describe('MedicalProfilePage', () => {
             last_tetanus_date: null,
             medicare_expiry: null,
             medicare_number: null,
-            requires_support: false,
-            support_details: null,
             updated_at: null,
             updated_by: null,
           },
@@ -161,8 +161,7 @@ describe('MedicalProfilePage', () => {
             {
               id: 'c1',
               name: 'Asthma',
-              custom_name: null,
-              severity: 'High',
+              severity: 'Severe',
               medical_alert: true,
               is_active: true,
             },
@@ -177,10 +176,13 @@ describe('MedicalProfilePage', () => {
       saveMedicalProfile: vi.fn().mockResolvedValue(undefined),
       isSaving: false,
       saveError: null,
+      supabase: null,
+      typedClient: null,
+      queryClient: {},
     }));
   });
 
-  it('renders summary heading and recorded conditions handoff', () => {
+  it('renders summary heading and conditions section', () => {
     const client = new QueryClient();
     render(
       <QueryClientProvider client={client}>
@@ -191,12 +193,13 @@ describe('MedicalProfilePage', () => {
     );
     expect(screen.getByRole('heading', { name: /medical profile/i })).toBeInTheDocument();
     expect(screen.getByText(/Asthma/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /add condition/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add condition/i })).toBeInTheDocument();
   });
 
   it('redirects to member profile when member profile is incomplete', async () => {
     editor.mockImplementation(() => ({
       organisationId: 'org-1',
+      appId: 'app-1',
       userId: 'u1',
       gateReady: true,
       blockedReason: 'needs_member_profile',
@@ -216,6 +219,9 @@ describe('MedicalProfilePage', () => {
       saveMedicalProfile: vi.fn(),
       isSaving: false,
       saveError: null,
+      supabase: null,
+      typedClient: null,
+      queryClient: {},
     }));
 
     const client = new QueryClient();
@@ -239,6 +245,7 @@ describe('MedicalProfilePage', () => {
     const save = vi.fn().mockResolvedValue(undefined);
     editor.mockImplementation(() => ({
       organisationId: 'org-1',
+      appId: 'app-1',
       userId: 'u1',
       gateReady: true,
       blockedReason: null,
@@ -260,8 +267,6 @@ describe('MedicalProfilePage', () => {
             last_tetanus_date: null,
             medicare_expiry: null,
             medicare_number: null,
-            requires_support: false,
-            support_details: null,
             updated_at: null,
             updated_by: null,
           },
@@ -278,6 +283,9 @@ describe('MedicalProfilePage', () => {
       saveMedicalProfile: save,
       isSaving: false,
       saveError: null,
+      supabase: null,
+      typedClient: null,
+      queryClient: {},
     }));
 
     const client = new QueryClient();

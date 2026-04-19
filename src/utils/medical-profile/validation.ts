@@ -18,8 +18,6 @@ const baseMedicalProfileFields = {
   menu_selection: z.string(),
   is_fully_immunised: z.boolean(),
   last_tetanus_date: z.string(),
-  requires_support: z.boolean(),
-  support_details: z.string(),
 };
 
 export function createMedicalProfileSchema(dietTypes: readonly CakeDietTypeRow[] | undefined) {
@@ -42,13 +40,6 @@ export function createMedicalProfileSchema(dietTypes: readonly CakeDietTypeRow[]
           path: ['dietary_comments'],
         });
       }
-      if (data.requires_support && data.support_details.trim() === '') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Describe the support required, or turn off the support option.',
-          path: ['support_details'],
-        });
-      }
     });
 }
 
@@ -69,8 +60,6 @@ export function defaultMedicalProfileFormValues(): MedicalProfileFormValues {
     menu_selection: '',
     is_fully_immunised: false,
     last_tetanus_date: '',
-    requires_support: false,
-    support_details: '',
   };
 }
 
@@ -117,7 +106,5 @@ export function mapMediProfileRowToFormValues(
     menu_selection,
     is_fully_immunised: Boolean(row.is_fully_immunised),
     last_tetanus_date: row.last_tetanus_date ?? '',
-    requires_support: Boolean(row.requires_support),
-    support_details: row.support_details ?? '',
   };
 }
