@@ -34,8 +34,6 @@ describe('medicalProfileSchema', () => {
       menu_selection: '',
       is_fully_immunised: false,
       last_tetanus_date: '',
-      requires_support: false,
-      support_details: '',
     });
     expect(r.success).toBe(false);
   });
@@ -52,8 +50,6 @@ describe('medicalProfileSchema', () => {
       menu_selection: '1',
       is_fully_immunised: true,
       last_tetanus_date: '',
-      requires_support: false,
-      support_details: '',
     });
     expect(r.success).toBe(true);
   });
@@ -73,8 +69,6 @@ describe('createMedicalProfileSchema (OT)', () => {
       menu_selection: '16',
       is_fully_immunised: false,
       last_tetanus_date: '',
-      requires_support: false,
-      support_details: '',
     });
     expect(r.success).toBe(false);
   });
@@ -92,8 +86,6 @@ describe('createMedicalProfileSchema (OT)', () => {
       menu_selection: '16',
       is_fully_immunised: false,
       last_tetanus_date: '',
-      requires_support: false,
-      support_details: '',
     });
     expect(r.success).toBe(true);
   });
@@ -103,7 +95,6 @@ describe('mapMediProfileRowToFormValues', () => {
   it('maps null row to defaults', () => {
     const v = mapMediProfileRowToFormValues(null);
     expect(v.medicare_number).toBe('');
-    expect(v.requires_support).toBe(false);
     expect(v.menu_selection).toBe('');
   });
 
@@ -119,8 +110,6 @@ describe('mapMediProfileRowToFormValues', () => {
       dietary_comments: null,
       is_fully_immunised: null,
       last_tetanus_date: null,
-      requires_support: null,
-      support_details: null,
     } as never;
 
     const diets = [
@@ -152,23 +141,3 @@ describe('resolveMenuSelectionToDietId', () => {
   });
 });
 
-describe('requires_support refinement', () => {
-  it('rejects support without details when diet types loaded', () => {
-    const schema = createMedicalProfileSchema(sampleDiets);
-    const r = schema.safeParse({
-      medicare_number: '',
-      medicare_expiry: '',
-      health_care_card_number: '',
-      health_care_card_expiry: '',
-      health_fund_name: '',
-      health_fund_number: '',
-      dietary_comments: '',
-      menu_selection: '1',
-      is_fully_immunised: false,
-      last_tetanus_date: '',
-      requires_support: true,
-      support_details: '',
-    });
-    expect(r.success).toBe(false);
-  });
-});

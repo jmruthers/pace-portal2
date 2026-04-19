@@ -5,10 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useMedicalConditions } from '@/hooks/medical-profile/useMedicalConditions';
 import { defaultMedicalConditionFormValues } from '@/utils/medical-profile/medicalConditionValidation';
 
-const deleteActionPlansForCondition = vi.fn().mockResolvedValue(undefined);
+const deleteAttachment = vi.fn().mockResolvedValue({ ok: true, data: undefined });
 
-vi.mock('@/hooks/medical-profile/actionPlanOperations', () => ({
-  deleteActionPlansForCondition: (...args: unknown[]) => deleteActionPlansForCondition(...args),
+vi.mock('@solvera/pace-core/crud', () => ({
+  deleteAttachment: (...args: unknown[]) => deleteAttachment(...args),
 }));
 
 const mockFrom = vi.fn((table: string) => {
@@ -22,12 +22,39 @@ const mockFrom = vi.fn((table: string) => {
       update: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
+            data: [{ id: 'c1' }],
+            error: null,
             single: vi.fn().mockResolvedValue({ data: { id: 'c1' }, error: null }),
           }),
         }),
       }),
       delete: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+        eq: vi.fn().mockReturnValue({
+          select: vi.fn().mockResolvedValue({ data: [{ id: 'cond-99' }], error: null }),
+        }),
+      }),
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { action_plan_file_id: 'ref-1' },
+            error: null,
+          }),
+        }),
+      }),
+    };
+  }
+  if (table === 'core_file_references') {
+    return {
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { file_path: 'files/path.pdf' },
+            error: null,
+          }),
+        }),
+      }),
+      delete: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
       }),
     };
   }
@@ -54,7 +81,7 @@ function wrapper(qc: QueryClient) {
 describe('useMedicalConditions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    deleteActionPlansForCondition.mockResolvedValue(undefined);
+    deleteAttachment.mockResolvedValue({ ok: true, data: undefined });
   });
 
   it('creates a condition and invalidation keys are wired via mutation success', async () => {
@@ -88,7 +115,7 @@ describe('useMedicalConditions', () => {
     expect(mockFrom).toHaveBeenCalledWith('medi_condition');
   });
 
-  it('deleteCondition runs action-plan cleanup before deleting medi_condition', async () => {
+  it('deleteCondition unlinks and removes linked action-plan file before deleting condition', async () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
 
     const { result } = renderHook(
@@ -98,9 +125,7 @@ describe('useMedicalConditions', () => {
 
     await result.current.deleteCondition.mutateAsync('cond-99');
 
-    expect(deleteActionPlansForCondition).toHaveBeenCalledWith(
-      expect.objectContaining({ conditionId: 'cond-99' })
-    );
+    expect(deleteAttachment).toHaveBeenCalled();
     expect(mockFrom).toHaveBeenCalledWith('medi_condition');
   });
 });

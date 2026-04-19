@@ -23,29 +23,59 @@ vi.mock('@/components/medical-profile/MedicalConditionForm', () => ({
   MedicalConditionForm: () => null,
 }));
 
+vi.mock('@/hooks/medical-profile/useActionPlans', () => ({
+  useActionPlanForCondition: () => ({
+    data: {
+      actionPlanDate: '2024-06-01',
+      fileReference: {
+        id: 'file-1',
+        table_name: 'medi_condition',
+        record_id: 'cond-1',
+        file_path: 'org-1/medi_action_plans/medi_action_plan/cond-1/plan.pdf',
+        file_metadata: { fileName: 'plan.pdf', fileType: 'application/pdf' },
+        app_id: 'app-1',
+        is_public: false,
+        created_at: '',
+        updated_at: '',
+      },
+    },
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
+vi.mock('@solvera/pace-core/rbac', () => ({
+  useSecureSupabase: () => ({}),
+}));
+
+vi.mock('@/lib/supabase-typed', () => ({
+  toSupabaseClientLike: () => ({
+    storage: {
+      from: () => ({
+        createSignedUrl: vi.fn(async () => ({ data: { signedUrl: 'https://example.com/plan.pdf' }, error: null })),
+        getPublicUrl: vi.fn(() => ({ data: { publicUrl: 'https://example.com/plan.pdf' } })),
+      }),
+    },
+  }),
+}));
+
 const sampleCondition = {
   id: 'cond-1',
   profile_id: 'mp1',
-  organisation_id: 'org-1',
   condition_type_id: 2,
-  custom_name: null,
   name: 'Asthma',
-  severity: 'High' as const,
+  severity: 'Severe' as const,
   medical_alert: true,
-  alert_description: 'Use inhaler',
   diagnosed_by: 'Dr A',
   diagnosed_date: '2020-01-01',
-  last_episode_date: '2024-06-01',
   treatment: 'Inhaler',
-  medication: 'Salbutamol',
+  medications_and_aids: 'Salbutamol + spacer',
   triggers: 'Cold air',
   emergency_protocol: 'Call 000',
   notes: 'Carry spacer',
-  management_plan: 'Annual review',
-  reaction: 'Wheeze',
-  aid: 'Spacer',
+  action_plan_date: '2024-06-01',
+  action_plan_file_id: null,
   is_active: true,
-  aid_field: '',
   created_at: '',
   created_by: '',
   updated_at: '',
@@ -57,10 +87,10 @@ describe('MedicalConditionsSection', () => {
     vi.clearAllMocks();
   });
 
-  it('renders high-signal condition summary including hierarchical type and clinical fields', () => {
+  it('renders simplified card content with type/severity/alert badges', async () => {
     render(
       <MedicalConditionsSection
-        conditions={[sampleCondition] as never}
+        conditions={[{ ...sampleCondition, action_plan_file_id: 'file-1' }] as never}
         profileId="mp1"
         organisationId="org-1"
         appId="app-1"
@@ -68,9 +98,22 @@ describe('MedicalConditionsSection', () => {
     );
 
     expect(screen.getByText(/Respiratory › Asthma/)).toBeInTheDocument();
-    expect(screen.getByText(/Treatment: Inhaler/)).toBeInTheDocument();
-    expect(screen.getByText(/Triggers: Cold air/)).toBeInTheDocument();
-    expect(screen.getByText(/Emergency protocol: Call 000/)).toBeInTheDocument();
-    expect(screen.getByText(/Notes: Carry spacer/)).toBeInTheDocument();
+    expect(screen.getByText('Medical alert')).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /open attachment/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Treatment: Inhaler/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Diagnosed by:/)).not.toBeInTheDocument();
+  });
+
+  it('shows an attachment indicator when an action-plan file is linked', () => {
+    render(
+      <MedicalConditionsSection
+        conditions={[{ ...sampleCondition, action_plan_file_id: 'file-1' }] as never}
+        profileId="mp1"
+        organisationId="org-1"
+        appId="app-1"
+      />
+    );
+
+    expect(screen.getByText('Attachment')).toBeInTheDocument();
   });
 });

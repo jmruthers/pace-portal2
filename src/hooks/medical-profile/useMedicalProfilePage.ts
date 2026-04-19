@@ -26,8 +26,6 @@ function mapFormToRpcPayload(values: MedicalProfileFormValues, profileId: string
     p_dietary_comments: emptyToUndef(values.dietary_comments),
     p_is_fully_immunised: values.is_fully_immunised,
     p_last_tetanus_date: emptyToUndef(values.last_tetanus_date),
-    p_requires_support: values.requires_support,
-    p_support_details: emptyToUndef(values.support_details),
   };
 }
 
@@ -54,8 +52,6 @@ function buildInsertRow(personId: string, values: MedicalProfileFormValues): Med
     dietary_comments: emptyToNull(values.dietary_comments),
     is_fully_immunised: values.is_fully_immunised,
     last_tetanus_date: emptyToNull(values.last_tetanus_date),
-    requires_support: values.requires_support,
-    support_details: emptyToNull(values.support_details),
   };
 }
 

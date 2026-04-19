@@ -1,19 +1,57 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ConfirmationDialog } from '@solvera/pace-core/components';
+import { FileDisplay } from '@solvera/pace-core/components';
+import { useSecureSupabase } from '@solvera/pace-core/rbac';
 import type { MediConditionDetail } from '@/hooks/medical-profile/useMedicalProfileData';
+import { toSupabaseClientLike } from '@/lib/supabase-typed';
+import { useActionPlanForCondition } from '@/hooks/medical-profile/useActionPlans';
 import { useMediConditionTypes } from '@/hooks/medical-profile/useMediConditionTypes';
 import { useMedicalConditions } from '@/hooks/medical-profile/useMedicalConditions';
 import { MedicalConditionForm } from '@/components/medical-profile/MedicalConditionForm';
 import { buildConditionTypePathLabel } from '@/utils/medical-profile/conditionTypeLabel';
 
-function SummaryLine({ label, value }: { label: string; value: string | null | undefined }) {
-  const t = value?.trim();
-  if (!t) return null;
-  return (
-    <p>
-      {label}: {t}
-    </p>
-  );
+function ConditionAttachmentLink({ conditionId }: { conditionId: string }) {
+  const secure = useSecureSupabase();
+  const storageClient = toSupabaseClientLike(secure);
+  const actionPlanQuery = useActionPlanForCondition(conditionId);
+  const fileReference = actionPlanQuery.data?.fileReference ?? null;
+  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function resolveUrl() {
+      if (!fileReference || !storageClient) {
+        setAttachmentUrl(null);
+        return;
+      }
+
+      const bucketApi = storageClient.storage.from('files');
+      if (fileReference.is_public) {
+        const publicUrl = bucketApi.getPublicUrl(fileReference.file_path).data.publicUrl;
+        if (!cancelled) setAttachmentUrl(publicUrl);
+        return;
+      }
+      if (typeof bucketApi.createSignedUrl === 'function') {
+        const signed = await bucketApi.createSignedUrl(fileReference.file_path, 3600);
+        if (!cancelled) {
+          setAttachmentUrl(signed.data?.signedUrl ?? null);
+        }
+        return;
+      }
+      const fallbackUrl = bucketApi.getPublicUrl(fileReference.file_path).data.publicUrl;
+      if (!cancelled) setAttachmentUrl(fallbackUrl);
+    }
+
+    void resolveUrl();
+    return () => {
+      cancelled = true;
+    };
+  }, [fileReference, storageClient]);
+
+  if (!fileReference || !attachmentUrl) return null;
+
+  return <FileDisplay fileReference={fileReference} url={attachmentUrl} label="Open attachment" />;
 }
 
 export type MedicalConditionsSectionProps = {
@@ -62,9 +100,9 @@ export function MedicalConditionsSection({
             <p role="status">Save your medical profile summary first, then you can manage conditions.</p>
           ) : null}
           {conditions.length === 0 && canEdit ? <p>No conditions are recorded yet.</p> : null}
-          <ul className="grid gap-3">
+          <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {conditions.map((c) => {
-              const label = (c.custom_name ?? c.name ?? 'Condition').trim();
+              const label = (c.name ?? 'Condition').trim();
               const inactive = c.is_active === false;
               const typePath =
                 typesQuery.data && c.condition_type_id
@@ -72,13 +110,13 @@ export function MedicalConditionsSection({
                   : '';
               return (
                 <li key={c.id}>
-                  <article className="grid gap-3 rounded-md border border-sec-200 p-3">
+                  <article className="grid h-full content-start gap-3 rounded-md border border-sec-200 p-3">
                     <header className="grid gap-2">
                       <p>
                         <strong>{label}</strong>
                         {inactive ? ' (inactive)' : ''}
                       </p>
-                      <p className="grid grid-flow-col auto-cols-max gap-2">
+                      <p className="flex flex-wrap gap-2">
                         {!typesQuery.isLoading && typePath ? (
                           <Badge variant="outline-sec-muted">{typePath}</Badge>
                         ) : null}
@@ -88,23 +126,10 @@ export function MedicalConditionsSection({
                         {c.medical_alert ? (
                           <Badge variant="solid-acc-normal">Medical alert</Badge>
                         ) : null}
+                        {c.action_plan_file_id ? <Badge variant="outline-main-muted">Attachment</Badge> : null}
                       </p>
                     </header>
-                    {c.name?.trim() && c.custom_name?.trim() && c.name.trim() !== c.custom_name.trim() ? (
-                      <p>Diagnosis label: {c.name}</p>
-                    ) : null}
-                    <SummaryLine label="Diagnosed by" value={c.diagnosed_by} />
-                    <SummaryLine label="Diagnosed date" value={c.diagnosed_date} />
-                    <SummaryLine label="Last episode date" value={c.last_episode_date} />
-                    {c.medical_alert ? <SummaryLine label="Alert description" value={c.alert_description} /> : null}
-                    <SummaryLine label="Treatment" value={c.treatment} />
-                    <SummaryLine label="Medication" value={c.medication} />
-                    <SummaryLine label="Triggers" value={c.triggers} />
-                    <SummaryLine label="Emergency protocol" value={c.emergency_protocol} />
-                    <SummaryLine label="Notes" value={c.notes} />
-                    <SummaryLine label="Management plan" value={c.management_plan} />
-                    <SummaryLine label="Reaction" value={c.reaction} />
-                    <SummaryLine label="Aid" value={c.aid} />
+                    {c.action_plan_file_id ? <ConditionAttachmentLink conditionId={c.id} /> : null}
                     <fieldset className="m-0 grid grid-flow-col auto-cols-max justify-end gap-2 border-0 p-0">
                       <Button
                         type="button"
@@ -150,7 +175,7 @@ export function MedicalConditionsSection({
           if (!o) setDeleteTargetId(null);
         }}
         title="Delete this condition?"
-        description="The linked action-plan file will be removed as well."
+        description="This condition and any linked action-plan file will be removed."
         variant="destructive"
         confirmLabel="Delete"
         onConfirm={async () => {

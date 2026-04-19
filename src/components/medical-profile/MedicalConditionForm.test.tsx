@@ -1,11 +1,18 @@
 import type { ComponentProps } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MedicalConditionForm } from '@/components/medical-profile/MedicalConditionForm';
 
 const createMutate = vi.fn().mockResolvedValue('new-c');
 const updateMutate = vi.fn().mockResolvedValue(undefined);
+const useActionPlanForConditionMock = vi.fn(() => ({
+  data: { actionPlanDate: null, fileReference: null },
+  isLoading: false,
+  isError: false,
+  isPending: false,
+  error: null,
+}));
 
 vi.mock('@/hooks/medical-profile/useMedicalConditions', () => ({
   useMedicalConditions: () => ({
@@ -29,6 +36,16 @@ vi.mock('@/hooks/medical-profile/useMediConditionTypes', () => ({
         updated_at: null,
         updated_by: null,
       },
+      {
+        id: 13,
+        name: 'Archived Type',
+        parent_id: null,
+        created_at: null,
+        created_by: null,
+        is_active: false,
+        updated_at: null,
+        updated_by: null,
+      },
     ],
     isLoading: false,
     isError: false,
@@ -36,20 +53,7 @@ vi.mock('@/hooks/medical-profile/useMediConditionTypes', () => ({
 }));
 
 vi.mock('@/hooks/medical-profile/useActionPlans', () => ({
-  useActionPlanForCondition: () => ({
-    data: { actionPlan: null, fileReference: null },
-    isLoading: false,
-    isError: false,
-    isPending: false,
-    error: null,
-  }),
-}));
-
-vi.mock('@/hooks/medical-profile/useActionPlanFileAttachment', () => ({
-  useActionPlanFileAttachment: () => ({
-    persistActionPlanFile: vi.fn().mockResolvedValue(undefined),
-    isReady: true,
-  }),
+  useActionPlanForCondition: (...args: unknown[]) => useActionPlanForConditionMock(...args),
 }));
 
 vi.mock('@solvera/pace-core/rbac', () => ({
@@ -58,7 +62,14 @@ vi.mock('@solvera/pace-core/rbac', () => ({
 
 vi.mock('@/lib/supabase-typed', () => ({
   toTypedSupabase: () => ({}),
-  toSupabaseClientLike: () => ({}),
+  toSupabaseClientLike: () => ({
+    storage: {
+      from: () => ({
+        createSignedUrl: vi.fn(async () => ({ data: { signedUrl: 'https://example.com/plan.pdf' }, error: null })),
+        getPublicUrl: vi.fn(() => ({ data: { publicUrl: 'https://example.com/plan.pdf' } })),
+      }),
+    },
+  }),
 }));
 
 function renderForm(props: Partial<ComponentProps<typeof MedicalConditionForm>> = {}) {
@@ -81,6 +92,13 @@ function renderForm(props: Partial<ComponentProps<typeof MedicalConditionForm>> 
 describe('MedicalConditionForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useActionPlanForConditionMock.mockReturnValue({
+      data: { actionPlanDate: null, fileReference: null },
+      isLoading: false,
+      isError: false,
+      isPending: false,
+      error: null,
+    });
   });
 
   it('renders add-condition title when open without condition', () => {
@@ -88,16 +106,89 @@ describe('MedicalConditionForm', () => {
     expect(screen.getByRole('heading', { name: /add medical condition/i })).toBeInTheDocument();
   });
 
-  it('shows file validation error for disallowed MIME type', async () => {
+  it('shows upload-after-save message when creating a new condition', () => {
     renderForm();
+    expect(screen.getByText(/save this condition first, then upload an action plan file/i)).toBeInTheDocument();
+  });
 
-    const section = screen.getByLabelText('Action plan document');
-    const input = section.querySelector('input[type="file"]') as HTMLInputElement;
-    const bad = new File([new Uint8Array([1])], 'x.exe', { type: 'application/x-msdownload' });
-    fireEvent.change(input, { target: { files: [bad] } });
-
-    await waitFor(() => {
-      expect(section.textContent).toMatch(/PDF or image/i);
+  it('shows a view-attachment link when a file reference exists', async () => {
+    useActionPlanForConditionMock.mockReturnValue({
+      data: {
+        actionPlanDate: '2026-04-19',
+        fileReference: {
+          id: 'file-1',
+          table_name: 'medi_condition',
+          record_id: 'cond-1',
+          file_path: 'org-1/medi_action_plans/medi_action_plan/cond-1/plan.pdf',
+          file_metadata: { fileName: 'plan.pdf', fileType: 'application/pdf' },
+          app_id: 'app-1',
+          is_public: false,
+          created_at: '',
+          updated_at: '',
+        },
+      },
+      isLoading: false,
+      isError: false,
+      isPending: false,
+      error: null,
     });
+
+    renderForm({
+      condition: {
+        id: 'cond-1',
+        profile_id: 'mp1',
+        condition_type_id: 1,
+        name: 'Asthma',
+        severity: 'Mild',
+        medical_alert: false,
+        diagnosed_by: null,
+        diagnosed_date: null,
+        treatment: null,
+        medications_and_aids: null,
+        triggers: null,
+        emergency_protocol: null,
+        notes: null,
+        action_plan_file_id: 'file-1',
+        action_plan_date: null,
+        is_active: true,
+        created_at: '',
+        created_by: '',
+        updated_at: '',
+        updated_by: '',
+      } as never,
+    });
+
+    expect(await screen.findByRole('link', { name: /view attachment/i })).toBeInTheDocument();
+  });
+
+  it('shows the condition type label in edit mode instead of raw ID', () => {
+    renderForm({
+      condition: {
+        id: 'cond-13',
+        profile_id: 'mp1',
+        condition_type_id: 13,
+        name: 'Archived condition',
+        severity: 'Mild',
+        medical_alert: false,
+        diagnosed_by: null,
+        diagnosed_date: null,
+        treatment: null,
+        medications_and_aids: null,
+        triggers: null,
+        emergency_protocol: null,
+        notes: null,
+        action_plan_file_id: null,
+        action_plan_date: null,
+        is_active: true,
+        created_at: '',
+        created_by: '',
+        updated_at: '',
+        updated_by: '',
+      } as never,
+    });
+
+    const conditionTypeTrigger = screen.getByRole('button', { name: 'Condition type' });
+    expect(conditionTypeTrigger).toHaveTextContent('Archived Type');
+    expect(conditionTypeTrigger).not.toHaveTextContent('13');
   });
 });

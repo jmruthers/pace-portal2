@@ -20,7 +20,7 @@ const diets = [
 describe('computeMedicalProfileProgress', () => {
   it('returns low completion for empty defaults', () => {
     const r = computeMedicalProfileProgress(defaultMedicalProfileFormValues(), diets);
-    expect(r.totalFields).toBe(7);
+    expect(r.totalFields).toBe(6);
     expect(r.filledFields).toBeLessThan(r.totalFields);
     expect(r.completionRatio).toBeGreaterThanOrEqual(0);
     expect(r.completionRatio).toBeLessThanOrEqual(1);

@@ -11,7 +11,7 @@ type MediRpcRow = Database['public']['Functions']['data_medi_profile_get']['Retu
 
 export type MedicalConditionSummaryRow = Pick<
   Database['public']['Tables']['medi_condition']['Row'],
-  'id' | 'name' | 'custom_name' | 'severity' | 'medical_alert' | 'is_active'
+  'id' | 'name' | 'severity' | 'medical_alert' | 'is_active'
 >;
 
 /** Full condition row from `get_medi_conditions` RPC (PR10/PR11). */
@@ -43,8 +43,6 @@ function mapRpcToRow(r: MediRpcRow): MediProfileRow {
     last_tetanus_date: r.last_tetanus_date,
     medicare_expiry: r.medicare_expiry,
     medicare_number: r.medicare_number,
-    requires_support: r.requires_support,
-    support_details: r.support_details,
     updated_at: null,
     updated_by: null,
   };

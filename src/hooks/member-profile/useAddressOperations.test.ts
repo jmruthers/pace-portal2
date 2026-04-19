@@ -2,6 +2,7 @@ import { createElement, type ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { isOk } from '@solvera/pace-core/types';
 import { useAddressOperations } from '@/hooks/member-profile/useAddressOperations';
 
 vi.mock('@solvera/pace-core', () => ({
@@ -12,7 +13,8 @@ const insertSingle = vi.fn().mockResolvedValue({ data: { id: 'addr-new' }, error
 const updateEq = vi.fn().mockResolvedValue({ data: [{ id: 'addr-existing' }], error: null });
 const lookupMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
 const insert = vi.fn(() => ({ select: () => ({ single: insertSingle }) }));
-const update = vi.fn(() => ({ select: () => ({ eq: () => updateEq }) }));
+/** `eq` must return the Supabase promise (`updateEq()`), not the mock function reference. */
+const update = vi.fn(() => ({ select: () => ({ eq: vi.fn(() => updateEq()) }) }));
 const selectAddress = vi.fn(() => ({
   eq: vi.fn(() => ({
     maybeSingle: lookupMaybeSingle,
@@ -56,6 +58,8 @@ describe('useAddressOperations', () => {
     vi.clearAllMocks();
     insertSingle.mockResolvedValue({ data: { id: 'addr-new' }, error: null });
     lookupMaybeSingle.mockResolvedValue({ data: null, error: null });
+    updateEq.mockReset();
+    updateEq.mockResolvedValue({ data: [{ id: 'addr-existing' }], error: null });
   });
 
   it('saveAddressesAndPhones resolves residential insert and phone insert', async () => {
@@ -86,6 +90,47 @@ describe('useAddressOperations', () => {
     expect(out.residentialAddressId).toBe('addr-new');
     expect(out.postalAddressId).toBe('addr-new');
     expect(phoneInsert).toHaveBeenCalled();
+  });
+
+  it('on update, reuses existing row when place_id collides (23505) after lookup miss', async () => {
+    let lookups = 0;
+    lookupMaybeSingle.mockImplementation(async () => {
+      lookups += 1;
+      if (lookups === 1) {
+        return { data: null, error: null };
+      }
+      return { data: { id: 'addr-existing-by-place' }, error: null };
+    });
+    updateEq.mockImplementationOnce(async () => ({
+      data: null,
+      error: {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "pace_address_place_id_key"',
+      },
+    }));
+
+    const qc = new QueryClient();
+    const { result } = renderHook(() => useAddressOperations(), { wrapper: wrapper(qc) });
+
+    await waitFor(() => {
+      expect(result.current.upsertAddress).toBeDefined();
+    });
+
+    const res = await result.current.upsertAddress(
+      {
+        line1: '2 St',
+        locality: 'Sydney',
+        countryCode: 'AU',
+        placeId: 'place-dup',
+      },
+      'o1',
+      'addr-mine'
+    );
+
+    expect(isOk(res)).toBe(true);
+    if (isOk(res)) {
+      expect(res.data).toBe('addr-existing-by-place');
+    }
   });
 
   it('reuses existing address id when selected place_id already exists', async () => {
