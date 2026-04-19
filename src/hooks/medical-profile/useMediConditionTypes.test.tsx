@@ -25,7 +25,7 @@ describe('useMediConditionTypes', () => {
     vi.clearAllMocks();
   });
 
-  it('loads active condition types only', async () => {
+  it('loads all condition types including inactive rows', async () => {
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         order: vi.fn().mockResolvedValue({
@@ -43,7 +43,7 @@ describe('useMediConditionTypes', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data?.map((r) => r.id)).toEqual([1]);
+    expect(result.current.data?.map((r) => r.id)).toEqual([1, 2]);
     expect(mockFrom).toHaveBeenCalledWith('medi_condition_type');
   });
 });
