@@ -23,6 +23,7 @@ export type AdditionalContactsDisplayProps = {
   isProxyResolving: boolean;
   proxyValidationError: string | null;
   onAddContact: () => void;
+  onEditContact: (contactId: string) => void;
   deleteContact: UseMutationResult<void, Error, string>;
 };
 
@@ -38,6 +39,7 @@ export function AdditionalContactsDisplay({
   isProxyResolving,
   proxyValidationError,
   onAddContact,
+  onEditContact,
   deleteContact,
 }: AdditionalContactsDisplayProps) {
   if (!organisationId) {
@@ -114,6 +116,7 @@ export function AdditionalContactsDisplay({
       </header>
       <AdditionalContactsList
         contacts={contacts}
+        onEdit={onEditContact}
         onDelete={(id) => deleteContact.mutateAsync(id)}
         isDeletePending={deleteContact.isPending}
         deleteError={

@@ -4,6 +4,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useUnifiedAuthContext } from '@solvera/pace-core';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
+import {
+  err,
+  isOk,
+  normalizeToApiError,
+  ok,
+  type ApiResult,
+} from '@solvera/pace-core/types';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 import type { Database } from '@/types/pace-database';
 import {
@@ -80,35 +87,55 @@ function normalizeFlatContactRows(rows: Array<Record<string, unknown>>): FlatCon
 async function fetchSelfServiceContacts(
   client: ReturnType<typeof toTypedSupabase>,
   userId: string
-): Promise<GroupedAdditionalContact[]> {
-  if (!client) {
-    throw new Error('Client is not available.');
+): Promise<ApiResult<GroupedAdditionalContact[]>> {
+  try {
+    if (!client) {
+      return err({
+        code: 'CONTACTS_CONTEXT',
+        message: 'Client is not available.',
+      });
+    }
+    const { data, error } = await client.rpc('data_pace_contacts_list', {
+      p_user_id: userId,
+    } satisfies ContactsListRpc['Args']);
+    if (error) {
+      return err({
+        code: 'CONTACTS_LIST',
+        message: error.message || 'Could not load contacts.',
+      });
+    }
+    const rows = normalizeFlatContactRows((data ?? []) as Array<Record<string, unknown>>);
+    return ok(groupFlatContactRows(rows));
+  } catch (error) {
+    return err(normalizeToApiError(error, 'CONTACTS_LIST', 'Could not load contacts.'));
   }
-  const { data, error } = await client.rpc('data_pace_contacts_list', {
-    p_user_id: userId,
-  } satisfies ContactsListRpc['Args']);
-  if (error) {
-    throw new Error(error.message || 'Could not load contacts.');
-  }
-  const rows = normalizeFlatContactRows((data ?? []) as Array<Record<string, unknown>>);
-  return groupFlatContactRows(rows);
 }
 
 async function fetchProxyMemberContacts(
   client: ReturnType<typeof toTypedSupabase>,
   targetMemberId: string
-): Promise<GroupedAdditionalContact[]> {
-  if (!client) {
-    throw new Error('Client is not available.');
+): Promise<ApiResult<GroupedAdditionalContact[]>> {
+  try {
+    if (!client) {
+      return err({
+        code: 'CONTACTS_CONTEXT',
+        message: 'Client is not available.',
+      });
+    }
+    const { data, error } = await client.rpc('data_pace_member_contacts_list', {
+      p_member_id: targetMemberId,
+    } satisfies MemberContactsRpc['Args']);
+    if (error) {
+      return err({
+        code: 'CONTACTS_PROXY_LIST',
+        message: error.message || 'Could not load contacts.',
+      });
+    }
+    const rows = normalizeFlatContactRows((data ?? []) as Array<Record<string, unknown>>);
+    return ok(groupFlatContactRows(rows));
+  } catch (error) {
+    return err(normalizeToApiError(error, 'CONTACTS_PROXY_LIST', 'Could not load contacts.'));
   }
-  const { data, error } = await client.rpc('data_pace_member_contacts_list', {
-    p_member_id: targetMemberId,
-  } satisfies MemberContactsRpc['Args']);
-  if (error) {
-    throw new Error(error.message || 'Could not load contacts.');
-  }
-  const rows = normalizeFlatContactRows((data ?? []) as Array<Record<string, unknown>>);
-  return groupFlatContactRows(rows);
 }
 
 export type UseAdditionalContactsDataResult = {
@@ -185,9 +212,17 @@ export function useAdditionalContactsData(): UseAdditionalContactsDataResult {
         throw new Error('Missing authentication context.');
       }
       if (isProxyActive && targetMemberId) {
-        return fetchProxyMemberContacts(client, targetMemberId);
+        const result = await fetchProxyMemberContacts(client, targetMemberId);
+        if (!isOk(result)) {
+          throw new Error(result.error.message);
+        }
+        return result.data;
       }
-      return fetchSelfServiceContacts(client, userId);
+      const result = await fetchSelfServiceContacts(client, userId);
+      if (!isOk(result)) {
+        throw new Error(result.error.message);
+      }
+      return result.data;
     },
   });
 

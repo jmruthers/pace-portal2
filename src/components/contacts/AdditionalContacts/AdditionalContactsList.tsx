@@ -19,6 +19,7 @@ import type { GroupedAdditionalContact } from '@/utils/contacts/groupAdditionalC
 
 export type AdditionalContactsListProps = {
   contacts: GroupedAdditionalContact[];
+  onEdit: (contactId: string) => void;
   onDelete: (contactId: string) => Promise<void>;
   isDeletePending: boolean;
   deleteError: string | null;
@@ -30,6 +31,7 @@ export type AdditionalContactsListProps = {
  */
 export function AdditionalContactsList({
   contacts,
+  onEdit,
   onDelete,
   isDeletePending,
   deleteError,
@@ -65,7 +67,16 @@ export function AdditionalContactsList({
                   </ul>
                 ) : null}
               </CardContent>
-              <CardFooter className="text-right">
+              <CardFooter className="grid gap-2 md:grid-cols-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    onEdit(c.contact_id);
+                  }}
+                >
+                  Edit
+                </Button>
                 <Button
                   type="button"
                   variant="destructive"

@@ -1,24 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Button,
   LoadingSpinner,
 } from '@solvera/pace-core/components';
 import { AccessDenied, PagePermissionGuard } from '@solvera/pace-core/rbac';
 import { AdditionalContactsDisplay } from '@/components/contacts/AdditionalContacts/AdditionalContactsDisplay';
+import { ContactForm } from '@/components/contacts/ContactForm';
 import { useAdditionalContactsData } from '@/hooks/contacts/useAdditionalContactsData';
 import { useContactOperations } from '@/hooks/contacts/useContactOperations';
 import { ProxyModeBanner } from '@/shared/components/ProxyModeBanner';
 import { useProxyMode } from '@/shared/hooks/useProxyMode';
+import type { GroupedAdditionalContact } from '@/utils/contacts/groupAdditionalContactRows';
 
 function AdditionalContactsContent() {
   const [searchParams] = useSearchParams();
   const targetMemberId = searchParams.get('targetMemberId');
   const { setProxyTargetMemberId, validationError } = useProxyMode();
-  const [formSurface, setFormSurface] = useState<'list' | 'create'>('list');
+  const [formSurface, setFormSurface] = useState<'list' | 'create' | 'edit'>('list');
+  const [selectedContact, setSelectedContact] = useState<GroupedAdditionalContact | null>(null);
 
   const contactsState = useAdditionalContactsData();
   const { deleteContact } = useContactOperations();
@@ -34,19 +33,26 @@ function AdditionalContactsContent() {
       {targetMemberId ? <ProxyModeBanner /> : null}
       <h1>Additional contacts</h1>
 
-      {formSurface === 'create' ? (
-        <section className="grid gap-4" aria-label="Add contact handoff">
-          <Alert>
-            <AlertTitle>Add contact</AlertTitle>
-            <AlertDescription>
-              Contact matching, field details, and save are owned by PR13. This handoff preserves the list contract
-              on this route until the inline form is wired.
-            </AlertDescription>
-          </Alert>
-          <Button type="button" variant="secondary" onClick={() => setFormSurface('list')}>
-            Back to contacts
-          </Button>
-        </section>
+      {formSurface !== 'list' ? (
+        <ContactForm
+          mode={formSurface === 'edit' ? 'edit' : 'create'}
+          contacts={contactsState.contacts}
+          initialContact={formSurface === 'edit' ? selectedContact : null}
+          targetMemberId={contactsState.mode === 'proxy' ? targetMemberId : null}
+          onCancel={() => {
+            setSelectedContact(null);
+            setFormSurface('list');
+          }}
+          onSaved={() => {
+            contactsState.refetch();
+            setSelectedContact(null);
+            setFormSurface('list');
+          }}
+          onEditExistingContact={(contact) => {
+            setSelectedContact(contact);
+            setFormSurface('edit');
+          }}
+        />
       ) : (
         <AdditionalContactsDisplay
           organisationId={contactsState.organisationId}
@@ -57,6 +63,12 @@ function AdditionalContactsContent() {
           isProxyResolving={contactsState.isProxyResolving}
           proxyValidationError={validationError}
           onAddContact={() => setFormSurface('create')}
+          onEditContact={(contactId) => {
+            const contact = contactsState.contacts.find((item) => item.contact_id === contactId) ?? null;
+            if (!contact) return;
+            setSelectedContact(contact);
+            setFormSurface('edit');
+          }}
           deleteContact={deleteContact}
         />
       )}
