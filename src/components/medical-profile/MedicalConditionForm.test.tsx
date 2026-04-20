@@ -2,17 +2,38 @@ import type { ComponentProps } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { FileReference } from '@solvera/pace-core/types';
 import { MedicalConditionForm } from '@/components/medical-profile/MedicalConditionForm';
 
 const createMutate = vi.fn().mockResolvedValue('new-c');
 const updateMutate = vi.fn().mockResolvedValue(undefined);
-const useActionPlanForConditionMock = vi.fn(() => ({
-  data: { actionPlanDate: null, fileReference: null },
+type ActionPlanQueryState = {
+  data: {
+    actionPlanDate: string | null;
+    fileReference: FileReference | null;
+  };
   isLoading: false,
   isError: false,
   isPending: false,
   error: null,
-}));
+};
+
+function createActionPlanQueryState(): ActionPlanQueryState {
+  return {
+    data: {
+      actionPlanDate: null,
+      fileReference: null,
+    },
+    isLoading: false,
+    isError: false,
+    isPending: false,
+    error: null,
+  };
+}
+
+const useActionPlanForConditionMock = vi.fn<(conditionId: string | null) => ActionPlanQueryState>(() =>
+  createActionPlanQueryState()
+);
 
 vi.mock('@/hooks/medical-profile/useMedicalConditions', () => ({
   useMedicalConditions: () => ({
@@ -53,7 +74,7 @@ vi.mock('@/hooks/medical-profile/useMediConditionTypes', () => ({
 }));
 
 vi.mock('@/hooks/medical-profile/useActionPlans', () => ({
-  useActionPlanForCondition: (...args: unknown[]) => useActionPlanForConditionMock(...args),
+  useActionPlanForCondition: (conditionId: string | null) => useActionPlanForConditionMock(conditionId),
 }));
 
 vi.mock('@solvera/pace-core/rbac', () => ({
@@ -92,13 +113,7 @@ function renderForm(props: Partial<ComponentProps<typeof MedicalConditionForm>> 
 describe('MedicalConditionForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useActionPlanForConditionMock.mockReturnValue({
-      data: { actionPlanDate: null, fileReference: null },
-      isLoading: false,
-      isError: false,
-      isPending: false,
-      error: null,
-    });
+    useActionPlanForConditionMock.mockReturnValue(createActionPlanQueryState());
   });
 
   it('renders add-condition title when open without condition', () => {

@@ -295,13 +295,16 @@ describe('placeholder pages', () => {
     expect(screen.getByRole('heading', { name: /medical profile/i })).toBeInTheDocument();
   });
 
-  it('renders additional contacts placeholder', () => {
+  it('renders additional contacts page shell', () => {
+    const client = new QueryClient();
     render(
-      <MemoryRouter>
-        <AdditionalContactsPage />
-      </MemoryRouter>
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <AdditionalContactsPage />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
-    expect(screen.getByRole('heading', { name: /additional contacts/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /additional contacts/i, level: 1 })).toBeInTheDocument();
   });
 
   it('renders profile completion wizard shell', () => {

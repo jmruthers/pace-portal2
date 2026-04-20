@@ -116,18 +116,28 @@ export function MedicalConditionsSection({
                         <strong>{label}</strong>
                         {inactive ? ' (inactive)' : ''}
                       </p>
-                      <p className="flex flex-wrap gap-2">
+                      <ul className="grid gap-2 sm:grid-cols-2">
                         {!typesQuery.isLoading && typePath ? (
-                          <Badge variant="outline-sec-muted">{typePath}</Badge>
+                          <li>
+                            <Badge variant="outline-sec-muted">{typePath}</Badge>
+                          </li>
                         ) : null}
                         {c.severity != null ? (
-                          <Badge variant="solid-sec-muted">{String(c.severity)}</Badge>
+                          <li>
+                            <Badge variant="solid-sec-muted">{String(c.severity)}</Badge>
+                          </li>
                         ) : null}
                         {c.medical_alert ? (
-                          <Badge variant="solid-acc-normal">Medical alert</Badge>
+                          <li>
+                            <Badge variant="solid-acc-normal">Medical alert</Badge>
+                          </li>
                         ) : null}
-                        {c.action_plan_file_id ? <Badge variant="outline-main-muted">Attachment</Badge> : null}
-                      </p>
+                        {c.action_plan_file_id ? (
+                          <li>
+                            <Badge variant="outline-main-muted">Attachment</Badge>
+                          </li>
+                        ) : null}
+                      </ul>
                     </header>
                     {c.action_plan_file_id ? <ConditionAttachmentLink conditionId={c.id} /> : null}
                     <fieldset className="m-0 grid grid-flow-col auto-cols-max justify-end gap-2 border-0 p-0">
