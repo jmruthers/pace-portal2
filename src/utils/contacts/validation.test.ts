@@ -10,7 +10,7 @@ const contacts: GroupedAdditionalContact[] = [
   {
     contact_id: 'c1',
     contact_person_id: 'p1',
-    contact_type_id: 1,
+    contact_type_id: 'ct-1',
     contact_type_name: 'Emergency',
     email: 'sam@example.com',
     first_name: 'Sam',

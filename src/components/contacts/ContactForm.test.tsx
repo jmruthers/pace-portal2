@@ -11,6 +11,25 @@ const findByEmailMock = vi.fn();
 const createMutateAsync = vi.fn();
 const updateMutateAsync = vi.fn();
 
+vi.mock('@solvera/pace-core', () => ({
+  useUnifiedAuthContext: () => ({ user: { id: 'u1' } }),
+}));
+
+vi.mock('@solvera/pace-core/providers', () => ({
+  useOrganisationsContextOptional: () => ({ selectedOrganisation: { id: 'org-1' } }),
+}));
+
+vi.mock('@solvera/pace-core/rbac', () => ({
+  useSecureSupabase: () => ({}),
+}));
+
+vi.mock('@/shared/lib/utils/userUtils', () => ({
+  fetchCurrentPersonMember: vi.fn(async () => ({
+    ok: true,
+    data: { member: { id: 'm-self' } },
+  })),
+}));
+
 vi.mock('@/hooks/contacts/useContactFormState', () => ({
   useContactFormState: () => stateMock(),
 }));
@@ -138,6 +157,7 @@ describe('ContactForm', () => {
     stateMock.mockReset();
     referencesMock.mockReset();
     findByEmailMock.mockReset();
+    findByEmailMock.mockResolvedValue({ ok: true, data: null });
     createMutateAsync.mockReset();
     updateMutateAsync.mockReset();
     referencesMock.mockReturnValue({
@@ -166,7 +186,7 @@ describe('ContactForm', () => {
         mode="create"
         contacts={[]}
         initialContact={null}
-        targetMemberId={null}
+        memberId={null}
         onCancel={vi.fn()}
         onSaved={vi.fn()}
         onEditExistingContact={vi.fn()}
@@ -186,7 +206,7 @@ describe('ContactForm', () => {
         mode="create"
         contacts={[]}
         initialContact={null}
-        targetMemberId={null}
+        memberId={null}
         onCancel={vi.fn()}
         onSaved={vi.fn()}
         onEditExistingContact={vi.fn()}
@@ -207,7 +227,7 @@ describe('ContactForm', () => {
         mode="create"
         contacts={[]}
         initialContact={null}
-        targetMemberId="m1"
+        memberId="m1"
         onCancel={vi.fn()}
         onSaved={onSaved}
         onEditExistingContact={vi.fn()}
@@ -231,7 +251,7 @@ describe('ContactForm', () => {
         initialContact={{
           contact_id: 'c1',
           contact_person_id: 'p1',
-          contact_type_id: 1,
+          contact_type_id: 'ct-1',
           contact_type_name: 'Emergency',
           email: 'sam@example.com',
           first_name: 'Sam',
@@ -241,7 +261,7 @@ describe('ContactForm', () => {
           permission_type: 'view',
           phones: [{ phone_number: '0400', phone_type: 'Mobile' }],
         }}
-        targetMemberId={null}
+        memberId={null}
         onCancel={vi.fn()}
         onSaved={onSaved}
         onEditExistingContact={vi.fn()}
@@ -250,6 +270,12 @@ describe('ContactForm', () => {
 
     await user.click(screen.getByRole('button', { name: /full form submit/i }));
     expect(updateMutateAsync).toHaveBeenCalledOnce();
+    expect(updateMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phoneNumber: undefined,
+        phoneTypeId: undefined,
+      })
+    );
     expect(onSaved).toHaveBeenCalledOnce();
   });
 });

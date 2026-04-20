@@ -1,10 +1,20 @@
-import type { AdditionalContactRow } from '@/shared/hooks/useEnhancedLanding';
-
 /**
  * Flat row shape shared by `data_pace_contacts_list` and `data_pace_member_contacts_list`
  * (member RPC adds `access_level`).
  */
-export type FlatContactRpcRow = AdditionalContactRow & {
+export type FlatContactRpcRow = {
+  contact_id: string;
+  contact_person_id: string;
+  contact_type_id: string;
+  contact_type_name: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  member_id: string;
+  organisation_id: string;
+  permission_type: string;
+  phone_number: string;
+  phone_type: string;
   access_level?: string;
 };
 
@@ -19,7 +29,7 @@ export type GroupedContactPhone = {
 export type GroupedAdditionalContact = {
   contact_id: string;
   contact_person_id: string;
-  contact_type_id: number;
+  contact_type_id: string;
   contact_type_name: string;
   email: string;
   first_name: string;

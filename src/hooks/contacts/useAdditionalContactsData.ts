@@ -13,6 +13,7 @@ import {
 } from '@solvera/pace-core/types';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 import type { Database } from '@/types/pace-database';
+import { fetchCurrentPersonMember } from '@/shared/lib/utils/userUtils';
 import {
   groupFlatContactRows,
   type FlatContactRpcRow,
@@ -50,25 +51,18 @@ export function getAdditionalContactsQueryKey(input: {
   ];
 }
 
-type ContactsListRpc = Database['public']['Functions']['data_pace_contacts_list'];
 type MemberContactsRpc = Database['public']['Functions']['data_pace_member_contacts_list'];
 
 function normalizeFlatContactRows(rows: Array<Record<string, unknown>>): FlatContactRpcRow[] {
   return rows
     .map((row) => {
-      const rawTypeId = row.contact_type_id;
-      const parsedTypeId =
-        typeof rawTypeId === 'number'
-          ? rawTypeId
-          : typeof rawTypeId === 'string'
-            ? Number.parseInt(rawTypeId, 10)
-            : Number.NaN;
-      if (!Number.isFinite(parsedTypeId)) return null;
+      const contactTypeId = String(row.contact_type_id ?? '').trim();
+      if (contactTypeId === '') return null;
 
       return {
         contact_id: String(row.contact_id ?? ''),
         contact_person_id: String(row.contact_person_id ?? ''),
-        contact_type_id: parsedTypeId,
+        contact_type_id: contactTypeId,
         contact_type_name: String(row.contact_type_name ?? ''),
         email: String(row.email ?? ''),
         first_name: String(row.first_name ?? ''),
@@ -85,19 +79,28 @@ function normalizeFlatContactRows(rows: Array<Record<string, unknown>>): FlatCon
 }
 
 async function fetchSelfServiceContacts(
+  secure: ReturnType<typeof useSecureSupabase>,
   client: ReturnType<typeof toTypedSupabase>,
-  userId: string
+  userId: string,
+  organisationId: string
 ): Promise<ApiResult<GroupedAdditionalContact[]>> {
   try {
-    if (!client) {
+    if (!secure || !client) {
       return err({
         code: 'CONTACTS_CONTEXT',
         message: 'Client is not available.',
       });
     }
-    const { data, error } = await client.rpc('data_pace_contacts_list', {
-      p_user_id: userId,
-    } satisfies ContactsListRpc['Args']);
+    const pm = await fetchCurrentPersonMember(secure, userId, organisationId);
+    if (!isOk(pm) || !pm.data.member?.id) {
+      return err({
+        code: 'CONTACTS_CONTEXT',
+        message: 'Could not resolve current member for contacts list.',
+      });
+    }
+    const { data, error } = await client.rpc('data_pace_member_contacts_list', {
+      p_member_id: pm.data.member.id,
+    } satisfies MemberContactsRpc['Args']);
     if (error) {
       return err({
         code: 'CONTACTS_LIST',
@@ -218,7 +221,10 @@ export function useAdditionalContactsData(): UseAdditionalContactsDataResult {
         }
         return result.data;
       }
-      const result = await fetchSelfServiceContacts(client, userId);
+      if (!organisationId) {
+        throw new Error('Missing organisation context.');
+      }
+      const result = await fetchSelfServiceContacts(secure, client, userId, organisationId);
       if (!isOk(result)) {
         throw new Error(result.error.message);
       }

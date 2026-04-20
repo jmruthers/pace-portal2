@@ -11,6 +11,8 @@ export type EmailPersonMatch = {
   last_name: string;
   preferred_name: string | null;
   email: string | null;
+  phone_number: string | null;
+  phone_type_id: number | null;
 };
 
 export type ContactDraft = ContactFullFormValues & {
@@ -89,6 +91,8 @@ export function useContactFormState(input: UseContactFormStateInput): UseContact
         last_name: matchedPerson?.last_name ?? prev.last_name,
         preferred_name: matchedPerson?.preferred_name ?? prev.preferred_name,
         email: matchedPerson?.email ?? prev.email,
+        phone_number: matchedPerson?.phone_number ?? prev.phone_number,
+        phone_type_id: matchedPerson?.phone_type_id ?? prev.phone_type_id,
         match_person_id: matchedPerson?.person_id ?? prev.match_person_id,
         link_existing_person: true,
       }));

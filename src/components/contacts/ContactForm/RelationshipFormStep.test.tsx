@@ -12,6 +12,7 @@ describe('RelationshipFormStep', () => {
 
     render(
       <RelationshipFormStep
+        email="sam@example.com"
         contactTypes={[{ id: 'ct-1', name: 'Emergency' }]}
         permissionOptions={['view', 'edit']}
         defaultValues={{ contact_type_id: 'ct-1', permission_type: 'view' }}

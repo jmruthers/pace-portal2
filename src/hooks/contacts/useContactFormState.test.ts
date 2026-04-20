@@ -6,7 +6,7 @@ import type { GroupedAdditionalContact } from '@/utils/contacts/groupAdditionalC
 const existingContact: GroupedAdditionalContact = {
   contact_id: 'c1',
   contact_person_id: 'p1',
-  contact_type_id: 1,
+  contact_type_id: 'ct-1',
   contact_type_name: 'Emergency',
   email: 'sam@example.com',
   first_name: 'Sam',
@@ -31,7 +31,7 @@ describe('useContactFormState', () => {
     );
     expect(result.current.step).toBe('full');
     expect(result.current.draft.first_name).toBe('Sam');
-    expect(result.current.draft.contact_type_id).toBe('1');
+    expect(result.current.draft.contact_type_id).toBe('ct-1');
   });
 
   it('moves through match to relationship when link existing is chosen', () => {
@@ -46,6 +46,8 @@ describe('useContactFormState', () => {
         last_name: 'Jones',
         preferred_name: 'AJ',
         email: 'alex@example.com',
+        phone_number: '0400',
+        phone_type_id: 1,
       });
       result.current.toMatchStep();
     });
@@ -148,6 +150,8 @@ describe('useContactFormState', () => {
         last_name: 'Jones',
         preferred_name: null,
         email: 'alex@example.com',
+        phone_number: null,
+        phone_type_id: null,
       });
       result.current.toMatchStep();
       result.current.chooseCreateNewFromMatch();

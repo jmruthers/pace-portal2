@@ -53,7 +53,7 @@ export function EmailFormStep({
       </CardHeader>
       <CardContent>
         <FormProvider {...form}>
-          <section className="grid gap-4" aria-label="Contact email lookup">
+          <section className="grid gap-4 md:grid-cols-2" aria-label="Contact email lookup">
             <FormField<ContactEmailLookupValues>
               name="email"
               label="Email"
@@ -64,7 +64,7 @@ export function EmailFormStep({
               control={form.control}
               name="no_email"
               render={({ field }) => (
-                <Label className="grid grid-cols-[auto_1fr] items-center gap-2">
+                <Label className="grid grid-cols-[auto_1fr] items-center gap-2 md:col-span-2">
                   <Checkbox
                     checked={field.value}
                     onChange={(checked) => field.onChange(checked)}

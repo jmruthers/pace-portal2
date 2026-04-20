@@ -19,6 +19,8 @@ describe('MatchConfirmationStep', () => {
           last_name: 'Lee',
           preferred_name: null,
           email: 'sam@example.com',
+          phone_number: null,
+          phone_type_id: null,
         }}
         onBack={onBack}
         onCancel={onCancel}

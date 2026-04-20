@@ -38,7 +38,11 @@ function AdditionalContactsContent() {
           mode={formSurface === 'edit' ? 'edit' : 'create'}
           contacts={contactsState.contacts}
           initialContact={formSurface === 'edit' ? selectedContact : null}
-          targetMemberId={contactsState.mode === 'proxy' ? targetMemberId : null}
+          memberId={
+            contactsState.mode === 'proxy'
+              ? targetMemberId
+              : (contactsState.contacts[0]?.member_id ?? null)
+          }
           onCancel={() => {
             setSelectedContact(null);
             setFormSurface('list');

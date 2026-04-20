@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
   FormField,
+  Input,
   Label,
   Select,
   SelectContent,
@@ -34,6 +35,7 @@ export type FullFormStepProps = {
   permissionOptions: ReadonlyArray<string>;
   defaultValues: ContactFullFormValues;
   canBack: boolean;
+  isLinkExistingPerson: boolean;
   isSaving: boolean;
   onBack: () => void;
   onCancel: () => void;
@@ -47,6 +49,7 @@ export function FullFormStep({
   permissionOptions,
   defaultValues,
   canBack,
+  isLinkExistingPerson,
   isSaving,
   onBack,
   onCancel,
@@ -61,6 +64,13 @@ export function FullFormStep({
   useEffect(() => {
     form.reset(defaultValues);
   }, [defaultValues, form]);
+
+  const selectedContactTypeId = form.watch('contact_type_id');
+  const selectedPermissionType = form.watch('permission_type');
+  const selectedPhoneTypeId = form.watch('phone_type_id');
+  const selectedContactTypeLabel = contactTypes.find((option) => option.id === selectedContactTypeId)?.name;
+  const selectedPermissionLabel = permissionOptions.find((option) => option === selectedPermissionType);
+  const selectedPhoneTypeLabel = phoneTypes.find((option) => option.id === selectedPhoneTypeId)?.name;
 
   return (
     <Card>
@@ -78,7 +88,9 @@ export function FullFormStep({
                   Relationship type
                   <Select value={field.value} onValueChange={(value) => field.onChange(value)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select relationship type" />
+                        <SelectValue placeholder="Select relationship type">
+                          {selectedContactTypeLabel}
+                        </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {contactTypes.map((option) => (
@@ -102,7 +114,9 @@ export function FullFormStep({
                   Permission type
                   <Select value={field.value} onValueChange={(value) => field.onChange(value)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select permission type" />
+                      <SelectValue placeholder="Select permission type">
+                        {selectedPermissionLabel}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {permissionOptions.map((option) => (
@@ -118,14 +132,75 @@ export function FullFormStep({
                 </Label>
               )}
             />
-            <FormField<ContactFullFormValues> name="first_name" label="First name" required />
-            <FormField<ContactFullFormValues> name="last_name" label="Last name" required />
-            <FormField<ContactFullFormValues> name="preferred_name" label="Preferred name" />
-            <FormField<ContactFullFormValues>
+            <Controller
+              control={form.control}
+              name="first_name"
+              render={({ field, fieldState }) => (
+                <Label className="grid gap-1">
+                  First name
+                  <Input
+                    value={field.value}
+                    onChange={(value) => field.onChange(value)}
+                    disabled={isLinkExistingPerson}
+                  />
+                  {fieldState.error?.message != null ? (
+                    <p role="alert">{String(fieldState.error.message)}</p>
+                  ) : null}
+                </Label>
+              )}
+            />
+            <Controller
+              control={form.control}
+              name="last_name"
+              render={({ field, fieldState }) => (
+                <Label className="grid gap-1">
+                  Last name
+                  <Input
+                    value={field.value}
+                    onChange={(value) => field.onChange(value)}
+                    disabled={isLinkExistingPerson}
+                  />
+                  {fieldState.error?.message != null ? (
+                    <p role="alert">{String(fieldState.error.message)}</p>
+                  ) : null}
+                </Label>
+              )}
+            />
+            <Controller
+              control={form.control}
+              name="preferred_name"
+              render={({ field, fieldState }) => (
+                <Label className="grid gap-1">
+                  Preferred name
+                  <Input
+                    value={field.value}
+                    onChange={(value) => field.onChange(value)}
+                    disabled={isLinkExistingPerson}
+                  />
+                  {fieldState.error?.message != null ? (
+                    <p role="alert">{String(fieldState.error.message)}</p>
+                  ) : null}
+                </Label>
+              )}
+            />
+            <Controller
+              control={form.control}
               name="email"
-              label="Email"
-              type="email"
-              placeholder="Enter email address"
+              render={({ field, fieldState }) => (
+                <Label className="grid gap-1">
+                  Email
+                  <Input
+                    type="email"
+                    value={field.value}
+                    onChange={(value) => field.onChange(value)}
+                    placeholder="Enter email address"
+                    disabled={isLinkExistingPerson}
+                  />
+                  {fieldState.error?.message != null ? (
+                    <p role="alert">{String(fieldState.error.message)}</p>
+                  ) : null}
+                </Label>
+              )}
             />
             <FormField<ContactFullFormValues>
               name="phone_number"
@@ -143,7 +218,9 @@ export function FullFormStep({
                     onValueChange={(value) => field.onChange(value === '' ? null : Number(value))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select phone type" />
+                      <SelectValue placeholder="Select phone type">
+                        {selectedPhoneTypeLabel}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {phoneTypes.map((option) => (
@@ -159,6 +236,13 @@ export function FullFormStep({
                 </Label>
               )}
             />
+            {isLinkExistingPerson ? (
+              <article className="md:col-span-2">
+                <p role="status">
+                  Name and email come from the matched person record and cannot be changed in this flow.
+                </p>
+              </article>
+            ) : null}
           </section>
         </FormProvider>
       </CardContent>

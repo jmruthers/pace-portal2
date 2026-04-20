@@ -4,6 +4,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import * as supabaseTyped from '@/lib/supabase-typed';
+import * as userUtils from '@/shared/lib/utils/userUtils';
 import { useAdditionalContactsData } from '@/hooks/contacts/useAdditionalContactsData';
 
 const rpc = vi.fn();
@@ -79,11 +80,19 @@ describe('useAdditionalContactsData', () => {
       proxyAttribution: {},
     }));
     vi.spyOn(supabaseTyped, 'toTypedSupabase').mockReturnValue({ rpc } as never);
+    vi.spyOn(userUtils, 'fetchCurrentPersonMember').mockResolvedValue({
+      ok: true,
+      data: {
+        person: { id: 'p-self' },
+        member: { id: 'm-self' },
+        usedReducedFieldFallback: false,
+      },
+    } as never);
   });
 
-  it('loads self-service contacts via data_pace_contacts_list', async () => {
+  it('loads self-service contacts via data_pace_member_contacts_list', async () => {
     rpc.mockImplementation((name: string) => {
-      if (name === 'data_pace_contacts_list') {
+      if (name === 'data_pace_member_contacts_list') {
         return Promise.resolve({ data: [sampleRow], error: null });
       }
       return Promise.resolve({ data: null, error: null });
@@ -97,7 +106,7 @@ describe('useAdditionalContactsData', () => {
       expect(result.current.contacts).toHaveLength(1);
     });
     expect(result.current.mode).toBe('self');
-    expect(rpc).toHaveBeenCalledWith('data_pace_contacts_list', { p_user_id: 'u1' });
+    expect(rpc).toHaveBeenCalledWith('data_pace_member_contacts_list', { p_member_id: 'm-self' });
   });
 
   it('loads proxy contacts via data_pace_member_contacts_list when proxy is active', async () => {

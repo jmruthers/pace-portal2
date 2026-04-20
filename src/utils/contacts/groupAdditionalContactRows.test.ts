@@ -7,7 +7,7 @@ import {
 function row(partial: Partial<FlatContactRpcRow> & Pick<FlatContactRpcRow, 'contact_id'>): FlatContactRpcRow {
   return {
     contact_person_id: 'cp1',
-    contact_type_id: 1,
+    contact_type_id: 'ct-1',
     contact_type_name: 'Emergency',
     email: 'a@b.c',
     first_name: 'A',

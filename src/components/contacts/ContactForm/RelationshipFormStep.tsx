@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useZodForm } from '@solvera/pace-core/hooks';
 import { Controller, FormProvider } from '@solvera/pace-core/forms';
 import {
@@ -26,6 +26,7 @@ export type ContactTypeOption = {
 };
 
 export type RelationshipFormStepProps = {
+  email: string;
   contactTypes: ReadonlyArray<ContactTypeOption>;
   permissionOptions: ReadonlyArray<string>;
   defaultValues: ContactRelationshipValues;
@@ -35,6 +36,7 @@ export type RelationshipFormStepProps = {
 };
 
 export function RelationshipFormStep({
+  email,
   contactTypes,
   permissionOptions,
   defaultValues,
@@ -52,10 +54,10 @@ export function RelationshipFormStep({
     form.reset(defaultValues);
   }, [defaultValues, form]);
 
-  const contactTypeLabel = useMemo(() => {
-    const selected = contactTypes.find((option) => option.id === form.watch('contact_type_id'));
-    return selected?.name;
-  }, [contactTypes, form]);
+  const selectedContactTypeId = form.watch('contact_type_id');
+  const selectedPermissionType = form.watch('permission_type');
+  const contactTypeLabel = contactTypes.find((option) => option.id === selectedContactTypeId)?.name;
+  const permissionLabel = permissionOptions.find((option) => option === selectedPermissionType);
 
   return (
     <Card>
@@ -64,7 +66,11 @@ export function RelationshipFormStep({
       </CardHeader>
       <CardContent>
         <FormProvider {...form}>
-          <section className="grid gap-4" aria-label="Relationship step">
+          <section className="grid gap-4 md:grid-cols-2" aria-label="Relationship step">
+            <article className="grid gap-1 md:col-span-2" aria-label="Email selected for contact">
+              <p>Email</p>
+              <p>{email.trim() === '' ? 'No email address' : email}</p>
+            </article>
             <Controller
               control={form.control}
               name="contact_type_id"
@@ -99,7 +105,9 @@ export function RelationshipFormStep({
                   Permission type
                   <Select value={field.value} onValueChange={(value) => field.onChange(value)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select permission type" />
+                      <SelectValue placeholder="Select permission type">
+                        {permissionLabel}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {permissionOptions.map((option) => (

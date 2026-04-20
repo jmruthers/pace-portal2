@@ -8,7 +8,7 @@ type DeleteRpc = Database['public']['Functions']['app_pace_contact_delete'];
 type UpdateRpc = Database['public']['Functions']['app_pace_contact_update'];
 
 export type CreateContactInput = {
-  memberId?: string | null;
+  memberId: string;
   firstName: string;
   lastName: string;
   preferredName?: string | null;
@@ -37,6 +37,11 @@ export type UseContactOperationsResult = {
   updateContact: UseMutationResult<void, Error, UpdateContactInput>;
 };
 
+function normalizeOptionalText(value: string | null | undefined): string | undefined {
+  const normalized = (value ?? '').trim();
+  return normalized === '' ? undefined : normalized;
+}
+
 /**
  * Contact mutations for additional contacts (PR12: delete; PR13 will extend create/update).
  * Invalidates additional-contacts list queries on successful delete.
@@ -51,15 +56,25 @@ export function useContactOperations(): UseContactOperationsResult {
       if (!client) {
         throw new Error('Client is not available.');
       }
+      const memberId = input.memberId.trim();
+      const firstName = input.firstName.trim();
+      const lastName = input.lastName.trim();
+      const contactTypeId = input.contactTypeId.trim();
+      const normalizedEmail = normalizeOptionalText(input.email);
+      const normalizedPreferredName = normalizeOptionalText(input.preferredName);
+      const normalizedPhoneNumber = normalizeOptionalText(input.phoneNumber);
+      if (!memberId || !firstName || !lastName || !contactTypeId) {
+        throw new Error('contact_type_id, member_id, first_name, and last_name are required');
+      }
       const { data, error } = await client.rpc('app_pace_contact_create', {
-        p_member_id: input.memberId ?? undefined,
-        p_first_name: input.firstName,
-        p_last_name: input.lastName,
-        p_preferred_name: input.preferredName ?? undefined,
-        p_email: input.email ?? undefined,
-        p_contact_type_id: input.contactTypeId,
+        p_member_id: memberId,
+        p_first_name: firstName,
+        p_last_name: lastName,
+        p_preferred_name: normalizedPreferredName,
+        p_email: normalizedEmail,
+        p_contact_type_id: contactTypeId,
         p_permission_type: input.permissionType,
-        p_phone_number: input.phoneNumber ?? undefined,
+        p_phone_number: normalizedPhoneNumber,
         p_phone_type_id: input.phoneTypeId ?? undefined,
       } satisfies CreateRpc['Args']);
       if (error) {
@@ -102,15 +117,18 @@ export function useContactOperations(): UseContactOperationsResult {
       if (!client) {
         throw new Error('Client is not available.');
       }
+      const normalizedEmail = normalizeOptionalText(input.email);
+      const normalizedPreferredName = normalizeOptionalText(input.preferredName);
+      const normalizedPhoneNumber = normalizeOptionalText(input.phoneNumber);
       const { data, error } = await client.rpc('app_pace_contact_update', {
         p_contact_id: input.contactId,
         p_first_name: input.firstName,
         p_last_name: input.lastName,
-        p_preferred_name: input.preferredName ?? undefined,
-        p_email: input.email ?? undefined,
+        p_preferred_name: normalizedPreferredName,
+        p_email: normalizedEmail,
         p_contact_type_id: input.contactTypeId,
         p_permission_type: input.permissionType,
-        p_phone_number: input.phoneNumber ?? undefined,
+        p_phone_number: normalizedPhoneNumber,
         p_phone_type_id: input.phoneTypeId ?? undefined,
       } satisfies UpdateRpc['Args']);
       if (error) {

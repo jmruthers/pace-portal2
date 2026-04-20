@@ -11,6 +11,9 @@ import {
   CardTitle,
   LoadingSpinner,
 } from '@solvera/pace-core/components';
+import { useUnifiedAuthContext } from '@solvera/pace-core';
+import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
+import { useSecureSupabase } from '@solvera/pace-core/rbac';
 import { isOk } from '@solvera/pace-core/types';
 import { EmailFormStep } from '@/components/contacts/ContactForm/EmailFormStep';
 import { FullFormStep } from '@/components/contacts/ContactForm/FullFormStep';
@@ -31,12 +34,13 @@ import {
   useContactFormReferenceData,
   useContactPersonLookup,
 } from '@/hooks/contacts/useContactFormData';
+import { fetchCurrentPersonMember } from '@/shared/lib/utils/userUtils';
 
 type ContactFormProps = {
   mode: ContactFormMode;
   contacts: ReadonlyArray<GroupedAdditionalContact>;
   initialContact: GroupedAdditionalContact | null;
-  targetMemberId: string | null;
+  memberId: string | null;
   onCancel: () => void;
   onSaved: () => void;
   onEditExistingContact: (contact: GroupedAdditionalContact) => void;
@@ -60,15 +64,22 @@ function buildPermissionOptions(
   return [...values];
 }
 
+function normalizeText(value: string | null | undefined): string {
+  return (value ?? '').trim();
+}
+
 export function ContactForm({
   mode,
   contacts,
   initialContact,
-  targetMemberId,
+  memberId,
   onCancel,
   onSaved,
   onEditExistingContact,
 }: ContactFormProps) {
+  const { user } = useUnifiedAuthContext();
+  const org = useOrganisationsContextOptional();
+  const secure = useSecureSupabase();
   const formState = useContactFormState({
     mode,
     initialContact,
@@ -108,6 +119,22 @@ export function ContactForm({
   }
 
   const editingContactId = mode === 'edit' ? initialContact?.contact_id ?? null : null;
+  const organisationId = org?.selectedOrganisation?.id ?? null;
+  const actingUserId = user?.id ?? null;
+
+  const resolveCreateMemberId = async (): Promise<string | null> => {
+    if (memberId) {
+      return memberId;
+    }
+    if (!secure || !actingUserId || !organisationId) {
+      return null;
+    }
+    const pm = await fetchCurrentPersonMember(secure, actingUserId, organisationId);
+    if (!isOk(pm)) {
+      return null;
+    }
+    return pm.data.member?.id ?? null;
+  };
 
   const setDuplicateBlocked = (candidatePersonId: string | null, candidateEmail: string) => {
     const duplicate = findDuplicateContact({
@@ -124,40 +151,96 @@ export function ContactForm({
   };
 
   const saveContact = async (values: ContactFullFormValues) => {
-    formState.applyFullValues(values);
-    const duplicateContact = setDuplicateBlocked(formState.draft.match_person_id, values.email);
+    const linkExisting = formState.draft.link_existing_person && formState.matchedPerson;
+    const normalizedValues = linkExisting
+      ? {
+          ...values,
+          first_name: formState.matchedPerson?.first_name ?? values.first_name,
+          last_name: formState.matchedPerson?.last_name ?? values.last_name,
+          preferred_name: formState.matchedPerson?.preferred_name ?? values.preferred_name,
+          email: formState.matchedPerson?.email ?? values.email,
+        }
+      : values;
+
+    formState.applyFullValues(normalizedValues);
+    const duplicateContact = setDuplicateBlocked(formState.draft.match_person_id, normalizedValues.email);
     if (duplicateContact) {
       return;
     }
 
-    if (mode === 'edit' && initialContact) {
-      await updateContact.mutateAsync({
-        contactId: initialContact.contact_id,
-        firstName: values.first_name,
-        lastName: values.last_name,
-        preferredName: values.preferred_name,
-        email: values.email,
-        contactTypeId: values.contact_type_id,
-        permissionType: values.permission_type,
-        phoneNumber: values.phone_number,
-        phoneTypeId: values.phone_type_id,
-      });
-      onSaved();
+    if (mode === 'edit' && !initialContact) {
+      formState.setBlocked('Could not resolve the selected contact for editing. Return to contacts and try again.');
       return;
     }
 
-    await createContact.mutateAsync({
-      memberId: targetMemberId,
-      firstName: values.first_name,
-      lastName: values.last_name,
-      preferredName: values.preferred_name,
-      email: values.email,
-      contactTypeId: values.contact_type_id,
-      permissionType: values.permission_type,
-      phoneNumber: values.phone_number,
-      phoneTypeId: values.phone_type_id,
-    });
-    onSaved();
+    try {
+      if (mode === 'edit' && initialContact) {
+        const submittedPhone = normalizeText(normalizedValues.phone_number);
+        const existingPhones = new Set(
+          initialContact.phones
+            .map((phone) => normalizeText(phone.phone_number))
+            .filter((phone) => phone !== '')
+        );
+        const shouldInsertPhone = submittedPhone !== '' && !existingPhones.has(submittedPhone);
+
+        await updateContact.mutateAsync({
+          contactId: initialContact.contact_id,
+          firstName: normalizedValues.first_name,
+          lastName: normalizedValues.last_name,
+          preferredName: normalizedValues.preferred_name,
+          email: normalizedValues.email,
+          contactTypeId: normalizedValues.contact_type_id,
+          permissionType: normalizedValues.permission_type,
+          phoneNumber: shouldInsertPhone ? normalizedValues.phone_number : undefined,
+          phoneTypeId: shouldInsertPhone ? normalizedValues.phone_type_id : undefined,
+        });
+        onSaved();
+        return;
+      }
+
+      const trimmedEmail = normalizedValues.email.trim().toLowerCase();
+      if (!linkExisting && trimmedEmail !== '') {
+        const lookup = await findByEmail(trimmedEmail);
+        if (!isOk(lookup)) {
+          formState.setBlocked(lookup.error.message);
+          return;
+        }
+        if (lookup.data) {
+          formState.setMatchedPerson(lookup.data);
+          const duplicateFromLookup = setDuplicateBlocked(lookup.data.person_id, trimmedEmail);
+          if (!duplicateFromLookup) {
+            formState.toMatchStep();
+          }
+          return;
+        }
+      }
+
+      const createMemberId = await resolveCreateMemberId();
+      if (!createMemberId) {
+        formState.setBlocked('Could not resolve member context for this contact. Please refresh and try again.');
+        return;
+      }
+
+      await createContact.mutateAsync({
+        memberId: createMemberId,
+        firstName: normalizedValues.first_name,
+        lastName: normalizedValues.last_name,
+        preferredName: normalizedValues.preferred_name,
+        email: linkExisting ? '' : normalizedValues.email,
+        contactTypeId: normalizedValues.contact_type_id,
+        permissionType: normalizedValues.permission_type,
+        phoneNumber: normalizedValues.phone_number,
+        phoneTypeId: normalizedValues.phone_type_id,
+      });
+      onSaved();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not save contact.';
+      if (message.toLowerCase().includes('unique_email')) {
+        formState.setBlocked('This email is already used by an existing person. Link the existing person instead of creating a new email record.');
+        return;
+      }
+      formState.setBlocked(message);
+    }
   };
 
   if (formState.step === 'blocked') {
@@ -167,14 +250,15 @@ export function ContactForm({
       candidateEmail: formState.draft.email,
       editingContactId,
     });
+    const duplicateMode = Boolean(duplicate.existingContact);
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Contact already linked</CardTitle>
+          <CardTitle>{duplicateMode ? 'Contact already linked' : 'Contact not saved'}</CardTitle>
         </CardHeader>
         <CardContent>
           <Alert variant="destructive">
-            <AlertTitle>Duplicate contact blocked</AlertTitle>
+            <AlertTitle>{duplicateMode ? 'Duplicate contact blocked' : 'Save failed'}</AlertTitle>
             <AlertDescription>{formState.blockedMessage ?? 'Edit the existing contact instead.'}</AlertDescription>
           </Alert>
         </CardContent>
@@ -182,17 +266,23 @@ export function ContactForm({
           <Button type="button" variant="secondary" onClick={onCancel}>
             Back to contacts
           </Button>
-          <Button
-            type="button"
-            variant="default"
-            disabled={!duplicate.existingContact}
-            onClick={() => {
-              if (!duplicate.existingContact) return;
-              onEditExistingContact(duplicate.existingContact);
-            }}
-          >
-            Edit existing contact
-          </Button>
+          {duplicateMode ? (
+            <Button
+              type="button"
+              variant="default"
+              disabled={!duplicate.existingContact}
+              onClick={() => {
+                if (!duplicate.existingContact) return;
+                onEditExistingContact(duplicate.existingContact);
+              }}
+            >
+              Edit existing contact
+            </Button>
+          ) : (
+            <Button type="button" variant="default" onClick={formState.clearBlocked}>
+              Back to form
+            </Button>
+          )}
           <Button type="button" variant="ghost" onClick={formState.clearBlocked}>
             Try again
           </Button>
@@ -259,6 +349,7 @@ export function ContactForm({
   if (formState.step === 'relationship') {
     return (
       <RelationshipFormStep
+        email={formState.draft.email}
         contactTypes={referenceData.contactTypes.map((row) => ({ id: row.id, name: row.name }))}
         permissionOptions={permissionOptions}
         defaultValues={{
@@ -291,6 +382,7 @@ export function ContactForm({
         permission_type: formState.draft.permission_type,
       }}
       canBack={mode === 'create'}
+      isLinkExistingPerson={formState.draft.link_existing_person}
       isSaving={createContact.isPending || updateContact.isPending}
       onBack={() => {
         if (mode === 'edit') {

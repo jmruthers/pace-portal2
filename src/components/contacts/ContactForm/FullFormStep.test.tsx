@@ -27,6 +27,7 @@ describe('FullFormStep', () => {
           permission_type: 'view',
         }}
         canBack={true}
+        isLinkExistingPerson={false}
         isSaving={false}
         onBack={onBack}
         onCancel={onCancel}

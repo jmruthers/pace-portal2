@@ -53,46 +53,86 @@ describe('useContactFormData', () => {
   });
 
   it('finds person by email', async () => {
-    fromMock.mockImplementation(() => ({
-      select: () => ({
-        eq: () => ({
-          is: () => ({
-            limit: () =>
-              Promise.resolve({
-                data: [
-                  {
-                    id: 'p1',
-                    first_name: 'Sam',
-                    last_name: 'Lee',
-                    preferred_name: 'Sam',
-                    email: 'sam@example.com',
-                  },
-                ],
-                error: null,
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'core_person') {
+        return {
+          select: () => ({
+            eq: () => ({
+              is: () => ({
+                limit: () =>
+                  Promise.resolve({
+                    data: [
+                      {
+                        id: 'p1',
+                        first_name: 'Sam',
+                        last_name: 'Lee',
+                        preferred_name: 'Sam',
+                        email: 'sam@example.com',
+                      },
+                    ],
+                    error: null,
+                  }),
               }),
+            }),
+          }),
+        };
+      }
+      return {
+        select: () => ({
+          eq: () => ({
+            is: () => ({
+              order: () => ({
+                limit: () => ({
+                  maybeSingle: () =>
+                    Promise.resolve({
+                      data: { phone_number: '0400', phone_type_id: 1 },
+                      error: null,
+                    }),
+                }),
+              }),
+            }),
           }),
         }),
-      }),
-    }));
+      };
+    });
 
     const { result } = renderHook(() => useContactPersonLookup(), { wrapper });
     const lookup = await result.current.findByEmail('sam@example.com');
     expect(lookup.ok).toBe(true);
     if (lookup.ok) {
       expect(lookup.data?.person_id).toBe('p1');
+      expect(lookup.data?.phone_number).toBe('0400');
+      expect(lookup.data?.phone_type_id).toBe(1);
     }
   });
 
   it('returns null when no email match exists', async () => {
-    fromMock.mockImplementation(() => ({
-      select: () => ({
-        eq: () => ({
-          is: () => ({
-            limit: () => Promise.resolve({ data: [], error: null }),
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'core_person') {
+        return {
+          select: () => ({
+            eq: () => ({
+              is: () => ({
+                limit: () => Promise.resolve({ data: [], error: null }),
+              }),
+            }),
+          }),
+        };
+      }
+      return {
+        select: () => ({
+          eq: () => ({
+            is: () => ({
+              order: () => ({
+                limit: () => ({
+                  maybeSingle: () => Promise.resolve({ data: null, error: null }),
+                }),
+              }),
+            }),
           }),
         }),
-      }),
-    }));
+      };
+    });
 
     const { result } = renderHook(() => useContactPersonLookup(), { wrapper });
     const lookup = await result.current.findByEmail('none@example.com');

@@ -43,7 +43,7 @@ export function AdditionalContactsList({
 
   return (
     <>
-      <ul className="grid gap-4" aria-label="Additional contacts list">
+      <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Additional contacts list">
         {contacts.map((c) => (
           <li key={c.contact_id}>
             <Card>
@@ -51,17 +51,18 @@ export function AdditionalContactsList({
                 <CardTitle>
                   {c.first_name} {c.last_name}
                 </CardTitle>
-                <Badge variant="outline-sec-normal">{c.permission_type}</Badge>
+                <section className="grid grid-flow-col auto-cols-max gap-2">
+                  <Badge variant="outline-main-normal">{c.contact_type_name}</Badge>
+                  <Badge variant="outline-sec-normal">{c.permission_type}</Badge>
+                </section>
               </CardHeader>
               <CardContent className="grid gap-2">
-                <p>{c.contact_type_name}</p>
-                {c.email ? <p>{c.email}</p> : null}
+                {c.email ? <p>Email: {c.email}</p> : null}
                 {c.phones.length > 0 ? (
                   <ul className="grid gap-1">
                     {c.phones.map((ph, idx) => (
                       <li key={`${c.contact_id}-ph-${idx}`}>
-                        {ph.phone_type ? `${ph.phone_type}: ` : null}
-                        {ph.phone_number}
+                        {(ph.phone_type || 'Phone') + ': ' + ph.phone_number}
                       </li>
                     ))}
                   </ul>

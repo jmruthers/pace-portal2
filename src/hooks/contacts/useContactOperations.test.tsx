@@ -141,6 +141,35 @@ describe('useContactOperations', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['additionalContacts', 'v1'] });
   });
 
+  it('sends undefined email when update email is blank', async () => {
+    rpc.mockResolvedValue({
+      data: [{ id: 'c1' }],
+      error: null,
+    });
+
+    const { result } = renderHook(() => useContactOperations(), { wrapper });
+
+    await result.current.updateContact.mutateAsync({
+      contactId: 'c1',
+      firstName: 'Ari',
+      lastName: 'Jones',
+      preferredName: '',
+      email: '   ',
+      contactTypeId: 'ct-2',
+      permissionType: 'edit',
+      phoneNumber: '',
+      phoneTypeId: null,
+    });
+
+    expect(rpc).toHaveBeenCalledWith(
+      'app_pace_contact_update',
+      expect.objectContaining({
+        p_contact_id: 'c1',
+        p_email: undefined,
+      })
+    );
+  });
+
   it('throws when RPC returns error', async () => {
     rpc.mockResolvedValue({
       data: null,
@@ -175,7 +204,7 @@ describe('useContactOperations', () => {
 
     await expect(
       result.current.createContact.mutateAsync({
-        memberId: null,
+        memberId: 'm1',
         firstName: 'Ari',
         lastName: 'Jones',
         preferredName: '',

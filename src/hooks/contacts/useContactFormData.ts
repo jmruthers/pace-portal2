@@ -107,12 +107,28 @@ export function useContactPersonLookup() {
         if (!row) {
           return ok(null);
         }
+        const primaryPhone = await client
+          .from('core_phone')
+          .select('phone_number, phone_type_id')
+          .eq('person_id', row.id)
+          .is('deleted_at', null)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (primaryPhone.error) {
+          return err({
+            code: 'CONTACT_EMAIL_LOOKUP',
+            message: primaryPhone.error.message || 'Could not load matched phone details.',
+          });
+        }
         return ok({
           person_id: row.id,
           first_name: row.first_name,
           last_name: row.last_name,
           preferred_name: row.preferred_name,
           email: row.email,
+          phone_number: primaryPhone.data?.phone_number ?? null,
+          phone_type_id: primaryPhone.data?.phone_type_id ?? null,
         });
       } catch (error) {
         return err(normalizeToApiError(error, 'CONTACT_EMAIL_LOOKUP', 'Could not match email.'));
