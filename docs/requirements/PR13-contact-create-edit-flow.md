@@ -12,28 +12,28 @@ This file is **`PR13-contact-create-edit-flow.md`** — portal requirement slice
 - Purpose and scope: rebuild the additional-contact create/edit workflow so users can add, match, link, edit, and save contacts with the same core behavior as the current portal.
 - Dependencies: this slice depends on the list shell in `PR12`; it owns the inline create/edit experience, matching, branching, and save behavior for contacts.
 - Standards: 01 Project Structure, 02 Architecture, 03 Security/RBAC, 04 API/Tech Stack, 05 pace-core Compliance, 06 Code Quality, 07 Visual, 08 Testing/Documentation.
-- Current baseline behavior: the page loads contacts through `data_pace_contacts_list` or `data_pace_member_contacts_list` depending on proxy mode; it shows a `ProxyModeBanner` when editing on behalf of another member; clicking add opens an inline contact form; the flow starts with email lookup, then branches to existing-person confirmation or a full manual form; the current flow also needs a viable manual path for contacts without an email address; editing an existing contact skips the email step and opens the full form prefilled; submit updates `core_person`, `core_contact`, and `pace_phone`, or uses the contact RPCs in proxy mode; list rendering is a separate concern; the current duplicate-contact detection is implemented against the signed-in user path, which means the proxy flow is not a trustworthy baseline for duplicate prevention.
+- Current baseline behavior: the page loads contacts through `data_pace_member_contacts_list` using member context for both self-service and proxy mode; it shows a `ProxyModeBanner` when editing on behalf of another member; clicking add opens an inline contact form; the flow starts with email lookup, then branches to existing-person confirmation or a full manual form; the current flow also needs a viable manual path for contacts without an email address; editing an existing contact skips the email step and opens the full form prefilled; submit uses contact RPCs (`app_pace_contact_create`, `app_pace_contact_update`, `app_pace_contact_delete`) that persist across `core_person`, `core_contact`, and `core_phone`; list rendering is a separate concern; duplicate-contact detection uses the currently loaded member-scoped contact set.
 - Rebuild delta: preserve the current route and inline editor as the rebuild baseline; preserve the branching flow unless a later evidence-backed UX pass intentionally simplifies it; preserve proxy-mode support as a first-class path; keep phone-number editing behavior; add duplicate-detection rules before create/link save so the same person is not linked twice; when an email match is already linked as a contact, block duplicate linking and direct the user back to edit the existing contact instead of creating an override path; in proxy mode, evaluate duplicate-contact rules against the target member being managed, not the signed-in delegate; prefer pace-core controls where they already exist.
 
 ## Acceptance criteria
 
-- [ ] A user can add a new contact from the page and complete the flow through save.
-- [ ] If a matching person is found by email, the user can choose to link or create a new contact.
-- [ ] A user can still create a contact through a manual no-email branch when no email exists.
-- [ ] An existing contact can be opened in edit mode and saved successfully.
-- [ ] Proxy mode continues to fetch and mutate the target member's contacts.
-- [ ] Validation errors are surfaced before save.
-- [ ] Duplicate-contact detection blocks accidental double-linking without silently creating a second contact record.
-- [ ] When an email match is already linked as a contact, the flow blocks duplicate linking and tells the user to edit the existing contact from the list.
-- [ ] In proxy mode, duplicate-contact checks are evaluated against the target member's existing contacts rather than the signed-in delegate's contacts.
-- [ ] The contact list refreshes after create, edit, or delete.
-- [ ] The UI remains built from pace-core primitives where equivalents exist.
+- [x] A user can add a new contact from the page and complete the flow through save.
+- [x] If a matching person is found by email, the user can choose to link or create a new contact.
+- [x] A user can still create a contact through a manual no-email branch when no email exists.
+- [x] An existing contact can be opened in edit mode and saved successfully.
+- [x] Proxy mode continues to fetch and mutate the target member's contacts.
+- [x] Validation errors are surfaced before save.
+- [x] Duplicate-contact detection blocks accidental double-linking without silently creating a second contact record.
+- [x] When an email match is already linked as a contact, the flow blocks duplicate linking and tells the user to edit the existing contact from the list.
+- [x] In proxy mode, duplicate-contact checks are evaluated against the target member's existing contacts rather than the signed-in delegate's contacts.
+- [x] The contact list refreshes after create, edit, or delete.
+- [x] The UI remains built from pace-core primitives where equivalents exist.
 
 ## API / Contract
 
-- Public exports: the inline contact form, the email, match-confirmation, relationship, and full-form steps, `useContactFormState`, `useContactOperations`, `useLinkedProfiles`, and the contact validation utilities.
-- File paths: `src/pages/contacts/AdditionalContactsPage.tsx`, `src/components/contacts/ContactForm.tsx`, `src/components/contacts/ContactForm/EmailFormStep.tsx`, `src/components/contacts/ContactForm/MatchConfirmationStep.tsx`, `src/components/contacts/ContactForm/RelationshipFormStep.tsx`, `src/components/contacts/ContactForm/FullFormStep.tsx`, `src/hooks/contacts/useAdditionalContactsData.ts`, `src/hooks/contacts/useContactFormState.ts`, `src/hooks/contacts/useContactOperations.ts`, `src/hooks/contacts/useLinkedProfiles.ts`, `src/utils/contacts/validation.ts`.
-- Data contracts: `data_pace_contacts_list`, `data_pace_member_contacts_list`, `app_pace_contact_create`, `app_pace_contact_update`, `app_pace_contact_delete`, `core_person`, `core_contact`, `core_contact_type`, `core_phone_type`, `core_phone`, and `pace_phone`.
+- Public exports: the inline contact form, the email, match-confirmation, relationship, and full-form steps, `useContactFormState`, `useContactOperations`, and the contact validation utilities.
+- File paths: `src/pages/AdditionalContactsPage.tsx`, `src/components/contacts/ContactForm.tsx`, `src/components/contacts/ContactForm/EmailFormStep.tsx`, `src/components/contacts/ContactForm/MatchConfirmationStep.tsx`, `src/components/contacts/ContactForm/RelationshipFormStep.tsx`, `src/components/contacts/ContactForm/FullFormStep.tsx`, `src/hooks/contacts/useAdditionalContactsData.ts`, `src/hooks/contacts/useContactFormState.ts`, `src/hooks/contacts/useContactOperations.ts`, `src/utils/contacts/validation.ts`.
+- Data contracts: `data_pace_member_contacts_list`, `app_pace_contact_create`, `app_pace_contact_update`, `app_pace_contact_delete`, `core_person`, `core_contact`, `core_contact_type`, `core_phone_type`, and `core_phone`.
 - ID contract: contact create, link, and edit boundaries should use `UserId`, `OrganisationId`, and `PageId` from `@solvera/pace-core/types` where acting user, target member, organisation, and guarded-page identifiers cross hook or service seams.
 - Form contract: the branching contact create and edit forms should use `useZodForm` from `@solvera/pace-core/hooks` for Zod-backed validation and state instead of wiring raw `react-hook-form` per step.
 - Permission and context contracts: authenticated user context is required; `PagePermissionGuard` continues to protect page access; proxy mode is supported for editing another member's contacts; save paths must respect whether the flow is acting on the signed-in member or a proxy target.
@@ -84,7 +84,7 @@ Duplicate-link decision table:
 ## References
 
 - [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
-- `src/pages/contacts/AdditionalContactsPage.tsx`
+- `src/pages/AdditionalContactsPage.tsx`
 - `src/components/contacts/ContactForm.tsx`
 - `src/components/contacts/ContactForm/EmailFormStep.tsx`
 - `src/components/contacts/ContactForm/MatchConfirmationStep.tsx`
@@ -93,7 +93,6 @@ Duplicate-link decision table:
 - `src/hooks/contacts/useAdditionalContactsData.ts`
 - `src/hooks/contacts/useContactFormState.ts`
 - `src/hooks/contacts/useContactOperations.ts`
-- `src/hooks/contacts/useLinkedProfiles.ts`
 - `src/components/contacts/AdditionalContacts/AdditionalContactsList.tsx`
 - `src/components/contacts/AdditionalContacts/AdditionalContactsDisplay.tsx`
 - [Project brief: pace-portal](./PR00-portal-project-brief.md)

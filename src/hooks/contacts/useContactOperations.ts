@@ -43,8 +43,8 @@ function normalizeOptionalText(value: string | null | undefined): string | undef
 }
 
 /**
- * Contact mutations for additional contacts (PR12: delete; PR13 will extend create/update).
- * Invalidates additional-contacts list queries on successful delete.
+ * Contact mutations for additional contacts (create, update, delete).
+ * Invalidates additional-contacts list queries on successful mutations.
  */
 export function useContactOperations(): UseContactOperationsResult {
   const queryClient = useQueryClient();

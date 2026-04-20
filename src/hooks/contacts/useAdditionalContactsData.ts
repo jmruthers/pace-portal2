@@ -155,8 +155,9 @@ export type UseAdditionalContactsDataResult = {
 };
 
 /**
- * Loads additional contacts for `/additional-contacts`: self-service via `data_pace_contacts_list`,
- * or proxy mode via `data_pace_member_contacts_list` when delegated access is active.
+ * Loads additional contacts for `/additional-contacts` using member-scoped RPC data.
+ * Self-service resolves the signed-in user's member id first, then calls `data_pace_member_contacts_list`.
+ * Proxy mode calls `data_pace_member_contacts_list` directly with the delegated target member id.
  */
 export function useAdditionalContactsData(): UseAdditionalContactsDataResult {
   const [searchParams] = useSearchParams();

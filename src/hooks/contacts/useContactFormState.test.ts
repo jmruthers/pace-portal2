@@ -63,7 +63,7 @@ describe('useContactFormState', () => {
     expect(result.current.draft.link_existing_person).toBe(true);
   });
 
-  it('sets blocked state with message and clears to email', () => {
+  it('sets blocked state with message and clears to current create step', () => {
     const { result } = renderHook(() =>
       useContactFormState({ mode: 'create', initialContact: null })
     );
@@ -79,6 +79,42 @@ describe('useContactFormState', () => {
     });
     expect(result.current.step).toBe('email');
     expect(result.current.blockedMessage).toBeNull();
+  });
+
+  it('returns to full step when blocked in edit mode', () => {
+    const { result } = renderHook(() =>
+      useContactFormState({ mode: 'edit', initialContact: existingContact })
+    );
+
+    act(() => {
+      result.current.setBlocked('Save failed');
+    });
+    expect(result.current.step).toBe('blocked');
+
+    act(() => {
+      result.current.clearBlocked();
+    });
+    expect(result.current.step).toBe('full');
+  });
+
+  it('returns to full step when blocked from create full step', () => {
+    const { result } = renderHook(() =>
+      useContactFormState({ mode: 'create', initialContact: null })
+    );
+
+    act(() => {
+      result.current.applyRelationship({
+        contact_type_id: 'ct-1',
+        permission_type: 'view',
+      });
+      result.current.setBlocked('Save failed');
+    });
+    expect(result.current.step).toBe('blocked');
+
+    act(() => {
+      result.current.clearBlocked();
+    });
+    expect(result.current.step).toBe('full');
   });
 
   it('applies relationship and full values into draft', () => {
@@ -160,5 +196,6 @@ describe('useContactFormState', () => {
     expect(result.current.step).toBe('relationship');
     expect(result.current.draft.link_existing_person).toBe(false);
     expect(result.current.draft.match_person_id).toBeNull();
+    expect(result.current.draft.create_new_from_match).toBe(true);
   });
 });

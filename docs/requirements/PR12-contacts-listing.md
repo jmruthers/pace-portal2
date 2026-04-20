@@ -17,20 +17,20 @@ This file is **`PR12-contacts-listing.md`** — portal requirement slice **PR12*
 
 ## Acceptance criteria
 
-- [ ] The page loads and renders contacts in self-service mode.
-- [ ] The page loads and renders contacts in proxy mode.
-- [ ] The empty state is useful and includes an add-contact CTA.
-- [ ] Delete removes a contact and refreshes the list.
-- [ ] The page still surfaces phone numbers and permission badges.
-- [ ] The create/edit form is not owned by this slice.
-- [ ] The rebuild docs explicitly call out the split into `PR13`.
-- [ ] Pace-core components are used where they fit the requirement.
+- [x] The page loads and renders contacts in self-service mode.
+- [x] The page loads and renders contacts in proxy mode.
+- [x] The empty state is useful and includes an add-contact CTA.
+- [x] Delete removes a contact and refreshes the list.
+- [x] The page still surfaces phone numbers and permission badges.
+- [x] The create/edit form is not owned by this slice.
+- [x] The rebuild docs explicitly call out the split into `PR13`.
+- [x] Pace-core components are used where they fit the requirement.
 
 ## API / Contract
 
 - Public exports: the additional-contacts page shell, the list and empty-state contracts, the delete action, and the add-contact handoff into `PR13`.
-- File paths: `src/pages/contacts/AdditionalContactsPage.tsx`, `src/components/contacts/AdditionalContacts/AdditionalContactsList.tsx`, `src/components/contacts/AdditionalContacts/AdditionalContactsDisplay.tsx`, `src/hooks/contacts/useAdditionalContactsData.ts`, `src/hooks/contacts/useContactOperations.ts`, `src/hooks/contacts/useContactFormState.ts`, `src/hooks/contacts/useLinkedProfiles.ts`.
-- Data contracts: `data_pace_contacts_list`, `data_pace_member_contacts_list`, `app_pace_contact_delete`, `core_contact`, `core_person`, `pace_phone`, and the grouping of flat RPC rows into card-level contact objects.
+- File paths: `src/pages/AdditionalContactsPage.tsx`, `src/components/contacts/AdditionalContacts/AdditionalContactsList.tsx`, `src/components/contacts/AdditionalContacts/AdditionalContactsDisplay.tsx`, `src/hooks/contacts/useAdditionalContactsData.ts`, `src/hooks/contacts/useContactOperations.ts`, `src/hooks/contacts/useContactFormState.ts`.
+- Data contracts: `data_pace_member_contacts_list` (self-service and proxy member scopes), `app_pace_contact_delete`, `core_contact`, `core_person`, `core_phone`, and the grouping of flat RPC rows into card-level contact objects.
 - ID contract: additional-contact list and delete boundaries should use `UserId`, `OrganisationId`, and `PageId` from `@solvera/pace-core/types` where signed-in user, proxy target, organisation, and guarded-page identifiers are exchanged between hooks or services.
 - Permission and context contracts: authenticated users only; the page-level permission guard remains in place; proxy mode must continue to load and delete the target member’s contacts; list content and delete behavior must respect the selected organisation and target-member context.
 
@@ -68,14 +68,13 @@ This file is **`PR12-contacts-listing.md`** — portal requirement slice **PR12*
 ## References
 
 - [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
-- `src/pages/contacts/AdditionalContactsPage.tsx`
+- `src/pages/AdditionalContactsPage.tsx`
 - `src/components/contacts/AdditionalContacts/AdditionalContactsList.tsx`
 - `src/components/contacts/AdditionalContacts/AdditionalContactsDisplay.tsx`
 - `src/components/contacts/ContactForm.tsx`
 - `src/hooks/contacts/useAdditionalContactsData.ts`
 - `src/hooks/contacts/useContactOperations.ts`
 - `src/hooks/contacts/useContactFormState.ts`
-- `src/hooks/contacts/useLinkedProfiles.ts`
 - [Project brief: pace-portal](./PR00-portal-project-brief.md)
 - [Portal architecture](./PR00-portal-architecture.md)
 - Legacy ID mapping: [PR00-portal-architecture.md](./PR00-portal-architecture.md#appendix-a-legacy-slice-id-mapping-por-to-pr)

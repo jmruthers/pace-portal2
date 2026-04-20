@@ -199,7 +199,7 @@ export function ContactForm({
       }
 
       const trimmedEmail = normalizedValues.email.trim().toLowerCase();
-      if (!linkExisting && trimmedEmail !== '') {
+      if (!linkExisting && !formState.draft.create_new_from_match && trimmedEmail !== '') {
         const lookup = await findByEmail(trimmedEmail);
         if (!isOk(lookup)) {
           formState.setBlocked(lookup.error.message);

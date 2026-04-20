@@ -133,6 +133,7 @@ function buildBaseState(step: UseContactFormStateResult['step']): UseContactForm
       permission_type: 'view',
       match_person_id: null,
       link_existing_person: false,
+      create_new_from_match: false,
     },
     matchedPerson: null,
     blockedMessage: null,
@@ -217,6 +218,54 @@ describe('ContactForm', () => {
     expect(state.toRelationshipStep).toHaveBeenCalledOnce();
   });
 
+  it('blocks duplicate match against provided contacts set', async () => {
+    const user = userEvent.setup();
+    const state = buildBaseState('email');
+    stateMock.mockReturnValue(state);
+    findByEmailMock.mockResolvedValue({
+      ok: true,
+      data: {
+        person_id: 'p-dup',
+        first_name: 'Sam',
+        last_name: 'Lee',
+        preferred_name: null,
+        email: 'sam@example.com',
+        phone_number: null,
+        phone_type_id: null,
+      },
+    });
+
+    render(
+      <ContactForm
+        mode="create"
+        contacts={[
+          {
+            contact_id: 'c-dup',
+            contact_person_id: 'p-dup',
+            contact_type_id: 'ct-1',
+            contact_type_name: 'Emergency',
+            email: 'sam@example.com',
+            first_name: 'Sam',
+            last_name: 'Lee',
+            member_id: 'member-target',
+            organisation_id: 'org-1',
+            permission_type: 'view',
+            phones: [],
+          },
+        ]}
+        initialContact={null}
+        memberId={null}
+        onCancel={vi.fn()}
+        onSaved={vi.fn()}
+        onEditExistingContact={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /email step submit/i }));
+    expect(state.setBlocked).toHaveBeenCalledOnce();
+    expect(state.toMatchStep).not.toHaveBeenCalled();
+  });
+
   it('saves create flow from full step', async () => {
     const user = userEvent.setup();
     stateMock.mockReturnValue(buildBaseState('full'));
@@ -277,5 +326,89 @@ describe('ContactForm', () => {
       })
     );
     expect(onSaved).toHaveBeenCalledOnce();
+  });
+
+  it('saves create-new-from-match without re-entering match step', async () => {
+    const user = userEvent.setup();
+    const state = buildBaseState('full');
+    state.draft.create_new_from_match = true;
+    stateMock.mockReturnValue(state);
+    const onSaved = vi.fn();
+
+    render(
+      <ContactForm
+        mode="create"
+        contacts={[]}
+        initialContact={null}
+        memberId="m1"
+        onCancel={vi.fn()}
+        onSaved={onSaved}
+        onEditExistingContact={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /full form submit/i }));
+    expect(createMutateAsync).toHaveBeenCalledOnce();
+    expect(state.toMatchStep).not.toHaveBeenCalled();
+    expect(onSaved).toHaveBeenCalledOnce();
+  });
+
+  it('allows editing the existing contact from duplicate blocked state', async () => {
+    const user = userEvent.setup();
+    const state = buildBaseState('blocked');
+    state.blockedMessage = 'Duplicate contact';
+    state.draft.match_person_id = 'p-dup';
+    stateMock.mockReturnValue(state);
+    const onEditExistingContact = vi.fn();
+    const duplicateContact = {
+      contact_id: 'c-dup',
+      contact_person_id: 'p-dup',
+      contact_type_id: 'ct-1',
+      contact_type_name: 'Emergency',
+      email: 'sam@example.com',
+      first_name: 'Sam',
+      last_name: 'Lee',
+      member_id: 'm1',
+      organisation_id: 'org-1',
+      permission_type: 'view',
+      phones: [],
+    };
+
+    render(
+      <ContactForm
+        mode="create"
+        contacts={[duplicateContact]}
+        initialContact={null}
+        memberId="m1"
+        onCancel={vi.fn()}
+        onSaved={vi.fn()}
+        onEditExistingContact={onEditExistingContact}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /edit existing contact/i }));
+    expect(onEditExistingContact).toHaveBeenCalledWith(duplicateContact);
+  });
+
+  it('retries from generic blocked state back to form', async () => {
+    const user = userEvent.setup();
+    const state = buildBaseState('blocked');
+    state.blockedMessage = 'Could not save';
+    stateMock.mockReturnValue(state);
+
+    render(
+      <ContactForm
+        mode="create"
+        contacts={[]}
+        initialContact={null}
+        memberId="m1"
+        onCancel={vi.fn()}
+        onSaved={vi.fn()}
+        onEditExistingContact={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /try again/i }));
+    expect(state.clearBlocked).toHaveBeenCalledOnce();
   });
 });

@@ -18,6 +18,7 @@ export type EmailPersonMatch = {
 export type ContactDraft = ContactFullFormValues & {
   match_person_id: string | null;
   link_existing_person: boolean;
+  create_new_from_match: boolean;
 };
 
 export type UseContactFormStateInput = {
@@ -58,6 +59,7 @@ function createDraftFromContact(contact: GroupedAdditionalContact | null): Conta
     permission_type: contact?.permission_type ?? '',
     match_person_id: contact?.contact_person_id ?? null,
     link_existing_person: false,
+    create_new_from_match: false,
   };
 }
 
@@ -65,6 +67,9 @@ export function useContactFormState(input: UseContactFormStateInput): UseContact
   const initialDraft = useMemo(() => createDraftFromContact(input.initialContact), [input.initialContact]);
   const [draft, setDraft] = useState<ContactDraft>(initialDraft);
   const [step, setStep] = useState<ContactFormStep>(input.mode === 'edit' ? 'full' : 'email');
+  const [blockedReturnStep, setBlockedReturnStep] = useState<ContactFormStep>(
+    input.mode === 'edit' ? 'full' : 'email'
+  );
   const [matchedPerson, setMatchedPerson] = useState<EmailPersonMatch | null>(null);
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
 
@@ -75,11 +80,14 @@ export function useContactFormState(input: UseContactFormStateInput): UseContact
     blockedMessage,
     setBlocked: (message: string) => {
       setBlockedMessage(message);
-      setStep('blocked');
+      setStep((currentStep) => {
+        setBlockedReturnStep((prev) => (currentStep === 'blocked' ? prev : currentStep));
+        return 'blocked';
+      });
     },
     clearBlocked: () => {
       setBlockedMessage(null);
-      setStep('email');
+      setStep(blockedReturnStep);
     },
     setMatchedPerson: (match: EmailPersonMatch | null) => {
       setMatchedPerson(match);
@@ -95,6 +103,7 @@ export function useContactFormState(input: UseContactFormStateInput): UseContact
         phone_type_id: matchedPerson?.phone_type_id ?? prev.phone_type_id,
         match_person_id: matchedPerson?.person_id ?? prev.match_person_id,
         link_existing_person: true,
+        create_new_from_match: false,
       }));
       setStep('relationship');
     },
@@ -103,6 +112,7 @@ export function useContactFormState(input: UseContactFormStateInput): UseContact
         ...prev,
         match_person_id: null,
         link_existing_person: false,
+        create_new_from_match: true,
       }));
       setStep('relationship');
     },
@@ -124,6 +134,7 @@ export function useContactFormState(input: UseContactFormStateInput): UseContact
       setDraft((prev) => ({
         ...prev,
         email: '',
+        create_new_from_match: false,
       }));
       setStep('relationship');
     },
@@ -131,6 +142,7 @@ export function useContactFormState(input: UseContactFormStateInput): UseContact
       setDraft((prev) => ({
         ...prev,
         email,
+        create_new_from_match: false,
       }));
     },
     toEmailStep: () => {
