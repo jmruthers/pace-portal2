@@ -4,6 +4,11 @@ import { Alert, AlertDescription, AlertTitle, Button, FileUpload } from '@solver
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
 import { toSupabaseClientLike } from '@/lib/supabase-typed';
 import {
+  FILE_STORAGE_BUCKET,
+  FILE_UPLOAD_NO_EVENT_ID,
+  FILE_UPLOAD_NO_ORG_ID,
+} from '@/constants/fileStorage';
+import {
   PROFILE_PHOTO_CATEGORY,
   PROFILE_PHOTO_FOLDER,
   PROFILE_PHOTO_MAX_BYTES,
@@ -17,7 +22,6 @@ export type PhotoUploadDialogProps = {
   personId: string;
   organisationId: string | null;
   appId: string;
-  userId: string;
 };
 
 /**
@@ -29,7 +33,6 @@ export function PhotoUploadDialog({
   personId,
   organisationId,
   appId,
-  userId,
 }: PhotoUploadDialogProps) {
   const secure = useSecureSupabase();
   const supabase = toSupabaseClientLike(secure);
@@ -71,14 +74,15 @@ export function PhotoUploadDialog({
         ) : null}
         <FileUpload
           supabase={supabase}
+          bucket={FILE_STORAGE_BUCKET}
           table_name="core_person"
           record_id={personId}
-          organisation_id={organisationId}
+          organisation_id={organisationId ?? FILE_UPLOAD_NO_ORG_ID}
+          event_id={FILE_UPLOAD_NO_EVENT_ID}
           app_id={appId}
           category={PROFILE_PHOTO_CATEGORY}
           folder={PROFILE_PHOTO_FOLDER}
           pageContext={PROFILE_PHOTO_PAGE_CONTEXT}
-          userId={userId}
           accept="image/jpeg,image/png,image/webp"
           maxSize={PROFILE_PHOTO_MAX_BYTES}
           multiple={false}

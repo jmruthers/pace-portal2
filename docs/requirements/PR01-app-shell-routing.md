@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR01-app-shell-routing.md`** — portal requirement slice **PR01** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR01-app-shell-routing.md`** — portal requirement slice **PR01** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -12,9 +12,9 @@ This file is **`PR01-app-shell-routing.md`** — portal requirement slice **PR01
 - Purpose and scope: rebuild the portal runtime shell so the app boots with the correct providers, route guards, layouts, and lazy-loaded page entry points for the active non-payment portal surfaces.
 - Dependencies: this slice is the foundation for every other portal slice; downstream slices depend on the route map, providers, and shell contracts defined here.
 - Standards: 01 Project Structure, 02 Architecture, 03 Security/RBAC, 04 API/Tech Stack, 05 pace-core Compliance, 06 Code Quality, 08 Testing/Documentation, 09 Operations.
-- Current baseline behavior: `src/main.tsx` sets `APP_NAME` to `PACE`, configures RBAC with the base Supabase client before any RBAC-dependent route renders, mounts `QueryClientProvider`, `BrowserRouter`, `UnifiedAuthProvider`, `TooltipProvider`, and `Toaster`, and redirects idle users to `/login`. `src/App.tsx` lazy-loads the portal pages, wraps protected shells in `PaceAppLayout`, keeps `/login` and `/register` public, and resolves event workflow routes with auth-required handoff when no session is present.
+- Current baseline behavior: `src/main.tsx` sets `APP_NAME` to `PACE`, configures RBAC with the base Supabase client before any RBAC-dependent route renders, mounts `QueryClientProvider`, `BrowserRouter`, `ToastProvider`, `UnifiedAuthProvider`, `SessionRestorationLoader`, and `OrganisationServiceProvider`, and redirects idle users to `/login`. `src/App.tsx` lazy-loads the portal pages, wraps protected shells in `PortalAuthenticatedLayout` / `ProfileCompleteLayout` (aligned to the `PaceAppLayout` contract in [portal-architecture.md](./portal-architecture.md)), keeps `/login` and `/register` public, and resolves event workflow routes with auth-required handoff when no session is present.
 - Rebuild delta: preserve the current non-payment route set and aliases, keep public and protected boundaries explicit, keep lazy loading and global error/loading behavior centralized, keep the profile-complete shell separate from the main chrome, configure `UnifiedAuthProvider` with the full inactivity contract rather than `dangerouslyDisableInactivity: true`, render `InactivityWarningModal` from `@solvera/pace-core/components` through `renderInactivityWarning`, use `useSessionRestoration` with `SessionRestorationLoader` from `@solvera/pace-core/components` during auth restore instead of a generic spinner, and exclude payment and invoice routes and nav from the active rebuild wave.
-- **Implementation note (pace-portal):** `APP_NAME` for RBAC/auth is shared via `src/constants.ts` (`pace`); global toasts use `ToastProvider` from pace-core; authenticated chrome uses `PortalAuthenticatedLayout` / `ProfileCompleteLayout` (see PR00) in place of a single `PaceAppLayout` symbol; unauthenticated visitors on `/:eventSlug/:formSlug` are redirected to `/login?redirect=…` for return-URL preservation; event hub and application placeholders live in `src/pages/public/EventWorkflowPlaceholders.tsx`; `LoginHistoryRecorder` mounts under `OrganisationServiceProvider` for PR02 login history.
+- **Implementation note (pace-portal):** `APP_NAME` for RBAC/auth is shared via `src/constants.ts` (`PACE`); global toasts use `ToastProvider` from pace-core; authenticated chrome uses `PortalAuthenticatedLayout` / `ProfileCompleteLayout` (see [portal-architecture.md](./portal-architecture.md)) in place of a single `PaceAppLayout` symbol; unauthenticated visitors on `/:eventSlug/:formSlug` are redirected to `/login?redirect=…` for return-URL preservation; event hub and application placeholders live in `src/pages/public/EventWorkflowPlaceholders.tsx`; `LoginHistoryRecorder` mounts in `App.tsx` under `OrganisationServiceProvider` for PR02 login history.
 
 ## Acceptance criteria
 
@@ -26,7 +26,7 @@ This file is **`PR01-app-shell-routing.md`** — portal requirement slice **PR01
 - [x] The main app layout uses the shared authenticated shell contract (`PortalAuthenticatedLayout`), and the profile-complete shell uses the shared navigation-free authenticated shell contract (`ProfileCompleteLayout`) aligned with `PaceAppLayout` behavior.
 - [x] `UnifiedAuthProvider` uses the full inactivity configuration (`idleTimeoutMs`, `warnBeforeMs`, `onIdleLogout`, and `renderInactivityWarning`) rather than disabling inactivity protection.
 - [x] Session restoration uses `useSessionRestoration` and `SessionRestorationLoader` instead of a generic protected-route loading spinner.
-- [x] The shell keeps the global error boundary, suspense fallback, and toaster.
+- [x] The shell keeps the global error boundary, suspense fallback, and toast surface (`ToastProvider`).
 - [x] Intended redirects survive a successful sign-in flow.
 - [x] Idle timeout, explicit sign-out, and session expiry return the user to `/login`.
 - [x] Payment and invoice routes and nav are not part of the active rebuild slice.
@@ -35,8 +35,8 @@ This file is **`PR01-app-shell-routing.md`** — portal requirement slice **PR01
 
 - Public exports: `APP_NAME`, root app bootstrap, protected route shells, `DashboardPage`, `MemberProfilePage`, `MedicalProfilePage`, `AdditionalContactsPage`, `ProfileCompletionWizardPage`, `ProfileViewPage`, `ProfileEditProxyPage`, `FormFillPage`, `RegistrationPage`, and `NotFoundPage`.
 - File paths: `src/main.tsx`, `src/App.tsx`, `src/lib/supabase.ts`, `src/shared/components/AppErrorBoundary.tsx`, and the routed page modules under `src/pages/*`.
-- Data contracts: `setupRBAC(supabaseClient, ...)` must run before any protected route renders; the root shell must configure the TanStack Query client, auth provider, tooltip provider, and suspense/error fallback once; `UnifiedAuthProvider` should use the stable `@solvera/pace-core` import path and must be configured with `idleTimeoutMs`, `warnBeforeMs`, `onIdleLogout`, and `renderInactivityWarning` for the rebuild target; `renderInactivityWarning` should render `InactivityWarningModal` from `@solvera/pace-core/components`; auth restore should use `useSessionRestoration` from `@solvera/pace-core/hooks` and `SessionRestorationLoader` from `@solvera/pace-core/components`; `PaceAppLayout` usage must follow the shared portal constraint in `./PR00-portal-architecture.md#paceapplayout-and-appswitcher`; the portal RBAC surface must follow `./PR00-portal-architecture.md#rbac-and-route-permission-model`; the active route contract includes `/login`, `/register`, `/profile-complete`, `/`, `/dashboard`, `/member-profile`, `/medical-profile`, `/additional-contacts`, `/profile/view/:memberId`, `/profile/edit/:memberId`, `/:eventSlug`, `/:eventSlug/application`, and `/:eventSlug/:formSlug`.
-- Permission and context contracts: auth entry routes stay accessible without a session; event workflow routes support auth-required handoff with return URL preservation; protected routes must continue to honor auth and organisation context; the profile-complete shell must stay isolated from the main navigation chrome; shell-level auth handling must clear protected context on sign-out, idle timeout, or session expiry; page-level permissions must use the exact portal RBAC names documented in `./PR00-portal-architecture.md#rbac-and-route-permission-model`; reserved route matching must prevent generic event-form matching from swallowing `/login`, `/register`, `/dashboard`, `/profile-complete`, delegated profile routes, or `/:eventSlug/application`.
+- Data contracts: `setupRBAC(supabaseClient, ...)` must run before any protected route renders; the root shell must configure the TanStack Query client, auth provider, `ToastProvider`, and suspense/error fallback once; `UnifiedAuthProvider` should use the stable `@solvera/pace-core` import path and must be configured with `idleTimeoutMs`, `warnBeforeMs`, `onIdleLogout`, and `renderInactivityWarning` for the rebuild target; `renderInactivityWarning` should render `InactivityWarningModal` from `@solvera/pace-core/components`; auth restore should use `useSessionRestoration` from `@solvera/pace-core/hooks` and `SessionRestorationLoader` from `@solvera/pace-core/components`; `PaceAppLayout` usage must follow the shared portal constraint in `./portal-architecture.md#paceapplayout-and-appswitcher`; the portal RBAC surface must follow `./portal-architecture.md#rbac-and-route-permission-model`; the active route contract includes `/login`, `/register`, `/profile-complete`, `/`, `/dashboard`, `/member-profile`, `/medical-profile`, `/additional-contacts`, `/profile/view/:memberId`, `/profile/edit/:memberId`, `/:eventSlug`, `/:eventSlug/application`, and `/:eventSlug/:formSlug`.
+- Permission and context contracts: auth entry routes stay accessible without a session; event workflow routes support auth-required handoff with return URL preservation; protected routes must continue to honor auth and organisation context; the profile-complete shell must stay isolated from the main navigation chrome; shell-level auth handling must clear protected context on sign-out, idle timeout, or session expiry; page-level permissions must use the exact portal RBAC names documented in `./portal-architecture.md#rbac-and-route-permission-model`; reserved route matching must prevent generic event-form matching from swallowing `/login`, `/register`, `/dashboard`, `/profile-complete`, delegated profile routes, or `/:eventSlug/application`.
 
 ## Visual specification
 
@@ -53,7 +53,7 @@ This file is **`PR01-app-shell-routing.md`** — portal requirement slice **PR01
 
 ## Testing requirements
 
-- Cover provider mounting, public/protected route gating, auth-loading behavior, session-restoration loading behavior, reserved-route matching, shell-level error boundaries, global toaster mounting, and inactivity-warning rendering.
+- Cover provider mounting, public/protected route gating, auth-loading behavior, session-restoration loading behavior, reserved-route matching, shell-level error boundaries, global `ToastProvider` mounting, explicit `SIGNED_OUT` redirect policy to `/login` (see `applyShellSignedOutRedirect` + `App` `onAuthStateChange` wiring), and inactivity-warning rendering.
 - Cover the protected route aliases, lazy loading, idle logout redirect to `/login`, the configured inactivity warning path, `AppSwitcher` visibility and access-aware item population on authenticated shells, and removal of payment routes and nav from the active shell.
 
 ## Do not
@@ -65,15 +65,15 @@ This file is **`PR01-app-shell-routing.md`** — portal requirement slice **PR01
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
-- [Portal RBAC constraint](./PR00-portal-architecture.md#rbac-and-route-permission-model)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [Portal RBAC constraint](./portal-architecture.md#rbac-and-route-permission-model)
 - `src/main.tsx`
 - `src/App.tsx`
 - `src/shared/components/AppErrorBoundary.tsx`
 - `src/lib/supabase.ts`
-- `./PR00-portal-architecture.md#paceapplayout-and-appswitcher`
-- `./PR00-portal-project-brief.md`
-- `./PR00-portal-architecture.md`
+- `./portal-architecture.md#paceapplayout-and-appswitcher`
+- `./portal-project-brief.md`
+- `./portal-architecture.md`
 
 ---
 
@@ -83,4 +83,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

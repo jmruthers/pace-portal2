@@ -3,7 +3,9 @@ import { Route, Routes, useLocation, useNavigate, useParams } from 'react-router
 import { useSessionRestoration } from '@solvera/pace-core/hooks';
 import { ProtectedRoute, LoadingSpinner, SessionRestorationLoader } from '@solvera/pace-core/components';
 import { supabaseClient } from '@/lib/supabase';
+import { applyShellSignedOutRedirect } from '@/lib/sessionAuthRedirect';
 import { AppErrorBoundary } from '@/shared/components/AppErrorBoundary';
+import { LoginHistoryRecorder } from '@/shared/components/LoginHistoryRecorder';
 import { OrganisationLoadingGate } from '@/shared/components/OrganisationLoadingGate';
 import { PortalAuthenticatedLayout } from '@/shared/components/PortalAuthenticatedLayout';
 import { ProfileCompleteLayout } from '@/shared/components/ProfileCompleteLayout';
@@ -99,9 +101,6 @@ function SessionRestorationHookProbe() {
   return null;
 }
 
-/**
- * Shell-level redirect for auth teardown events (idle timeout, explicit sign-out, session expiry).
- */
 function useSessionAuthRedirector() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -111,16 +110,12 @@ function useSessionAuthRedirector() {
       if (event !== 'SIGNED_OUT') {
         return;
       }
-      if (location.pathname === '/login' || location.pathname === '/register') {
-        return;
-      }
-      navigate('/login', { replace: true });
+      applyShellSignedOutRedirect(location.pathname, navigate);
     });
     return () => {
       data.subscription.unsubscribe();
     };
   }, [location.pathname, navigate]);
-
 }
 
 function EventFormRoute() {
@@ -147,6 +142,7 @@ export default function App() {
 
   return (
     <AppErrorBoundary>
+      <LoginHistoryRecorder />
       <SessionRestorationHookProbe />
       <Suspense fallback={<RouteLoadingFallback />}>
         <Routes>

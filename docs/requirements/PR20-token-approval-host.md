@@ -30,4 +30,4 @@
 ## References
 
 - [../base/slices/S07-token-approval-actions_requirements.md](../base/slices/S07-token-approval-actions_requirements.md)
-- [PR00-portal-architecture.md](./PR00-portal-architecture.md)
+- [portal-architecture.md](./portal-architecture.md)

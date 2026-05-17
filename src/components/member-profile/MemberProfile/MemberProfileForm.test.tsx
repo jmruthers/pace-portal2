@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemberProfileForm } from '@/components/member-profile/MemberProfile/MemberProfileForm';
 import type { ReferenceDataBundle } from '@/shared/hooks/useReferenceData';
@@ -63,5 +63,29 @@ describe('MemberProfileForm', () => {
 
     await user.click(screen.getByRole('checkbox', { name: /postal address same as residential/i }));
     expect(screen.getAllByRole('region', { name: /postal address/i }).length).toBeGreaterThan(0);
+  });
+
+  it('updates completion progress when a tracked field is cleared', async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient();
+    const completeDefaults = { ...defaultValues, preferred_name: 'Pat' };
+    render(
+      <QueryClientProvider client={client}>
+        <MemberProfileForm
+          formKey="t-progress"
+          defaultValues={completeDefaults}
+          referenceData={referenceBundle}
+          addressProvider={null}
+          isSubmitting={false}
+          onSubmit={vi.fn()}
+        />
+      </QueryClientProvider>
+    );
+
+    const progressbar = screen.getByRole('progressbar');
+    expect(progressbar).toHaveAttribute('aria-valuenow', '100');
+
+    await user.clear(screen.getByRole('textbox', { name: /first name/i }));
+    await waitFor(() => expect(progressbar).toHaveAttribute('aria-valuenow', '89'));
   });
 });

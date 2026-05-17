@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR04-register-placeholder.md`** — portal requirement slice **PR04** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR04-register-placeholder.md`** — portal requirement slice **PR04** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -57,11 +57,11 @@ This file is **`PR04-register-placeholder.md`** — portal requirement slice **P
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
 - `src/pages/auth/public/RegistrationPage.tsx`
 - `src/App.tsx`
-- `./PR00-portal-project-brief.md`
-- `./PR00-portal-architecture.md`
+- `./portal-project-brief.md`
+- `./portal-architecture.md`
 
 ---
 
@@ -71,4 +71,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

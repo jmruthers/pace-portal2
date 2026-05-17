@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
 import type { FileReference } from '@solvera/pace-core/types';
+import { toFileMetadata } from '@/lib/fileMetadata';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 
 /**
@@ -44,10 +45,10 @@ export function useActionPlanForCondition(conditionId: string | null) {
           table_name: 'medi_condition',
           record_id: conditionId,
           file_path: ref.data.file_path,
-          file_metadata:
-            ref.data.file_metadata != null && typeof ref.data.file_metadata === 'object'
-              ? (ref.data.file_metadata as FileReference['file_metadata'])
-              : { fileName: 'document', fileType: 'application/octet-stream' },
+          file_metadata: toFileMetadata(ref.data.file_metadata, {
+            fileName: 'document',
+            fileType: 'application/octet-stream',
+          }),
           app_id: ref.data.app_id,
           is_public: ref.data.is_public === true,
           created_at: ref.data.created_at ?? '',

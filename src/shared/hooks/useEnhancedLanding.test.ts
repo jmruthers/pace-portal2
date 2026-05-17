@@ -27,6 +27,7 @@ describe('groupEventsByRegistrationScope', () => {
         typical_unit_size: null,
         updated_at: null,
         updated_by: null,
+        logo_id: null,
       },
       {
         event_id: 'e2',
@@ -51,6 +52,7 @@ describe('groupEventsByRegistrationScope', () => {
         typical_unit_size: null,
         updated_at: null,
         updated_by: null,
+        logo_id: null,
       },
     ] as const;
 

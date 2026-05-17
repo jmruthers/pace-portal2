@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR12-contacts-listing.md`** — portal requirement slice **PR12** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR12-contacts-listing.md`** — portal requirement slice **PR12** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -67,7 +67,7 @@ This file is **`PR12-contacts-listing.md`** — portal requirement slice **PR12*
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
 - `src/pages/AdditionalContactsPage.tsx`
 - `src/components/contacts/AdditionalContacts/AdditionalContactsList.tsx`
 - `src/components/contacts/AdditionalContacts/AdditionalContactsDisplay.tsx`
@@ -75,9 +75,9 @@ This file is **`PR12-contacts-listing.md`** — portal requirement slice **PR12*
 - `src/hooks/contacts/useAdditionalContactsData.ts`
 - `src/hooks/contacts/useContactOperations.ts`
 - `src/hooks/contacts/useContactFormState.ts`
-- [Project brief: pace-portal](./PR00-portal-project-brief.md)
-- [Portal architecture](./PR00-portal-architecture.md)
-- Legacy ID mapping: [PR00-portal-architecture.md](./PR00-portal-architecture.md#appendix-a-legacy-slice-id-mapping-por-to-pr)
+- [Project brief: pace-portal](./portal-project-brief.md)
+- [Portal architecture](./portal-architecture.md)
+- Legacy ID mapping: [portal-architecture.md](./portal-architecture.md#appendix-a-legacy-slice-id-mapping-por-to-pr)
 
 ---
 
@@ -87,4 +87,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

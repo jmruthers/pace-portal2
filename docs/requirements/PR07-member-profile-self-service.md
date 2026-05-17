@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR07-member-profile-self-service.md`** — portal requirement slice **PR07** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR07-member-profile-self-service.md`** — portal requirement slice **PR07** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -31,7 +31,7 @@ This file is **`PR07-member-profile-self-service.md`** — portal requirement sl
 - File paths: `src/pages/member-profile/MemberProfilePage.tsx`, `src/components/member-profile/MemberProfile/MemberProfileForm.tsx`, `src/hooks/member-profile/useMemberProfileData.ts`, `src/hooks/member-profile/useMemberAdditionalFields.ts`, `src/hooks/member-profile/usePersonOperations.ts`, `src/hooks/member-profile/useAddressOperations.ts`, `src/shared/lib/profileProgress.ts`, `src/utils/member-profile/validation.ts`, `src/shared/hooks/useProxyMode.ts`.
 - Data contracts: `core_person`, `core_member`, `core_phone`, `core_address`, `memberProfileSchema`, and the shared profile-progress helpers that turn form values into the current completion indicator.
 - ID contract: typed boundaries in this slice should use `UserId`, `OrganisationId`, and `PageId` from `@solvera/pace-core/types` where user, organisation, and page-permission identifiers cross hook or service boundaries, rather than passing raw `string` IDs.
-- Form contract: the self-service profile form should use `useZodForm` from `@solvera/pace-core/hooks` as the default Zod and React Hook Form bridge instead of a page-local `useForm` setup.
+- Form contract: the self-service profile form must keep the same Zod + React Hook Form bridge as `useZodForm` from `@solvera/pace-core/hooks` (resolver, defaults, error wiring). The current implementation does this via pace-core `Form` with `memberProfileSchema` (`MemberProfileForm`), which satisfies that contract without a page-local ad hoc `useForm` setup.
 - Permission and context contracts: authenticated only, `PagePermissionGuard`, current user context, and selected organisation context for persistence; the page must remain usable even when proxy mode is not active.
 
 ## Visual specification
@@ -63,7 +63,7 @@ This file is **`PR07-member-profile-self-service.md`** — portal requirement sl
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
 - Delegated editing: [PR08-proxy-delegated-editing.md](./PR08-proxy-delegated-editing.md)
 - `src/pages/member-profile/MemberProfilePage.tsx`
 - `src/components/member-profile/MemberProfile/MemberProfileForm.tsx`
@@ -84,4 +84,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

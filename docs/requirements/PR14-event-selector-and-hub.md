@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice **PR14** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice **PR14** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -45,7 +45,7 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 - ID contract: event-hub and dashboard action boundaries in this slice should use `EventId`, `OrganisationId`, `AppId`, and `PageId` from `@solvera/pace-core/types` where slug resolution, application lookup, organisation context, and page-permission identifiers cross service seams.
 - File-display contract: event selector and event hub are authenticated surfaces and should resolve logos with authenticated file display helpers (`FileDisplay` / `useFileDisplay`) rather than bespoke URL assembly.
 - Theming contract: do not apply `applyPalette`, `getPaletteFromEvent`, `getPaletteFromOrganisation`, or `clearPalette` in this slice during the rebuild; event and organisation palette theming is explicitly out of scope for the current wave.
-- Permission and context contracts: dashboard and event-hub actions require authenticated user context and any RBAC context supplied by `UnifiedAuth`; authenticated `PaceAppLayout` usage in this slice must follow `./PR00-portal-architecture.md#paceapplayout-and-appswitcher`.
+- Permission and context contracts: dashboard and event-hub actions require authenticated user context and any RBAC context supplied by `UnifiedAuth`; authenticated `PaceAppLayout` usage in this slice must follow `./portal-architecture.md#paceapplayout-and-appswitcher`.
 - Ownership rule: `PR14` owns the `useFileReferences` hook as the event-logo file-reference resolver for dashboard event-entry and participant event-hub surfaces. Later event slices may depend on that contract, but they do not own the hook definition.
 
 ## Visual specification
@@ -77,14 +77,14 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
-- [Project brief: pace-portal](./PR00-portal-project-brief.md)
-- [pace-portal architecture](./PR00-portal-architecture.md)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [Project brief: pace-portal](./portal-project-brief.md)
+- [pace-portal architecture](./portal-architecture.md)
 - [PR01 app shell routing](./PR01-app-shell-routing.md) (redirect-after-sign-in)
-- [PaceAppLayout constraint](./PR00-portal-architecture.md#paceapplayout-and-appswitcher)
-- [Portal app manifest](./PR00-portal-architecture.md#route-ownership-and-matching-model)
-- [Portal domain map](./PR00-portal-architecture.md)
-- [Portal slice index / legacy mapping](./PR00-portal-architecture.md#appendix-a-legacy-slice-id-mapping-por-to-pr)
+- [PaceAppLayout constraint](./portal-architecture.md#paceapplayout-and-appswitcher)
+- [Portal app manifest](./portal-architecture.md#route-ownership-and-matching-model)
+- [Portal domain map](./portal-architecture.md)
+- [Portal slice index / legacy mapping](./portal-architecture.md#appendix-a-legacy-slice-id-mapping-por-to-pr)
 - `src/pages/events/EventHubPage.tsx`
 - `src/hooks/events/useEventHub.ts`
 - `src/hooks/events/useFileReferences.ts`
@@ -100,4 +100,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

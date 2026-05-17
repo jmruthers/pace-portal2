@@ -314,4 +314,42 @@ describe('AdditionalContactsPage', () => {
     renderPage('/additional-contacts?targetMemberId=m1');
     expect(screen.getByText(/proxy banner/i)).toBeInTheDocument();
   });
+
+  it('renders populated contacts for delegated member when proxy mode is active', () => {
+    proxyModeImpl.mockImplementation(() => ({
+      setProxyTargetMemberId: vi.fn(),
+      validationError: null,
+    }));
+
+    dataMock.mockReturnValue({
+      contacts: [
+        {
+          contact_id: 'c-proxy',
+          contact_person_id: 'p1',
+          contact_type_id: 'ct-1',
+          contact_type_name: 'Emergency',
+          email: 'river@example.com',
+          first_name: 'Sam',
+          last_name: 'River',
+          member_id: 'm-target',
+          organisation_id: 'org-1',
+          permission_type: 'view',
+          phones: [{ phone_number: '0400', phone_type: 'Mobile' }],
+        },
+      ],
+      mode: 'proxy',
+      isProxyResolving: false,
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+      organisationId: 'org-1',
+    });
+
+    renderPage('/additional-contacts?targetMemberId=m-target');
+
+    expect(screen.getByText(/Sam River/)).toBeInTheDocument();
+    expect(screen.getByText(/proxy banner/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^delete$/i })).toBeInTheDocument();
+  });
 });

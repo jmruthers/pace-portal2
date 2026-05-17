@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR06-wizard-field-details.md`** — portal requirement slice **PR06** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR06-wizard-field-details.md`** — portal requirement slice **PR06** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -30,7 +30,7 @@ This file is **`PR06-wizard-field-details.md`** — portal requirement slice **P
 ## API / Contract
 
 - Public exports: `MemberProfileForm`-shape field values, `MemberProfileFormPhone`, `MemberProfileReferenceData`, the step field contract inside `/profile-complete`, and the wizard save/validation helpers behind `useProfileCompletionWizard`.
-- File paths: `src/pages/auth/ProfileCompletionWizardPage.tsx`, `src/hooks/auth/useProfileCompletionWizard.ts`, `src/components/member-profile/MemberProfile/MemberProfileForm.tsx`, `src/hooks/contacts/usePhoneNumbers.ts`, `src/hooks/shared/useAddressData.ts`, `src/integrations/google-maps/loader.ts`.
+- File paths: `src/pages/ProfileCompletionWizardPage.tsx`, `src/hooks/auth/useProfileCompletionWizard.ts`, `src/components/member-profile/MemberProfile/MemberProfileForm.tsx`, `src/hooks/contacts/usePhoneNumbers.ts`, `src/hooks/shared/useAddressData.ts`, `src/integrations/google-maps/loader.ts`.
 - Data contracts: `core_person`, `core_member`, `core_phone`, `core_address`, `memberProfileSchema`, `AddressField`, and the reference-data option sets for phone, gender, pronoun, and membership type.
 - Form contract: the wizard step bodies should bind Zod-backed field groups through `useZodForm` from `@solvera/pace-core/hooks` rather than composing raw `react-hook-form` setup locally.
 - Permission and context contracts: authenticated user/session context, selected organisation context for persistence, and the existing event-handoff return path from the shell.
@@ -69,9 +69,9 @@ This file is **`PR06-wizard-field-details.md`** — portal requirement slice **P
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
 - Wizard shell: [PR05-profile-wizard-shell.md](./PR05-profile-wizard-shell.md)
-- `src/pages/auth/ProfileCompletionWizardPage.tsx`
+- `src/pages/ProfileCompletionWizardPage.tsx`
 - `src/hooks/auth/useProfileCompletionWizard.ts`
 - `src/components/member-profile/MemberProfile/MemberProfileForm.tsx`
 - `src/shared/hooks/useReferenceData.ts`
@@ -87,4 +87,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

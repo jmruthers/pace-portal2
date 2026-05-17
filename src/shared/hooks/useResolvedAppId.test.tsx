@@ -9,7 +9,6 @@ const mockRpc = vi.fn();
 vi.mock('@solvera/pace-core', () => ({
   useUnifiedAuthContext: () => ({
     user: { id: 'u1' },
-    appId: null as string | null,
   }),
 }));
 
@@ -41,7 +40,7 @@ describe('useResolvedAppId', () => {
 
     await waitFor(() => expect(result.current).toBe('app-resolved'), { timeout: 5000 });
     expect(mockRpc).toHaveBeenCalledWith('data_app_resolve', {
-      p_app_name: 'pace',
+      p_app_name: 'PACE',
       p_user_id: 'u1',
     });
   });

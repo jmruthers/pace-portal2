@@ -5,6 +5,7 @@ import { useSecureSupabase } from '@solvera/pace-core/rbac';
 import type { Database } from '@/types/pace-database';
 import { toTypedSupabase, toSupabaseClientLike } from '@/lib/supabase-typed';
 import type { MedicalConditionFormValues } from '@/utils/medical-profile/medicalConditionValidation';
+import { FILE_STORAGE_BUCKET } from '@/constants/fileStorage';
 
 type MediInsert = Database['public']['Tables']['medi_condition']['Insert'];
 type MediUpdate = Database['public']['Tables']['medi_condition']['Update'];
@@ -88,9 +89,12 @@ export function useMedicalConditions(input: {
         .from('medi_condition')
         .update(formToUpdate(inputRow.values))
         .eq('id', inputRow.id)
-        .select('id')
-        .single();
+        .select('id');
       if (upd.error) throw new Error(upd.error.message ?? 'Could not update condition.');
+      const updatedRows = Array.isArray(upd.data) ? upd.data.length : 0;
+      if (updatedRows !== 1) {
+        throw new Error('Could not update condition: no rows were updated.');
+      }
       return inputRow.id;
     },
     onSuccess: async () => {
@@ -138,7 +142,7 @@ export function useMedicalConditions(input: {
             secureClient: secure,
             adapter: {
               metadataTable: 'core_file_references',
-              storageBucket: 'files',
+              storageBucket: FILE_STORAGE_BUCKET,
               columns: {
                 id: 'id',
                 filePath: 'file_path',

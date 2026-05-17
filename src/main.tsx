@@ -3,13 +3,16 @@ import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@ta
 import { BrowserRouter } from 'react-router-dom';
 import { setupRBAC } from '@solvera/pace-core/rbac';
 import { UnifiedAuthProvider, useUnifiedAuthContext } from '@solvera/pace-core';
+import { SessionRestorationLoader, ToastProvider } from '@solvera/pace-core/components';
 import {
-  InactivityWarningModal,
-  SessionRestorationLoader,
-  ToastProvider,
-} from '@solvera/pace-core/components';
+  renderShellInactivityWarning,
+  SHELL_IDLE_TIMEOUT_MS,
+  SHELL_WARN_BEFORE_MS,
+} from '@/appShellAuthConfig';
 import { OrganisationServiceProvider } from '@solvera/pace-core/providers';
 import { QueryRetryHandler, queryErrorHandler } from '@solvera/pace-core/utils';
+import { APP_NAME } from '@/constants';
+import { resolveRbacAppIdForSetup } from '@/lib/rbacResolveAppId';
 import { supabaseClient } from '@/lib/supabase';
 import './app.css';
 import App from './App';
@@ -24,12 +27,14 @@ function AppWithOrganisation() {
   );
 }
 
-const APP_NAME = 'YourApp';
+function getRbacAppId(appName: string) {
+  return resolveRbacAppIdForSetup(supabaseClient, appName);
+}
 
-setupRBAC(supabaseClient, { appName: APP_NAME });
-
-const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
-const WARN_BEFORE_MS = 2 * 60 * 1000;
+setupRBAC(supabaseClient, {
+  appName: APP_NAME,
+  getAppId: getRbacAppId,
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -54,19 +59,12 @@ createRoot(root).render(
         <UnifiedAuthProvider
           supabaseClient={supabaseClient}
           appName={APP_NAME}
-          idleTimeoutMs={IDLE_TIMEOUT_MS}
-          warnBeforeMs={WARN_BEFORE_MS}
+          idleTimeoutMs={SHELL_IDLE_TIMEOUT_MS}
+          warnBeforeMs={SHELL_WARN_BEFORE_MS}
           onIdleLogout={async () => {
             await supabaseClient.auth.signOut();
           }}
-          renderInactivityWarning={({ timeRemaining, onStaySignedIn, onSignOutNow }) => (
-            <InactivityWarningModal
-              isOpen
-              timeRemaining={timeRemaining}
-              onStaySignedIn={onStaySignedIn}
-              onSignOutNow={onSignOutNow}
-            />
-          )}
+          renderInactivityWarning={renderShellInactivityWarning}
         >
           <SessionRestorationLoader message="Restoring session…">
             <AppWithOrganisation />

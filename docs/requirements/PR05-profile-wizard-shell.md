@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR05-profile-wizard-shell.md`** — portal requirement slice **PR05** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR05-profile-wizard-shell.md`** — portal requirement slice **PR05** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -28,7 +28,7 @@ This file is **`PR05-profile-wizard-shell.md`** — portal requirement slice **P
 ## API / Contract
 
 - Public exports: `/profile-complete`, `ProfileCompletionWizardPage`, `useProfileCompletionWizard`, `useReferenceData`, `fetchUserData`, `usePhoneNumbers`, `useAddressData`, and `loadGoogleMapsWithPlaces`.
-- File paths: `src/pages/auth/ProfileCompletionWizardPage.tsx`, `src/hooks/auth/useProfileCompletionWizard.ts`, `src/shared/hooks/useReferenceData.ts`, `src/shared/lib/utils/userUtils.ts`, `src/hooks/contacts/usePhoneNumbers.ts`, `src/hooks/shared/useAddressData.ts`, `src/integrations/google-maps/loader.ts`.
+- File paths: `src/pages/ProfileCompletionWizardPage.tsx`, `src/hooks/auth/useProfileCompletionWizard.ts`, `src/shared/hooks/useReferenceData.ts`, `src/shared/lib/utils/userUtils.ts`, `src/hooks/contacts/usePhoneNumbers.ts`, `src/hooks/shared/useAddressData.ts`, `src/integrations/google-maps/loader.ts`.
 - Data contracts: `core_person`, `core_member`, `core_phone`, and `core_address` are the persistence seams behind the shell; query-param handoff uses `eventSlug`, `formSlug`, and the `fromWizard=true` return flag.
 - Permission and context contracts: authenticated route, current user/session context, and event-form handoff context are required; this shell does not own its own organisation or RBAC policy.
 - **Implementation note (pace-portal):** `/profile-complete` is wrapped by the PR01 `ProtectedRoute` and `ProfileCompleteLayout` rather than `PagePermissionGuard`, because `rbac_check_permission_simplified` / `rbac_permissions_get` can block onboarding when `profile-complete` page rows are absent. Access remains authenticated-only; use `PagePermissionGuard` here only once RBAC page metadata guarantees non-blocking roles.
@@ -68,11 +68,11 @@ This file is **`PR05-profile-wizard-shell.md`** — portal requirement slice **P
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
-- [Project brief: pace-portal](./PR00-portal-project-brief.md)
-- [Portal architecture](./PR00-portal-architecture.md)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [Project brief: pace-portal](./portal-project-brief.md)
+- [Portal architecture](./portal-architecture.md)
 - Field detail slice: [PR06-wizard-field-details.md](./PR06-wizard-field-details.md)
-- `src/pages/auth/ProfileCompletionWizardPage.tsx`
+- `src/pages/ProfileCompletionWizardPage.tsx`
 - `src/hooks/auth/useProfileCompletionWizard.ts`
 - `src/shared/lib/profileProgress.ts`
 - `src/shared/hooks/useReferenceData.ts`
@@ -89,4 +89,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

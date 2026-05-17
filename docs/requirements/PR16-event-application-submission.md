@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR16-event-application-submission.md`** — portal requirement slice **PR16** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR16-event-application-submission.md`** — portal requirement slice **PR16** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -87,9 +87,9 @@ Use these exact identifiers in `err(...)` payloads (or attach as `error.code` if
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
-- [Project brief: pace-portal](./PR00-portal-project-brief.md)
-- [pace-portal architecture](./PR00-portal-architecture.md)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [Project brief: pace-portal](./portal-project-brief.md)
+- [pace-portal architecture](./portal-architecture.md)
 - `src/pages/events/FormFillPage.tsx`
 - `src/hooks/events/useApplicationSubmission.ts`
 - `src/hooks/events/useDraftApplication.ts`
@@ -103,4 +103,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

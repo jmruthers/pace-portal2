@@ -27,6 +27,7 @@ const sampleEvent = {
   typical_unit_size: null,
   updated_at: null,
   updated_by: null,
+  logo_id: null,
   event_logo: 'https://example.com/logo.png',
 } as const;
 

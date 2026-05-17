@@ -4,15 +4,18 @@ import { useSecureSupabase } from '@solvera/pace-core/rbac';
 import { APP_NAME } from '@/constants';
 
 /**
- * Resolves pace app id via `data_app_resolve` when auth context has no `appId` yet.
+ * Resolves the pace app id via `data_app_resolve` for the signed-in user ({@link APP_NAME}).
+ * Returns an empty string until the query succeeds or when the secure Supabase client or user is absent.
+ * Components that accept an `appId` prop (for example {@link ProfilePhotoUpload}) may combine
+ * `useResolvedAppId() || appId || ''` so a parent can pass a synchronously known id when needed.
  */
 export function useResolvedAppId() {
-  const { user, appId: contextAppId } = useUnifiedAuthContext();
+  const { user } = useUnifiedAuthContext();
   const secure = useSecureSupabase();
 
   const { data: resolved } = useQuery({
     queryKey: ['data_app_resolve', APP_NAME, user?.id],
-    enabled: Boolean(secure && user?.id && !contextAppId),
+    enabled: Boolean(secure && user?.id),
     queryFn: async () => {
       if (!secure || !user?.id) return null;
       const r = (await secure.rpc('data_app_resolve', {
@@ -25,5 +28,5 @@ export function useResolvedAppId() {
     },
   });
 
-  return contextAppId ?? resolved ?? '';
+  return resolved ?? '';
 }

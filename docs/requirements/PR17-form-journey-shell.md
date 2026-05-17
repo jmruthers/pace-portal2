@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR17-form-journey-shell.md`** — portal requirement slice **PR17** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR17-form-journey-shell.md`** — portal requirement slice **PR17** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -54,7 +54,7 @@ This file is **`PR17-form-journey-shell.md`** — portal requirement slice **PR1
 
 ## References
 
-- [PR00-portal-architecture.md](./PR00-portal-architecture.md)
+- [portal-architecture.md](./portal-architecture.md)
 - [PR15-authenticated-form-rendering.md](./PR15-authenticated-form-rendering.md)
 - [PR16-event-application-submission.md](./PR16-event-application-submission.md)
 - [../base/slices/S05a-registration-entry-and-application-submission_requirements.md](../base/slices/S05a-registration-entry-and-application-submission_requirements.md)

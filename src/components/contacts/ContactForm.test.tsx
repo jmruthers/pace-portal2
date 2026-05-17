@@ -60,10 +60,23 @@ vi.mock('@/hooks/contacts/useContactOperations', () => ({
 }));
 
 vi.mock('@/components/contacts/ContactForm/EmailFormStep', () => ({
-  EmailFormStep: ({ onSubmit }: { onSubmit: (value: { email: string; no_email: boolean }) => void }) => (
-    <Button type="button" variant="secondary" onClick={() => onSubmit({ email: 'sam@example.com', no_email: false })}>
-      Email step submit
-    </Button>
+  EmailFormStep: ({
+    onSubmit,
+  }: {
+    onSubmit: (value: { email: string; no_email: boolean }) => void | Promise<void>;
+  }) => (
+    <>
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={() => void onSubmit({ email: 'sam@example.com', no_email: false })}
+      >
+        Email step submit
+      </Button>
+      <Button type="button" variant="outline" onClick={() => void onSubmit({ email: '', no_email: true })}>
+        No email branch
+      </Button>
+    </>
   ),
 }));
 
@@ -410,5 +423,99 @@ describe('ContactForm', () => {
 
     await user.click(screen.getByRole('button', { name: /try again/i }));
     expect(state.clearBlocked).toHaveBeenCalledOnce();
+  });
+
+  it('enters no-email path from email step', async () => {
+    const user = userEvent.setup();
+    const state = buildBaseState('email');
+    stateMock.mockReturnValue(state);
+
+    render(
+      <ContactForm
+        mode="create"
+        contacts={[]}
+        initialContact={null}
+        memberId={null}
+        onCancel={vi.fn()}
+        onSaved={vi.fn()}
+        onEditExistingContact={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /no email branch/i }));
+    expect(state.setCreatePathNoEmail).toHaveBeenCalledOnce();
+  });
+
+  it('blocks duplicate email match using proxy target member contacts', async () => {
+    const user = userEvent.setup();
+    const state = buildBaseState('email');
+    stateMock.mockReturnValue(state);
+    findByEmailMock.mockResolvedValue({
+      ok: true,
+      data: {
+        person_id: 'p-proxy-dup',
+        first_name: 'Alex',
+        last_name: 'Pat',
+        preferred_name: null,
+        email: 'alex@example.com',
+        phone_number: null,
+        phone_type_id: null,
+      },
+    });
+
+    render(
+      <ContactForm
+        mode="create"
+        contacts={[
+          {
+            contact_id: 'c-proxy',
+            contact_person_id: 'p-proxy-dup',
+            contact_type_id: 'ct-1',
+            contact_type_name: 'Emergency',
+            email: 'alex@example.com',
+            first_name: 'Alex',
+            last_name: 'Pat',
+            member_id: 'm-proxy-target',
+            organisation_id: 'org-1',
+            permission_type: 'view',
+            phones: [],
+          },
+        ]}
+        initialContact={null}
+        memberId="m-proxy-target"
+        onCancel={vi.fn()}
+        onSaved={vi.fn()}
+        onEditExistingContact={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /email step submit/i }));
+    expect(state.setBlocked).toHaveBeenCalledOnce();
+    expect(state.toMatchStep).not.toHaveBeenCalled();
+  });
+
+  it('passes proxy member id through create save from full step', async () => {
+    const user = userEvent.setup();
+    stateMock.mockReturnValue(buildBaseState('full'));
+    createMutateAsync.mockResolvedValue(undefined);
+
+    render(
+      <ContactForm
+        mode="create"
+        contacts={[]}
+        initialContact={null}
+        memberId="m-proxy-target"
+        onCancel={vi.fn()}
+        onSaved={vi.fn()}
+        onEditExistingContact={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /full form submit/i }));
+    expect(createMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        memberId: 'm-proxy-target',
+      })
+    );
   });
 });

@@ -88,7 +88,6 @@ describe('PhotoUploadDialog', () => {
           personId="person-1"
           organisationId="org-1"
           appId="app-1"
-          userId="user-1"
           {...overrides}
         />
       </QueryClientProvider>

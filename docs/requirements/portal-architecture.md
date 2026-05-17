@@ -4,12 +4,10 @@
 
 Portal foundation docs in this folder follow:
 
-**`PR00-portal-architecture.md`**
+**`portal-architecture.md`** (paired with **`portal-project-brief.md`**)
 
 | Segment | Meaning |
 |--------|---------|
-| **`PR`** | Requirements program prefix for this rebuild documentation set. |
-| **`00`** | Foundation slot (shared with project brief and numbered requirement slices). |
 | **`portal`** | Product identifier. |
 | **`architecture`** | Fixed suffix for this document type. |
 
@@ -316,7 +314,7 @@ Contract-only: public exports, paths, data touchpoints, and layout obligations â
 
 ### References
 
-- [Project brief: pace-portal](./PR00-portal-project-brief.md)
+- [Project brief: pace-portal](./portal-project-brief.md)
 - `src/main.tsx`
 - `src/App.tsx`
 - `src/lib/supabase.ts`
@@ -370,9 +368,9 @@ Contract-only: public exports, paths, data touchpoints, and layout obligations â
 
 ### References
 
-- [Project brief: pace-portal](./PR00-portal-project-brief.md) (event selector and source-of-truth decisions)
+- [Project brief: pace-portal](./portal-project-brief.md) (event selector and source-of-truth decisions)
 - `src/pages/auth/RegistrationPage.tsx`
-- `src/pages/auth/ProfileCompletionWizardPage.tsx`
+- `src/pages/ProfileCompletionWizardPage.tsx`
 - `src/hooks/auth/useProfileCompletionWizard.ts`
 - `src/utils/auth/registrationUtils.ts`
 
@@ -648,8 +646,8 @@ Contract-only: public exports, paths, data touchpoints, and layout obligations â
 
 ### References
 
-- [Project brief: pace-portal](./PR00-portal-project-brief.md) (event selector and source-of-truth decisions)
-- [Optional pace-core2 candidates from portal slices](./PR00-portal-pace-core-candidates.md) (non-normative backlog)
+- [Project brief: pace-portal](./portal-project-brief.md) (event selector and source-of-truth decisions)
+- Optional pace-core2 enhancement backlog from portal slices (non-normative; no separate doc in this repo)
 - `src/pages/events/EventHubPage.tsx`
 - `src/pages/events/FormFillPage.tsx`
 - `src/components/events/FormRenderer.tsx`

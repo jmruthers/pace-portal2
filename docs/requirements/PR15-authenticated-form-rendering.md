@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR15-authenticated-form-rendering.md`** — portal requirement slice **PR15** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR15-authenticated-form-rendering.md`** — portal requirement slice **PR15** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -41,7 +41,7 @@ This file is **`PR15-authenticated-form-rendering.md`** — portal requirement s
 - **Profile confirmation blocks:** Treat confirmations as **named fields or a nested `confirmations` object** in the same schema so required confirmations block submit with explicit validation messages; do not maintain a parallel untyped state that bypasses `useZodForm`.
 - **Unsupported `field_type`:** Register a fallback branch that renders an `Alert` (and a read-only placeholder where useful), **omits** the field from required submit validation unless the product requires hard-stop, and **never** throws during render—matching the acceptance criterion for non-crashing fallback.
 - **Submit vs draft:** Client validation via `useZodForm` covers user-editable fields; **final persistence and duplicate-safe submit** are owned by [PR16-event-application-submission.md](./PR16-event-application-submission.md). Draft autosave may persist raw field payloads even when full Zod refinement would fail, as long as PR16 blocks final submit until valid.
-- Permission and context contracts: the page requires authenticated user context, must respect proxy mode when the user is completing the form for someone else, must keep organisation context present for form loads and saves, and authenticated `PaceAppLayout` usage in this slice must follow `./PR00-portal-architecture.md#paceapplayout-and-appswitcher`.
+- Permission and context contracts: the page requires authenticated user context, must respect proxy mode when the user is completing the form for someone else, must keep organisation context present for form loads and saves, and authenticated `PaceAppLayout` usage in this slice must follow `./portal-architecture.md#paceapplayout-and-appswitcher`.
 
 ## Visual specification
 
@@ -75,10 +75,10 @@ This file is **`PR15-authenticated-form-rendering.md`** — portal requirement s
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
-- [Project brief: pace-portal](./PR00-portal-project-brief.md)
-- [pace-portal architecture](./PR00-portal-architecture.md)
-- [PaceAppLayout constraint](./PR00-portal-architecture.md#paceapplayout-and-appswitcher)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [Project brief: pace-portal](./portal-project-brief.md)
+- [pace-portal architecture](./portal-architecture.md)
+- [PaceAppLayout constraint](./portal-architecture.md#paceapplayout-and-appswitcher)
 - `src/pages/events/FormFillPage.tsx`
 - `src/components/events/FormRenderer.tsx`
 - `src/hooks/events/useFormBySlug.ts`
@@ -96,4 +96,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

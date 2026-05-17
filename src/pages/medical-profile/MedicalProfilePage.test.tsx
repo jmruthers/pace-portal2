@@ -52,6 +52,18 @@ vi.mock('@/hooks/medical-profile/useMedicalReferenceData', () => ({
   }),
 }));
 
+const medicalProxy = vi.hoisted(() => ({
+  isProxyActive: false,
+  isValidating: false,
+  validationError: null as string | null,
+  targetMemberId: null as string | null,
+  targetPersonId: null as string | null,
+  actingUserId: 'u1',
+  clearProxy: vi.fn(),
+  setProxyTargetMemberId: vi.fn(),
+  proxyAttribution: {} as Record<string, unknown>,
+}));
+
 const editor = vi.hoisted(() =>
   vi.fn(() => ({
     organisationId: 'org-1',
@@ -112,22 +124,17 @@ vi.mock('@/hooks/medical-profile/useMedicalProfilePage', () => ({
 }));
 
 vi.mock('@/shared/hooks/useProxyMode', () => ({
-  useProxyMode: () => ({
-    isProxyActive: false,
-    isValidating: false,
-    validationError: null,
-    targetMemberId: null,
-    targetPersonId: null,
-    actingUserId: 'u1',
-    clearProxy: vi.fn(),
-    setProxyTargetMemberId: vi.fn(),
-    proxyAttribution: {},
-  }),
+  useProxyMode: () => medicalProxy,
 }));
 
 describe('MedicalProfilePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    medicalProxy.isProxyActive = false;
+    medicalProxy.isValidating = false;
+    medicalProxy.validationError = null;
+    medicalProxy.targetMemberId = null;
+    medicalProxy.targetPersonId = null;
     editor.mockImplementation(() => ({
       organisationId: 'org-1',
       appId: 'app-1',
@@ -300,5 +307,147 @@ describe('MedicalProfilePage', () => {
     const buttons = screen.getAllByRole('button', { name: /save medical profile/i });
     await user.click(buttons[buttons.length - 1]!);
     await waitFor(() => expect(save).toHaveBeenCalled());
+  });
+
+  it('submits save from top save button', async () => {
+    const user = userEvent.setup();
+    const save = vi.fn().mockResolvedValue(undefined);
+    editor.mockImplementation(() => ({
+      organisationId: 'org-1',
+      appId: 'app-1',
+      userId: 'u1',
+      gateReady: true,
+      blockedReason: null,
+      load: {
+        data: {
+          profile: {
+            id: 'mp1',
+            person_id: 'p1',
+            created_at: null,
+            created_by: null,
+            data_retention_until: null,
+            diet_type_id: '1',
+            dietary_comments: null,
+            health_care_card_expiry: null,
+            health_care_card_number: null,
+            health_fund_name: null,
+            health_fund_number: null,
+            is_fully_immunised: false,
+            last_tetanus_date: null,
+            medicare_expiry: null,
+            medicare_number: null,
+            updated_at: null,
+            updated_by: null,
+          },
+          memberId: 'm1',
+          personId: 'p1',
+          conditions: [],
+          dietTypeNameFromRpc: null,
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        dataUpdatedAt: 0,
+      },
+      saveMedicalProfile: save,
+      isSaving: false,
+      saveError: null,
+      supabase: null,
+      typedClient: null,
+      queryClient: {},
+    }));
+
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <MedicalProfilePage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    const buttons = screen.getAllByRole('button', { name: /save medical profile/i });
+    expect(buttons.length).toBeGreaterThanOrEqual(2);
+    await user.click(buttons[0]!);
+    await waitFor(() => expect(save).toHaveBeenCalled());
+  });
+
+  it('shows delegated access error when proxy gate blocks medical editing', async () => {
+    editor.mockImplementation(() => ({
+      organisationId: 'org-1',
+      appId: 'app-1',
+      userId: 'u1',
+      gateReady: true,
+      blockedReason: 'proxy_invalid',
+      load: {
+        data: {
+          profile: {
+            id: 'mp1',
+            person_id: 'p1',
+            created_at: null,
+            created_by: null,
+            data_retention_until: null,
+            diet_type_id: '1',
+            dietary_comments: null,
+            health_care_card_expiry: null,
+            health_care_card_number: null,
+            health_fund_name: null,
+            health_fund_number: null,
+            is_fully_immunised: false,
+            last_tetanus_date: null,
+            medicare_expiry: null,
+            medicare_number: null,
+            updated_at: null,
+            updated_by: null,
+          },
+          memberId: 'm1',
+          personId: 'p1',
+          conditions: [],
+          dietTypeNameFromRpc: null,
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        dataUpdatedAt: 0,
+      },
+      saveMedicalProfile: vi.fn(),
+      isSaving: false,
+      saveError: null,
+      supabase: null,
+      typedClient: null,
+      queryClient: {},
+    }));
+    medicalProxy.validationError = 'Proxy validation failed for test';
+
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <MedicalProfilePage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByRole('heading', { name: /^delegated access$/i })).toBeInTheDocument();
+    expect(screen.getByText('Proxy validation failed for test')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /medical profile/i })).toBeNull();
+  });
+
+  it('shows delegated context banner when proxy session is active', async () => {
+    medicalProxy.isProxyActive = true;
+    medicalProxy.targetMemberId = 'm-proxy';
+    medicalProxy.targetPersonId = 'p-proxy';
+
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <MedicalProfilePage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText(/delegated context active/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /medical profile/i })).toBeInTheDocument();
   });
 });

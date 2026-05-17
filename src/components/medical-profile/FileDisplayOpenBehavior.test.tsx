@@ -13,7 +13,7 @@ describe('FileDisplay (PR11 inline open)', () => {
           table_name: 'medi_action_plan',
           record_id: 'ap1',
           file_path: 'x/plan.pdf',
-          file_metadata: { fileName: 'plan.pdf', fileType: 'application/pdf' },
+          file_metadata: { fileName: 'plan.pdf', fileType: 'application/pdf', bucket: 'files' },
           app_id: 'app',
           is_public: false,
           created_at: '',
