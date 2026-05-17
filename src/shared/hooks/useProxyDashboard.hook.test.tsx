@@ -94,6 +94,14 @@ function buildDelegatedWorkspaceClient() {
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
     }
+    if (table === 'base_application') {
+      const chain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+      return chain;
+    }
     return {};
   });
 

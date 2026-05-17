@@ -59,9 +59,9 @@ const NotFoundPage = lazy(async () => {
   const m = await import('@/pages/NotFoundPage');
   return { default: m.NotFoundPage };
 });
-const EventHubPlaceholderPage = lazy(async () => {
-  const m = await import('@/pages/public/EventWorkflowPlaceholders');
-  return { default: m.EventHubPlaceholderPage };
+const EventHubPage = lazy(async () => {
+  const m = await import('@/pages/events/EventHubPage');
+  return { default: m.EventHubPage };
 });
 const EventApplicationPlaceholderPage = lazy(async () => {
   const m = await import('@/pages/public/EventWorkflowPlaceholders');
@@ -165,11 +165,11 @@ export default function App() {
                 <Route path="profile/view/:memberId" element={<ProfileViewPage />} />
                 <Route path="profile/edit/:memberId" element={<ProfileEditProxyPage />} />
               </Route>
+              <Route path=":eventSlug/application" element={<EventApplicationPlaceholderPage />} />
+              <Route path=":eventSlug/:formSlug" element={<EventFormRoute />} />
+              <Route path=":eventSlug" element={<EventHubPage />} />
             </Route>
           </Route>
-          <Route path="/:eventSlug/application" element={<EventApplicationPlaceholderPage />} />
-          <Route path="/:eventSlug/:formSlug" element={<EventFormRoute />} />
-          <Route path="/:eventSlug" element={<EventHubPlaceholderPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>

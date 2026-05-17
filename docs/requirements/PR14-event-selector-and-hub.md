@@ -16,12 +16,12 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 
 ## Acceptance criteria
 
-- [ ] The slice replaces the placeholder `EventList` interaction from PR03 with the resolved dashboard-side `Apply` / `Resume` / `Manage` flow.
-- [ ] The dashboard event selector shows `Apply` when no application exists, `Resume` when a draft application exists, and `Manage` when an application exists with any non-`draft` status.
-- [ ] `Resume` routes to the same authenticated application path as `Apply`.
-- [ ] `Manage`/open routes to `/:eventSlug` (participant event hub) and not a modal-only dead-end.
-- [ ] The participant event hub page shows event name, logo, dates, participant blurb, admin email, website (when present), application status, and active forms/workflow links without `context_id` grouping.
-- [ ] Missing event, inactive-window, and logo-fallback states are visible and testable on selector/hub surfaces.
+- [x] The slice replaces the placeholder `EventList` interaction from PR03 with the resolved dashboard-side `Apply` / `Resume` / `Manage` flow.
+- [x] The dashboard event selector shows `Apply` when no application exists, `Resume` when a draft application exists, and `Manage` when an application exists with any non-`draft` status.
+- [x] `Resume` routes to the same authenticated application path as `Apply`.
+- [x] `Manage`/open routes to `/:eventSlug` (participant event hub) and not a modal-only dead-end.
+- [x] The participant event hub page shows event name, logo, dates, participant blurb, admin email, website (when present), application status, and active forms/workflow links without `context_id` grouping.
+- [x] Missing event, inactive-window, and logo-fallback states are visible and testable on selector/hub surfaces.
 
 ## API / Contract
 

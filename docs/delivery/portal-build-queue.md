@@ -32,7 +32,7 @@
 | PR09 — Medical profile summary | PR07 | Done | — |
 | PR11 — Action-plan files | PR09 | Done | — |
 | PR10 — Medical conditions CRUD | PR09, PR11 | Done | — |
-| PR14 — Event selector and participant hub | PR03 |  |  |
+| PR14 — Event selector and participant hub | PR03 | Done | — |
 | PR15 — Authenticated form rendering | PR01, PR02, PR14 |  |  |
 | PR16 — Event application submission | PR15 |  |  |
 | PR17 — Shared form journey shell | PR01, PR02, PR14, PR15, PR16 |  |  |
@@ -122,6 +122,10 @@
 
 - authority: [`docs/requirements/PR14-event-selector-and-hub.md`](../requirements/PR14-event-selector-and-hub.md)
 - backend freeze: None — events + logos + hub read contracts PASS (portal-backend-ready-report slice coverage); corroborated with base-backend-ready-report per portal-backend-ready-report
+- implementation: dashboard slot `src/components/events/DashboardEventSelector.tsx`; selector + CTAs `src/components/events/EventList.tsx`; authenticated logos `src/components/events/EventLogo.tsx` + `src/hooks/events/useFileReferences.ts`; action mapping `src/hooks/events/eventDashboardAction.ts`; hub `src/pages/events/EventHubPage.tsx` + `src/hooks/events/useEventHub.ts`; routes `src/App.tsx` (`/:eventSlug`, `/:eventSlug/application`, `/:eventSlug/:formSlug`); dashboard wiring `src/pages/DashboardPage.tsx`; landing/event visibility `src/shared/hooks/useEnhancedLanding.ts`, `src/shared/lib/dashboardEventVisibility.ts`. Participant hub is intentionally mounted outside `PortalAuthenticatedLayout` and without a dedicated `PagePermissionGuard` catalogue row until RBAC catalogues include one; access relies on `ProtectedRoute`, organisation gate, and row-level visibility (see `EventHubPage` JSDoc).
+- tests: `src/components/events/EventList.test.tsx`, `src/components/events/EventLogo.test.tsx`, `src/components/events/DashboardEventSelector.test.tsx`, `src/hooks/events/eventDashboardAction.test.ts`, `src/hooks/events/useEventHub.test.ts`, `src/hooks/events/useFileReferences.test.tsx`, `src/pages/events/EventHubPage.test.tsx`
+- validate: `npm run validate` — PASS (`audit/202605171344-*` step reports + `audit/202605171345-pace-core-audit.md`)
+- contract note (Evidence only): logos resolve via direct `core_file_references` reads (same table family as `data_file_reference_list`); no dynamic event/org palette theming in this slice per requirement.
 
 ### PR15 — Authenticated form rendering
 

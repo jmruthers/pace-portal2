@@ -82,6 +82,14 @@ function buildDelegatedWorkspaceClient() {
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
     }
+    if (table === 'base_application') {
+      const chain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+      return chain;
+    }
     return {};
   });
 
@@ -111,6 +119,7 @@ describe('fetchDelegatedWorkspace', () => {
       expect(r.data.member?.id).toBe('m1');
       expect(r.data.phones).toEqual([]);
       expect(r.data.additionalContacts).toEqual([]);
+      expect(r.data.applicationStatusByEventId).toEqual({});
     }
   });
 

@@ -1,25 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@solvera/pace-core/components';
+import { createEventId } from '@solvera/pace-core/types';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
 import type { DashboardEvent } from '@/shared/hooks/useEnhancedLanding';
+import { deriveEventDashboardAction } from '@/hooks/events/eventDashboardAction';
+import { useFileReferences } from '@/hooks/events/useFileReferences';
+import { EventLogo } from '@/components/events/EventLogo';
+import { formatEventDateForDisplay } from '@/shared/lib/formatEventDateForDisplay';
 
 export type EventListProps = {
   eventsByCategory: Record<string, DashboardEvent[]>;
+  applicationStatusByEventId: Record<string, string>;
 };
-
-function initialsFromEventName(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-  return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
-}
-
-function isProbablyAbsoluteUrl(s: string): boolean {
-  return /^https?:\/\//i.test(s);
-}
 
 function organisationLabel(org: { display_name?: string | null; name?: string | null }): string {
   const d = org.display_name?.trim();
@@ -28,9 +21,9 @@ function organisationLabel(org: { display_name?: string | null; name?: string | 
 }
 
 /**
- * Event selector rail + expandable panel placeholder (PR03). Replaceable in PR14.
+ * PR14 dashboard event selector: Apply / Resume / Manage + authenticated logo display via {@link useFileReferences}.
  */
-export function EventList({ eventsByCategory }: EventListProps) {
+export function EventList({ eventsByCategory, applicationStatusByEventId }: EventListProps) {
   const navigate = useNavigate();
   const org = useOrganisationsContextOptional();
   const selectedOrgName = org?.selectedOrganisation
@@ -41,6 +34,14 @@ export function EventList({ eventsByCategory }: EventListProps) {
     () => Object.values(eventsByCategory).flat() as DashboardEvent[],
     [eventsByCategory]
   );
+
+  const logoScopes = useMemo(
+    () => flat.map((e) => ({ event_id: e.event_id, organisation_id: e.organisation_id })),
+    [flat]
+  );
+
+  const { refByEventId, isLoading: logoRefsBusy, isError: logoRefsFailed } = useFileReferences(logoScopes);
+
   const orgNameById = useMemo(() => {
     const m = new Map<string, string>();
     for (const o of org?.organisations ?? []) {
@@ -54,8 +55,18 @@ export function EventList({ eventsByCategory }: EventListProps) {
     [flat]
   );
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = flat.find((e) => e.event_id === selectedId) ?? null;
+  const navigateForEvent = (ev: DashboardEvent) => {
+    const codeRaw = ev.event_code?.trim() ?? '';
+    if (!codeRaw) return;
+    const code = encodeURIComponent(codeRaw);
+    const status = applicationStatusByEventId[ev.event_id];
+    const { intent } = deriveEventDashboardAction(status);
+    if (intent === 'manage') {
+      navigate(`/${code}`);
+      return;
+    }
+    navigate(`/${code}/application`);
+  };
 
   if (flat.length === 0) {
     const multiMembership = (org?.organisations?.length ?? 0) > 1;
@@ -97,61 +108,40 @@ export function EventList({ eventsByCategory }: EventListProps) {
         <CardContent className="grid gap-4">
           <ul className="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-3 list-none">
             {flat.map((ev) => {
-              const isSel = ev.event_id === selectedId;
-              const logoSrc = ev.event_logo?.trim();
-              const showImg = Boolean(logoSrc && (isProbablyAbsoluteUrl(logoSrc) || logoSrc.startsWith('/')));
+              const logoRef = refByEventId.get(createEventId(ev.event_id)) ?? null;
+              const applicationStatus = applicationStatusByEventId[ev.event_id];
+              const { label } = deriveEventDashboardAction(applicationStatus);
+              const codeOk = Boolean(ev.event_code?.trim());
               return (
                 <li key={ev.event_id}>
-                  <Button
-                    type="button"
-                    variant={isSel ? 'default' : 'secondary'}
-                    className="grid h-full min-h-[14rem] w-full grid-rows-[8rem_auto] gap-2 p-3"
-                    onClick={() => setSelectedId(isSel ? null : ev.event_id)}
+                  <article
+                    className="grid gap-2 rounded-md border border-sec-200 p-3"
+                    aria-labelledby={`event-title-${ev.event_id}`}
                   >
-                    {/* eslint-disable-next-line pace-core-compliance/prefer-semantic-html -- phrasing-only content inside Button */}
-                    <span className="grid min-h-[8rem] place-items-center overflow-hidden rounded-md border border-sec-200 bg-sec-100">
-                      {showImg && logoSrc ? (
-                        <img
-                          src={logoSrc}
-                          alt={`${ev.event_name} logo`}
-                          className="max-h-full max-w-full object-contain"
-                        />
-                      ) : (
-                        <span aria-hidden="true">{initialsFromEventName(ev.event_name)}</span>
-                      )}
-                    </span>
-                    {/* eslint-disable-next-line pace-core-compliance/prefer-semantic-html -- phrasing-only content inside Button */}
-                    <span className="grid gap-1">
-                      <strong>{ev.event_name}</strong>
-                      {ev.event_date ? (
-                        <time dateTime={ev.event_date}>{new Date(ev.event_date).toLocaleDateString()}</time>
-                      ) : null}
-                      {multipleOrgsInList ? (
-                        <span>{orgNameById.get(ev.organisation_id) ?? 'Organisation'}</span>
-                      ) : null}
-                    </span>
-                  </Button>
+                    <EventLogo
+                      eventName={ev.event_name}
+                      logoRef={logoRef}
+                      refsBusy={logoRefsBusy}
+                      refsFailed={logoRefsFailed}
+                    />
+                    <h2 id={`event-title-${ev.event_id}`}>{ev.event_name}</h2>
+                    {ev.event_date ? (
+                      <time dateTime={ev.event_date}>{formatEventDateForDisplay(ev.event_date)}</time>
+                    ) : null}
+                    {multipleOrgsInList ? <p>{orgNameById.get(ev.organisation_id) ?? 'Organisation'}</p> : null}
+                    <Button
+                      type="button"
+                      variant={label === 'Manage' ? 'default' : 'secondary'}
+                      disabled={!codeOk}
+                      onClick={() => navigateForEvent(ev)}
+                    >
+                      {label}
+                    </Button>
+                  </article>
                 </li>
               );
             })}
           </ul>
-          {selected ? (
-            <article className="rounded-md border border-sec-200 p-4" aria-label="Selected event details">
-              <h3>{selected.event_name}</h3>
-              <p>Forms and actions for this event will appear here (placeholder for PR14).</p>
-              {selected.event_code ? (
-                <p>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => navigate(`/${selected.event_code}`)}
-                  >
-                    Open event hub
-                  </Button>
-                </p>
-              ) : null}
-            </article>
-          ) : null}
         </CardContent>
       </Card>
     </section>

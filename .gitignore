@@ -5,6 +5,7 @@ node_modules/
 dist/
 *.local
 *.tsbuildinfo
+tsconfig.tsbuildinfo
 
 # Supabase local link state
 .supabase/

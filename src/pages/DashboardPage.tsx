@@ -64,7 +64,10 @@ function DashboardContent() {
       <h1>Dashboard</h1>
       <ContactSummaryCard person={data.person} phones={data.phones} organisationId={organisationId} />
       <ProfilePrompts profileProgress={data.profileProgress} />
-      <DashboardEventSelector eventsByCategory={data.eventsByCategory} />
+      <DashboardEventSelector
+        eventsByCategory={data.eventsByCategory}
+        applicationStatusByEventId={data.applicationStatusByEventId}
+      />
       <LinkedProfilesSection />
     </main>
   );
