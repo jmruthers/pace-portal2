@@ -281,4 +281,74 @@ describe('FormRenderer', () => {
       vi.useRealTimers();
     }
   });
+
+  it('hides submit and surfaces submitted copy when readOnly', () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <FormRenderer
+        eventTitle="Ev"
+        formTitle="F"
+        formDescription={null}
+        fieldMetas={[]}
+        confirmationKeys={[]}
+        personId="p1"
+        memberId="m1"
+        personFirstName={null}
+        personLastName={null}
+        personEmail={null}
+        fieldDefaults={{}}
+        draftValues={{}}
+        prefillWarning={null}
+        isDraftHydrating={false}
+        draftHydrateError={null}
+        scheduleSaveDraft={scheduleSaveDraft}
+        isSavingDraft={false}
+        saveDraftError={null}
+        onSubmitForm={onSubmitForm}
+        isSubmitting={false}
+        submitError={null}
+        readOnly
+      />,
+      { wrapper: wrapper(qc) }
+    );
+    expect(screen.queryByRole('button', { name: 'Submit' })).not.toBeInTheDocument();
+    expect(
+      screen.getByText('This application was submitted. You can review your answers below.')
+    ).toBeInTheDocument();
+  });
+
+  it('summarizes confirmations with copy instead of editable blocks when readOnly', () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <FormRenderer
+        eventTitle="Ev"
+        formTitle="F"
+        formDescription={null}
+        fieldMetas={[]}
+        confirmationKeys={['member_profile']}
+        personId="p1"
+        memberId="m1"
+        personFirstName={null}
+        personLastName={null}
+        personEmail={null}
+        fieldDefaults={{}}
+        draftValues={{}}
+        prefillWarning={null}
+        isDraftHydrating={false}
+        draftHydrateError={null}
+        scheduleSaveDraft={scheduleSaveDraft}
+        isSavingDraft={false}
+        saveDraftError={null}
+        onSubmitForm={onSubmitForm}
+        isSubmitting={false}
+        submitError={null}
+        readOnly
+      />,
+      { wrapper: wrapper(qc) }
+    );
+    expect(
+      screen.getByText(/pre-submission requirements you acknowledged are on record/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /accurate/i })).not.toBeInTheDocument();
+  });
 });

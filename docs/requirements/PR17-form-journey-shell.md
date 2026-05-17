@@ -15,15 +15,21 @@ This file is **`PR17-form-journey-shell.md`** — portal requirement slice **PR1
 
 ## Acceptance criteria
 
-- [ ] The form journey supports route contexts for `/:eventSlug/application`, `/:eventSlug/:formSlug`, and `/forms/:formSlug`.
-- [ ] All routes require authenticated member context by default and preserve return URL through auth-required handoff.
-- [ ] The same shell supports start, resume, and view-submitted (read-only where applicable) states.
-- [ ] Draft creation/reuse and restore are handled through typed hooks/services and do not duplicate workflow side effects.
-- [ ] Unsupported field types fail safely without crashing and are observable in tests.
+- [x] The form journey supports route contexts for `/:eventSlug/application`, `/:eventSlug/:formSlug`, and `/forms/:formSlug`.
+- [x] All routes require authenticated member context by default and preserve return URL through auth-required handoff.
+- [x] The same shell supports start, resume, and view-submitted (read-only where applicable) states.
+- [x] Draft creation/reuse and restore are handled through typed hooks/services and do not duplicate workflow side effects.
+- [x] Unsupported field types fail safely without crashing and are observable in tests.
+
+## Implementation notes (pace-portal)
+
+- **Event `base_registration`:** Full journey — intro (`Start`), draft resume via `useDraftApplication`, submit via PR16 adapter (`resolveSubmitMode` → `useApplicationSubmission`), and read-only **view-submitted** when `fetchSubmittedRegistrationSnapshot` returns a submitted snapshot (`FormRenderer` `readOnly`). In-app navigation to application progress (`/:eventSlug/applications/:applicationId`) ships with PR18; this slice avoids a dead-link control until that route exists.
+- **`/forms/:formSlug` (org):** Authenticated load, intro, fill, and pre-submit confirmations render through the same shell; **draft persistence and submit** are deferred to follow-up TEAM/org-aligned slices per [portal-architecture.md](./portal-architecture.md) (org signup / org workflow semantics). `useDraftApplication` stays disabled without an event scope (`event_id`). **Response window:** eligibility uses `opens_at` / `closes_at` only (org rows have no `event_id`, so dashboard event-card rules do not apply).
+- **`view_submitted`:** Only for **event** routes where `workflow_type === 'base_registration'` and a non-draft submitted snapshot exists; otherwise the member stays in intro/filling.
 
 ## API / Contract
 
-- Public exports: `src/pages/forms/FormJourneyPage.tsx`, `src/hooks/forms/useFormJourney.ts`, `src/hooks/forms/useFormEntrypoint.ts`.
+- Public exports: `src/components/form-journey/FormJourneyShell.tsx` (component `FormJourneyShell`; `renderExtension` optional for workflow chrome), `src/hooks/forms/useFormJourney.ts`, `src/hooks/forms/useFormEntrypoint.ts`; shared discriminant type `FormEntrypoint` — `src/lib/formEntrypointResolution.ts`.
 - Service contracts:
   - Entrypoint resolution by route and workflow context.
   - Draft lifecycle (create/reuse/load) separate from final submit orchestration.

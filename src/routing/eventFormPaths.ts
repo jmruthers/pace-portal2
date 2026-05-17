@@ -9,6 +9,8 @@ export const RESERVED_EVENT_SLUGS = new Set([
   'medical-profile',
   'additional-contacts',
   'profile',
+  /** Top-level `/forms/*` journey; must not resolve as `/:eventSlug` hub. */
+  'forms',
 ]);
 
 export function isReservedEventSlug(slug: string): boolean {

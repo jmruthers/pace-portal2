@@ -50,6 +50,8 @@ export type FormRendererProps = {
   onSubmitForm: (values: Record<string, unknown>) => void | Promise<void>;
   isSubmitting: boolean;
   submitError: string | null;
+  /** When true, suppresses autosave, disables fields, and hides submit (PR17 view-submitted). */
+  readOnly?: boolean;
 };
 
 type FormRendererBodyProps = FormRendererProps & {
@@ -72,11 +74,12 @@ function buildDefaultValues(
   fieldMetas: FormFieldMeta[],
   fieldDefaults: Record<string, unknown>,
   draftValues: Record<string, unknown>,
-  confirmationKeys: string[]
+  confirmationKeys: string[],
+  confirmationsReadOnlyTreatedAsAcknowledged: boolean
 ): Record<string, unknown> {
   const conf: Record<string, boolean> = {};
   for (const k of confirmationKeys) {
-    conf[k] = false;
+    conf[k] = confirmationsReadOnlyTreatedAsAcknowledged;
   }
   const out: Record<string, unknown> = { confirmations: conf };
   for (const m of fieldMetas) {
@@ -117,6 +120,7 @@ function FormRendererBody({
   saveDraftError,
   isSubmitting,
   submitError,
+  readOnly = false,
   form,
   registry,
 }: FormRendererBodyProps) {
@@ -126,7 +130,9 @@ function FormRendererBody({
   useEffect(() => {
     if (isDraftHydrating) return;
     skipDraftPersistenceRef.current = true;
-    form.reset(buildDefaultValues(fieldMetas, fieldDefaults, draftValues, confirmationKeys));
+    form.reset(
+      buildDefaultValues(fieldMetas, fieldDefaults, draftValues, confirmationKeys, readOnly)
+    );
     const t = window.setTimeout(() => {
       skipDraftPersistenceRef.current = false;
     }, 0);
@@ -134,10 +140,11 @@ function FormRendererBody({
       window.clearTimeout(t);
       skipDraftPersistenceRef.current = false;
     };
-  }, [isDraftHydrating, fieldMetas, fieldDefaults, draftValues, confirmationKeys, form]);
+  }, [isDraftHydrating, fieldMetas, fieldDefaults, draftValues, confirmationKeys, form, readOnly]);
 
   useEffect(() => {
     const subscription = form.watch((value) => {
+      if (readOnly) return;
       if (skipDraftPersistenceRef.current) return;
       if (isDraftHydrating || draftHydrateError) return;
       if (value == null || typeof value !== 'object') return;
@@ -150,7 +157,7 @@ function FormRendererBody({
       scheduleSaveDraft(dynamic);
     });
     return () => subscription.unsubscribe();
-  }, [form, scheduleSaveDraft, isDraftHydrating, draftHydrateError]);
+  }, [form, scheduleSaveDraft, isDraftHydrating, draftHydrateError, readOnly]);
 
   const phonesQuery = usePhoneNumbers(personId);
   const medicalQuery = useMedicalProfileData(memberId);
@@ -173,10 +180,17 @@ function FormRendererBody({
         </Alert>
       ) : null}
 
-      {hasDraftRestore ? (
+      {hasDraftRestore && !readOnly ? (
         <Alert variant="default">
           <AlertTitle>Resuming your application</AlertTitle>
           <AlertDescription>Your saved answers for this form have been restored.</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {readOnly ? (
+        <Alert variant="default">
+          <AlertTitle>Submitted</AlertTitle>
+          <AlertDescription>This application was submitted. You can review your answers below.</AlertDescription>
         </Alert>
       ) : null}
 
@@ -191,12 +205,22 @@ function FormRendererBody({
         </Card>
       ) : null}
 
-      {confirmationKeys.length > 0 ? (
+      {readOnly && confirmationKeys.length > 0 ? (
+        <Alert variant="default">
+          <AlertTitle>Confirmations</AlertTitle>
+          <AlertDescription>
+            Pre-submission requirements you acknowledged are on record. Review your answers below.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {!readOnly && confirmationKeys.length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle>Confirmations</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-6">
+            <fieldset className="min-w-0 border-0 p-0 m-0 grid gap-6">
             {confirmationKeys.includes('member_profile') ? (
               <section className="grid gap-2" aria-label="Member profile confirmation">
                 <h3>Member profile</h3>
@@ -321,6 +345,7 @@ function FormRendererBody({
                 />
               </section>
             ) : null}
+            </fieldset>
           </CardContent>
         </Card>
       ) : null}
@@ -330,6 +355,7 @@ function FormRendererBody({
           <CardTitle>Form fields</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
+          <fieldset disabled={readOnly} className="min-w-0 border-0 p-0 m-0 grid gap-4">
           {isDraftHydrating ? (
             <section className="grid place-items-center py-4" aria-busy="true">
               <LoadingSpinner label="Loading draft…" />
@@ -346,6 +372,8 @@ function FormRendererBody({
               })}
             </Fragment>
           ))}
+
+          </fieldset>
 
           {saveDraftError ? (
             <Alert variant="destructive">
@@ -365,6 +393,7 @@ function FormRendererBody({
             {isSavingDraft && !saveDraftError ? <LoadingSpinner label="Saving draft…" /> : null}
           </output>
         </CardContent>
+        {!readOnly ? (
         <CardFooter className="text-right">
           <Button
             type="submit"
@@ -376,6 +405,7 @@ function FormRendererBody({
             {isSubmitting ? 'Submitting…' : 'Submit'}
           </Button>
         </CardFooter>
+        ) : null}
       </Card>
     </>
   );
@@ -409,12 +439,13 @@ export function FormRenderer(props: FormRendererProps) {
         props.fieldMetas,
         props.fieldDefaults,
         props.draftValues,
-        props.confirmationKeys
+        props.confirmationKeys,
+        Boolean(props.readOnly)
       ),
-    [props.fieldMetas, props.fieldDefaults, props.draftValues, props.confirmationKeys]
+    [props.fieldMetas, props.fieldDefaults, props.draftValues, props.confirmationKeys, props.readOnly]
   );
 
-  if (draftHydrateError) {
+  if (draftHydrateError && !props.readOnly) {
     return (
       <Alert variant="destructive">
         <AlertTitle>Form</AlertTitle>
@@ -430,6 +461,7 @@ export function FormRenderer(props: FormRendererProps) {
       defaultValues={defaultValues}
       mode="onSubmit"
       onSubmit={(data) => {
+        if (props.readOnly) return;
         void onSubmitForm(data as Record<string, unknown>);
       }}
     >

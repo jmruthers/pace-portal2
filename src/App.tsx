@@ -10,6 +10,7 @@ import { OrganisationLoadingGate } from '@/shared/components/OrganisationLoading
 import { PortalAuthenticatedLayout } from '@/shared/components/PortalAuthenticatedLayout';
 import { ProfileCompleteLayout } from '@/shared/components/ProfileCompleteLayout';
 import { EventApplicationRoute, EventFormRoute } from '@/pages/events/EventFormRoutes';
+import { OrgFormRoute } from '@/pages/forms/OrgFormRoutes';
 
 const LoginPage = lazy(async () => {
   const m = await import('@/pages/auth/LoginPage');
@@ -146,6 +147,7 @@ export default function App() {
                 <Route path="profile/view/:memberId" element={<ProfileViewPage />} />
                 <Route path="profile/edit/:memberId" element={<ProfileEditProxyPage />} />
               </Route>
+              <Route path="forms/:formSlug" element={<OrgFormRoute />} />
               <Route path=":eventSlug/application" element={<EventApplicationRoute />} />
               <Route path=":eventSlug/:formSlug" element={<EventFormRoute />} />
               <Route path=":eventSlug" element={<EventHubPage />} />

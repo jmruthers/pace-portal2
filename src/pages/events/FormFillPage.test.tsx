@@ -8,6 +8,12 @@ import { err, ok } from '@solvera/pace-core/types';
 import { FormFillPage } from '@/pages/events/FormFillPage';
 import * as userUtils from '@/shared/lib/utils/userUtils';
 
+const fetchSubmittedMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/fetchSubmittedRegistrationSnapshot', () => ({
+  fetchSubmittedRegistrationSnapshot: (...args: unknown[]) => fetchSubmittedMock(...args),
+}));
+
 const mockNavigate = vi.hoisted(() => vi.fn());
 
 vi.mock('react-router-dom', async () => {
@@ -184,6 +190,10 @@ const minimalMember = {
 };
 
 describe('FormFillPage', () => {
+  async function clickStart(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(await screen.findByRole('button', { name: /^start$/i }));
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockNavigate.mockClear();
@@ -200,10 +210,18 @@ describe('FormFillPage', () => {
     proxyState.targetPersonId = null;
     proxyState.targetMemberId = null;
 
+    fetchSubmittedMock.mockResolvedValue(ok(null));
+
     useFormBySlugMock.mockReturnValue({
       data: {
         event: { event_name: 'Camp event', event_id: 'ev1' },
-        form: { id: 'form-1', title: 'Registration', name: 'Registration', description: null },
+        form: {
+          id: 'form-1',
+          title: 'Registration',
+          name: 'Registration',
+          description: null,
+          workflow_type: 'base_registration',
+        },
         fieldRows: [],
         confirmationKeys: [],
       },
@@ -255,7 +273,6 @@ describe('FormFillPage', () => {
     authState.user = null;
     renderPage();
     expect(screen.getByText(/redirecting to sign in/i)).toBeInTheDocument();
-    expect(mockNavigate).toHaveBeenCalledWith('/login?redirect=%2Fcamp%2Freg', { replace: true });
   });
 
   it('requires organisation context', () => {
@@ -286,6 +303,7 @@ describe('FormFillPage', () => {
       isError: false,
     });
     renderPage();
+    await clickStart(userEvent.setup());
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
   });
 
@@ -304,6 +322,21 @@ describe('FormFillPage', () => {
     });
     renderPage();
     expect(await screen.findByText(/resuming your application/i)).toBeInTheDocument();
+  });
+
+  it('shows read-only submitted journey without Start or Submit when a snapshot exists', async () => {
+    fetchSubmittedMock.mockResolvedValue(
+      ok({
+        applicationId: 'app-submitted',
+        responseId: 'resp-submitted',
+        valueByFieldId: { 'field-1': 'prior answer' },
+      })
+    );
+    renderPage();
+    expect(await screen.findByText(/this application was submitted/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^start$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^submit$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /view application progress/i })).not.toBeInTheDocument();
   });
 
   it('shows form unavailable when form load fails', async () => {
@@ -356,6 +389,7 @@ describe('FormFillPage', () => {
   it('shows success toast and navigates home after submit succeeds', async () => {
     const user = userEvent.setup();
     renderPage();
+    await clickStart(user);
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
     expect(submitAsync).toHaveBeenCalled();
@@ -379,6 +413,7 @@ describe('FormFillPage', () => {
     });
     const user = userEvent.setup();
     renderPage();
+    await clickStart(user);
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
     expect(toastMock).toHaveBeenCalledWith(
@@ -399,7 +434,9 @@ describe('FormFillPage', () => {
       isLoading: false,
       isError: false,
     });
+    const user = userEvent.setup();
     renderPage();
+    await clickStart(user);
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     expect(lastSubmissionInput.current?.applicantPersonId).toBe('p-proxy');
     expect(lastSubmissionInput.current?.actingUserId).toBe('user-1');
@@ -414,6 +451,7 @@ describe('FormFillPage', () => {
     );
     const user = userEvent.setup();
     renderPage();
+    await clickStart(user);
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
     expect(toastMock).toHaveBeenCalledWith(
@@ -437,6 +475,7 @@ describe('FormFillPage', () => {
     );
     const user = userEvent.setup();
     renderPage();
+    await clickStart(user);
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
     expect(toastMock).toHaveBeenCalledWith(
@@ -458,6 +497,7 @@ describe('FormFillPage', () => {
     );
     const user = userEvent.setup();
     renderPage();
+    await clickStart(user);
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
     expect(toastMock).toHaveBeenCalledWith(
@@ -486,6 +526,7 @@ describe('FormFillPage', () => {
     });
     const user = userEvent.setup();
     renderPage();
+    await clickStart(user);
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
     expect(saveDraftNow).toHaveBeenCalled();

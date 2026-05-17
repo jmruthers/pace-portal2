@@ -35,7 +35,7 @@
 | PR14 — Event selector and participant hub | PR03 | Built | — |
 | PR15 — Authenticated form rendering | PR01, PR02, PR14 | Built | — |
 | PR16 — Event application submission | PR15 | Built | — |
-| PR17 — Shared form journey shell | PR01, PR02, PR14, PR15, PR16 |  |  |
+| PR17 — Shared form journey shell | PR01, PR02, PR14, PR15, PR16 | Built | — |
 | PR18 — Participant application progress | PR14, PR17 |  |  |
 | PR19 — Participant activity booking | PR14, PR17 |  |  |
 | PR21 — My Memberships | PR01, PR02, PR05, PR06, PR07, PR15, PR17 |  |  |
@@ -152,8 +152,14 @@
 
 ### PR17 — Shared form journey shell
 
+- acceptance: All five acceptance criteria in [`PR17-form-journey-shell.md`](../requirements/PR17-form-journey-shell.md) marked complete; org `/forms/:formSlug` draft persistence and submit deferred in requirement **Implementation notes** (follow-up TEAM/org slices per [portal-architecture.md](../requirements/portal-architecture.md)).
 - authority: [`docs/requirements/PR17-form-journey-shell.md`](../requirements/PR17-form-journey-shell.md)
 - backend freeze: None — same readiness band as PR15–PR16 (portal-backend-ready-report slice coverage rows)
+- depends_on rationale: Executable prereqs PR01, PR02, PR14, PR15, PR16 per requirement Dependencies
+- implementation: Journey shell `src/components/form-journey/FormJourneyShell.tsx`; org wrapper `src/pages/forms/OrgFormRoutes.tsx` (`PagePermissionGuard`); thin event wrapper `src/pages/events/FormFillPage.tsx` (`PagePermissionGuard` — no duplicate guard on shell component); hooks `src/hooks/forms/useFormJourney.ts`, `src/hooks/forms/useFormEntrypoint.ts`; libs `src/lib/formEntrypointResolution.ts` (`FormEntrypoint` type union), `src/lib/formSubmitAdapters.ts`, `src/lib/fetchOrgFormBySlug.ts`, `src/lib/fetchSubmittedRegistrationSnapshot.ts`; routing `src/App.tsx` (`forms/:formSlug` before `:eventSlug/*`), `src/routing/eventFormPaths.ts` (`forms` reserved); read-only submitted UX via `readOnly` on `src/components/events/FormRenderer.tsx`.
+- tests: `src/lib/formSubmitAdapters.test.ts`, `src/lib/fetchOrgFormBySlug.test.ts`, `src/lib/fetchSubmittedRegistrationSnapshot.test.ts`, `src/hooks/forms/useFormEntrypoint.test.tsx`, `src/hooks/forms/useFormJourney.test.tsx`, `src/pages/forms/OrgFormRoutes.test.tsx`, `src/routing/eventFormPaths.test.ts`, `src/components/events/FormRenderer.test.tsx`, `src/pages/events/FormFillPage.test.tsx`.
+- validate: `npm run validate` — PASS (`audit/202605171533-*` step reports + `audit/202605171534-pace-core-audit.md`)
+- contract note: Org `/forms/:formSlug` — authenticated load and fill only until follow-up slices add org draft/submit adapters.
 - contract (Evidence only — not `depends_on`): BASE/TEAM workflow contracts referenced by PR17 (see requirement References); gate PASS freezes consumption for this run
 
 ### PR18 — Participant application progress

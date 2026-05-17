@@ -51,7 +51,8 @@ export async function fetchFieldCatalogueAndPrefill(
   fieldRows: CoreFormFieldRow[],
   personId: string,
   organisationId: string,
-  eventId: string
+  /** When null (org-scoped forms), `base_application` prefill is skipped. */
+  eventId: string | null
 ): Promise<ApiResult<FormFieldDataResult>> {
   const tables = collectPrefillTables(fieldRows);
 
@@ -94,7 +95,7 @@ export async function fetchFieldCatalogueAndPrefill(
       if (med.error) throw new Error(med.error.message);
       medi = med.data as MediProfileRow | null;
     }
-    if (tables.has('base_application')) {
+    if (tables.has('base_application') && eventId != null && eventId !== '') {
       const ar = await client
         .from('base_application')
         .select('*')
@@ -156,6 +157,7 @@ export async function fetchFieldCatalogueAndPrefill(
 export function useFormFieldData(
   personId: string | null,
   organisationId: string | null,
+  /** Pass null for org-scoped journeys (`/forms/…`); prefill still loads person/member when field keys require them. */
   eventId: string | null,
   fieldRows: CoreFormFieldRow[]
 ) {
@@ -166,13 +168,19 @@ export function useFormFieldData(
 
   const query = useQuery({
     queryKey: ['formFieldData', 'v1', personId, organisationId, eventId, stableFields],
-    enabled: Boolean(client && personId && organisationId && eventId && fieldRows.length > 0),
+    enabled: Boolean(client && personId && organisationId && fieldRows.length > 0),
     staleTime: 20_000,
     queryFn: async (): Promise<FormFieldDataResult> => {
-      if (!client || !personId || !organisationId || !eventId) {
-        throw new Error('Prefill requires person, organisation, and event.');
+      if (!client || !personId || !organisationId) {
+        throw new Error('Prefill requires person and organisation.');
       }
-      const r = await fetchFieldCatalogueAndPrefill(client, fieldRows, personId, organisationId, eventId);
+      const r = await fetchFieldCatalogueAndPrefill(
+        client,
+        fieldRows,
+        personId,
+        organisationId,
+        eventId
+      );
       if (!isOk(r)) {
         throw new Error(r.error.message ?? 'Could not load field defaults.');
       }
@@ -204,7 +212,7 @@ export function useFormFieldData(
     prefillWarning,
     fetchErrorMessage,
     isLoading:
-      Boolean(client && personId && organisationId && eventId && fieldRows.length > 0) && query.isLoading,
+      Boolean(client && personId && organisationId && fieldRows.length > 0) && query.isLoading,
     refetch: query.refetch,
   };
 }
