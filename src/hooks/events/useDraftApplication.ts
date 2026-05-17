@@ -169,6 +169,23 @@ export async function ensureDraftBundle(
 /* eslint-enable complexity */
 
 /** Exported for unit tests (PR15). */
+async function deleteDraftValueRow(
+  client: NonNullable<ReturnType<typeof toTypedSupabase>>,
+  responseId: string,
+  formFieldId: string
+): Promise<ApiResult<void>> {
+  const del = await client
+    .from('core_form_response_values')
+    .delete()
+    .eq('response_id', responseId)
+    .eq('form_field_id', formFieldId);
+
+  if (del.error) {
+    return err({ code: 'DRAFT_VALUE_DELETE', message: del.error.message ?? 'Draft save failed.' });
+  }
+  return ok(undefined);
+}
+
 export async function persistDraftValues(
   client: NonNullable<ReturnType<typeof toTypedSupabase>>,
   organisationId: string,
@@ -177,10 +194,45 @@ export async function persistDraftValues(
   dynamicValues: Record<string, unknown>
 ): Promise<ApiResult<void>> {
   const orgIdTyped = createOrganisationId(organisationId);
+  const allowedFieldIds = new Set(fieldRows.map((r) => r.id));
+
+  const existingRes = await client
+    .from('core_form_response_values')
+    .select('form_field_id')
+    .eq('response_id', responseId);
+
+  if (existingRes.error) {
+    return err({
+      code: 'DRAFT_VALUE_QUERY',
+      message: existingRes.error.message ?? 'Could not read draft values.',
+    });
+  }
+
+  const existingIds = new Set(
+    ((existingRes.data ?? []) as { form_field_id: string }[])
+      .map((r) => r.form_field_id)
+      .filter(Boolean)
+  );
+
+  for (const fid of [...existingIds]) {
+    if (!allowedFieldIds.has(fid)) {
+      const d = await deleteDraftValueRow(client, responseId, fid);
+      if (!isOk(d)) return d;
+    }
+  }
 
   for (const row of fieldRows) {
+    const hasKey = Object.prototype.hasOwnProperty.call(dynamicValues, row.id);
     const v = dynamicValues[row.id];
-    if (v === undefined) continue;
+    const shouldPersist = hasKey && v !== undefined;
+
+    if (!shouldPersist) {
+      if (existingIds.has(row.id)) {
+        const d = await deleteDraftValueRow(client, responseId, row.id);
+        if (!isOk(d)) return d;
+      }
+      continue;
+    }
 
     const valueJson: Database['public']['Tables']['core_form_response_values']['Insert']['value_json'] =
       typeof v === 'object' && v !== null ? (v as never) : null;
@@ -293,7 +345,7 @@ export function useDraftApplication(
     applicationId: bundle?.applicationId ?? null,
     responseId: bundle?.responseId ?? null,
     valueByFieldId: bundle?.valueByFieldId ?? {},
-    isHydrating: bundleQuery.isLoading || bundleQuery.isFetching,
+    isHydrating: bundleQuery.isLoading,
     hydrateError,
     saveDraftNow: (dynamicValues: Record<string, unknown>) => saveMutation.mutate(dynamicValues),
     scheduleSaveDraft,

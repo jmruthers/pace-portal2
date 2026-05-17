@@ -2,10 +2,21 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
 import { err, ok } from '@solvera/pace-core/types';
-import { FormFillPage } from '@/pages/events/FormFillPage';
 import * as userUtils from '@/shared/lib/utils/userUtils';
+
+const mockNavigate = vi.hoisted(() => vi.fn());
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
+import { MemoryRouter } from 'react-router-dom';
+import { FormFillPage } from '@/pages/events/FormFillPage';
 
 vi.mock('@solvera/pace-core/rbac', () => ({
   useSecureSupabase: () => ({}),
@@ -91,7 +102,7 @@ function renderPage() {
     return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
   }
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={['/camp/reg']}>
       <FormFillPage eventSlug="camp" formSlug="reg" />
     </MemoryRouter>,
     { wrapper: Provider }
@@ -129,6 +140,7 @@ const minimalMember = {
 describe('FormFillPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNavigate.mockClear();
     authState.isAuthenticated = true;
     authState.user = { id: 'user-1' };
     orgState.selectedOrganisation = { id: 'org-1' };
@@ -167,9 +179,8 @@ describe('FormFillPage', () => {
       fieldMetas: [],
       fieldDefaults: {},
       prefillWarning: null,
-      fieldLoadError: null,
+      fetchErrorMessage: null,
       isLoading: false,
-      error: null,
       refetch: vi.fn(),
     });
 
@@ -193,6 +204,7 @@ describe('FormFillPage', () => {
     authState.user = null;
     renderPage();
     expect(screen.getByText(/redirecting to sign in/i)).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith('/login?redirect=%2Fcamp%2Freg', { replace: true });
   });
 
   it('requires organisation context', () => {
@@ -256,19 +268,18 @@ describe('FormFillPage', () => {
     expect(screen.getByText(/wrong access mode/i)).toBeInTheDocument();
   });
 
-  it('shows field data error and back to event', async () => {
+  it('shows field data fetch error with back navigation', async () => {
     useFormFieldDataMock.mockReturnValue({
       fieldMetas: [],
       fieldDefaults: {},
       prefillWarning: null,
-      fieldLoadError: 'Could not load defaults.',
+      fetchErrorMessage: 'Could not load field defaults.',
       isLoading: false,
-      error: null,
       refetch: vi.fn(),
     });
     renderPage();
     expect(await screen.findByText(/field data/i)).toBeInTheDocument();
-    expect(screen.getByText(/could not load defaults/i)).toBeInTheDocument();
+    expect(screen.getByText(/could not load field defaults/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /back to event/i })).toBeInTheDocument();
   });
 

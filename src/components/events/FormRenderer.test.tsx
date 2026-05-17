@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FormRenderer } from '@/components/events/FormRenderer';
 import type { FormFieldMeta } from '@solvera/pace-core/forms';
@@ -200,5 +200,41 @@ describe('FormRenderer', () => {
       { wrapper: wrapper(qc) }
     );
     expect(screen.getByText(/network dropped/i)).toBeInTheDocument();
+  });
+
+  it('does not schedule draft persistence solely from hydrate boundary crossing', async () => {
+    vi.useFakeTimers();
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const props = {
+      eventTitle: 'Camp',
+      formTitle: 'Registration',
+      formDescription: null,
+      fieldMetas: [],
+      confirmationKeys: [],
+      personId: 'p1',
+      memberId: 'm1',
+      personFirstName: 'A',
+      personLastName: 'B',
+      personEmail: 'a@b.c',
+      fieldDefaults: {},
+      draftValues: {},
+      prefillWarning: null,
+      isDraftHydrating: true,
+      draftHydrateError: null,
+      scheduleSaveDraft,
+      isSavingDraft: false,
+      saveDraftError: null,
+    };
+
+    try {
+      const { rerender } = render(<FormRenderer {...props} />, { wrapper: wrapper(qc) });
+      rerender(<FormRenderer {...props} isDraftHydrating={false} />);
+      await act(() => {
+        vi.runAllTimers();
+      });
+      expect(scheduleSaveDraft).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

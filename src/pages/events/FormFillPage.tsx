@@ -254,13 +254,13 @@ export function FormFillPage({ eventSlug, formSlug }: FormFillPageProps) {
 
         const ready = formLoad.data;
 
-        if (fieldData.fieldLoadError) {
+        if (fieldData.fetchErrorMessage) {
           return (
             <main className="mx-auto grid max-w-(--app-width) gap-4 p-4">
               {proxy.isProxyActive ? <ProxyModeBanner /> : null}
               <Alert variant="destructive">
                 <AlertTitle>Field data</AlertTitle>
-                <AlertDescription>{fieldData.fieldLoadError}</AlertDescription>
+                <AlertDescription>{fieldData.fetchErrorMessage}</AlertDescription>
               </Alert>
               <Button type="button" variant="secondary" onClick={() => navigate(`/${encodeURIComponent(eventSlug)}`)}>
                 Back to event

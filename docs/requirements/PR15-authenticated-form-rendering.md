@@ -85,8 +85,10 @@ This file is **`PR15-authenticated-form-rendering.md`** — portal requirement s
 - `src/hooks/events/useFormFieldData.ts`
 - `src/hooks/events/useDraftApplication.ts`
 - `src/hooks/auth/usePhoneNumbers.ts`
+- `src/hooks/events/useFormAdditionalContactsPreview.ts`
+- `src/utils/contacts/groupAdditionalContactRows.ts` (same grouped-row contract as Additional Contacts PR12 flows)
 - `src/components/medical-profile/MedicalProfile/MedicalProfileDisplay.tsx`
-- `src/components/contacts/AdditionalContacts/AdditionalContactsDisplay.tsx`
+- Confirmation previews are read-only: **`MedicalProfileDisplay`** for medical; member profile surfaces phone rows from **`usePhoneNumbers`**; additional contacts confirmation uses **`useFormAdditionalContactsPreview`** with **`groupFlatContactRows`** (same grouped-row contract as PR12 **`AdditionalContactsList`**). **`AdditionalContactsDisplay`** remains scoped to the Additional Contacts slice (contacts management with edit/delete).
 
 ---
 

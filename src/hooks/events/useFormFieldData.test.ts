@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { isErr, isOk } from '@solvera/pace-core/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/pace-database';
 import * as formFieldDataModule from '@/hooks/events/useFormFieldData';
@@ -75,14 +76,14 @@ describe('fetchFieldCatalogueAndPrefill', () => {
     } as unknown as SupabaseClient<Database>;
 
     const res = await fetchFieldCatalogueAndPrefill(client, fieldRows, 'p1', 'o1', 'ev1');
-    expect(res.ok).toBe(true);
-    if (res.ok) {
+    expect(isOk(res)).toBe(true);
+    if (isOk(res)) {
       expect(res.data.fieldDefaults['field-1']).toBe('Alex');
       expect(res.data.prefillWarning).toBeNull();
     }
   });
 
-  it('surfaces non-fatal warning when catalogue RPC fails but still builds metas', async () => {
+  it('returns FIELD_CATALOGUE_RPC when catalogue RPC fails', async () => {
     const client = {
       rpc: vi.fn().mockResolvedValue({
         data: null,
@@ -92,10 +93,10 @@ describe('fetchFieldCatalogueAndPrefill', () => {
     } as unknown as SupabaseClient<Database>;
 
     const res = await fetchFieldCatalogueAndPrefill(client, fieldRows, 'p1', 'o1', 'ev1');
-    expect(res.ok).toBe(true);
-    if (res.ok) {
-      expect(res.data.prefillWarning).toMatch(/catalogue/i);
-      expect(res.data.fieldMetas).toHaveLength(1);
+    expect(isErr(res)).toBe(true);
+    if (isErr(res)) {
+      expect(res.error.code).toBe('FIELD_CATALOGUE_RPC');
+      expect(res.error.message).toMatch(/catalogue/i);
     }
   });
 
@@ -114,8 +115,8 @@ describe('fetchFieldCatalogueAndPrefill', () => {
     } as unknown as SupabaseClient<Database>;
 
     const res = await fetchFieldCatalogueAndPrefill(client, fieldRows, 'p1', 'o1', 'ev1');
-    expect(res.ok).toBe(true);
-    if (res.ok) {
+    expect(isOk(res)).toBe(true);
+    if (isOk(res)) {
       expect(res.data.prefillWarning).toMatch(/nope/);
     }
   });

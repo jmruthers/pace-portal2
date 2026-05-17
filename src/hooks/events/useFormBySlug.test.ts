@@ -124,6 +124,22 @@ describe('fetchFormBySlug', () => {
     expect(isOk(res)).toBe(true);
   });
 
+  it('returns EVENT_NOT_FOUND when slug is reserved', async () => {
+    const client = { from: vi.fn() };
+    const res = await fetchFormBySlug(
+      client as unknown as RBACSupabaseClient,
+      'o1',
+      ['o1'],
+      'dashboard',
+      'reg'
+    );
+    expect(isErr(res)).toBe(true);
+    if (isErr(res)) {
+      expect(res.error.code).toBe('EVENT_NOT_FOUND');
+    }
+    expect(client.from).not.toHaveBeenCalled();
+  });
+
   it('returns FORM_NOT_FOUND when published form row is missing', async () => {
     const client = {
       from: vi.fn((table: string) => {
@@ -147,6 +163,93 @@ describe('fetchFormBySlug', () => {
     expect(isErr(res)).toBe(true);
     if (isErr(res)) {
       expect(res.error.code).toBe('FORM_NOT_FOUND');
+    }
+  });
+
+  it('returns FORM_ACCESS_MODE when access_mode is not authenticated_member', async () => {
+    const client = {
+      from: vi.fn((table: string) => {
+        if (table === 'core_events') {
+          return createThenableBuilder({ data: eventRow, error: null });
+        }
+        if (table === 'core_forms') {
+          return createThenableBuilder({
+            data: { ...publishedForm, access_mode: 'public' },
+            error: null,
+          });
+        }
+        return createThenableBuilder({ data: null, error: { message: 'unknown' } });
+      }),
+    };
+
+    const res = await fetchFormBySlug(
+      client as unknown as RBACSupabaseClient,
+      'o1',
+      ['o1'],
+      'camp',
+      'reg'
+    );
+    expect(isErr(res)).toBe(true);
+    if (isErr(res)) {
+      expect(res.error.code).toBe('FORM_ACCESS_MODE');
+    }
+  });
+
+  it('returns FORM_INACTIVE when form is inactive', async () => {
+    const client = {
+      from: vi.fn((table: string) => {
+        if (table === 'core_events') {
+          return createThenableBuilder({ data: eventRow, error: null });
+        }
+        if (table === 'core_forms') {
+          return createThenableBuilder({
+            data: { ...publishedForm, is_active: false },
+            error: null,
+          });
+        }
+        return createThenableBuilder({ data: null, error: { message: 'unknown' } });
+      }),
+    };
+
+    const res = await fetchFormBySlug(
+      client as unknown as RBACSupabaseClient,
+      'o1',
+      ['o1'],
+      'camp',
+      'reg'
+    );
+    expect(isErr(res)).toBe(true);
+    if (isErr(res)) {
+      expect(res.error.code).toBe('FORM_INACTIVE');
+    }
+  });
+
+  it('returns FORM_WINDOW_CLOSED when opens_at is in the future', async () => {
+    const client = {
+      from: vi.fn((table: string) => {
+        if (table === 'core_events') {
+          return createThenableBuilder({ data: eventRow, error: null });
+        }
+        if (table === 'core_forms') {
+          return createThenableBuilder({
+            data: { ...publishedForm, opens_at: '2099-01-01T00:00:00.000Z' },
+            error: null,
+          });
+        }
+        return createThenableBuilder({ data: null, error: { message: 'unknown' } });
+      }),
+    };
+
+    const res = await fetchFormBySlug(
+      client as unknown as RBACSupabaseClient,
+      'o1',
+      ['o1'],
+      'camp',
+      'reg'
+    );
+    expect(isErr(res)).toBe(true);
+    if (isErr(res)) {
+      expect(res.error.code).toBe('FORM_WINDOW_CLOSED');
     }
   });
 });

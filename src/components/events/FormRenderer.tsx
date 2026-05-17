@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo } from 'react';
+import { Fragment, useEffect, useMemo, useRef } from 'react';
 import { useZodForm } from '@solvera/pace-core/hooks';
 import {
   Alert,
@@ -132,14 +132,25 @@ export function FormRenderer({
     mode: 'onSubmit',
   });
 
+  /** Blocks one `watch` emission after programmatic `reset` (draft/field hydrate) so autosave cannot echo defaults. */
+  const skipDraftPersistenceRef = useRef(false);
+
   useEffect(() => {
-    if (!isDraftHydrating) {
-      form.reset(buildDefaultValues(fieldMetas, fieldDefaults, draftValues, confirmationKeys));
-    }
+    if (isDraftHydrating) return;
+    skipDraftPersistenceRef.current = true;
+    form.reset(buildDefaultValues(fieldMetas, fieldDefaults, draftValues, confirmationKeys));
+    const t = window.setTimeout(() => {
+      skipDraftPersistenceRef.current = false;
+    }, 0);
+    return () => {
+      window.clearTimeout(t);
+      skipDraftPersistenceRef.current = false;
+    };
   }, [isDraftHydrating, fieldMetas, fieldDefaults, draftValues, confirmationKeys, form]);
 
   useEffect(() => {
     const subscription = form.watch((value) => {
+      if (skipDraftPersistenceRef.current) return;
       if (isDraftHydrating || draftHydrateError) return;
       if (value == null || typeof value !== 'object') return;
       const w = value as Record<string, unknown>;
@@ -217,14 +228,25 @@ export function FormRenderer({
                         {(personFirstName ?? '').trim()} {(personLastName ?? '').trim()}
                       </p>
                       <p>{(personEmail ?? '').trim()}</p>
-                      <ul>
-                        {(phonesQuery.data ?? []).map((ph) => (
-                          <li key={ph.id}>
-                            {ph.phone_number}
-                            {ph.phone_type_id != null ? ` (type ${ph.phone_type_id})` : ''}
-                          </li>
-                        ))}
-                      </ul>
+                      {phonesQuery.isError ? (
+                        <Alert variant="destructive">
+                          <AlertTitle>Phone numbers</AlertTitle>
+                          <AlertDescription>
+                            {phonesQuery.error instanceof Error
+                              ? phonesQuery.error.message
+                              : 'Could not load phone numbers.'}
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <ul>
+                          {(phonesQuery.data ?? []).map((ph) => (
+                            <li key={ph.id}>
+                              {ph.phone_number}
+                              {ph.phone_type_id != null ? ` (type ${ph.phone_type_id})` : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </CardContent>
                   </Card>
                   <Controller
@@ -249,7 +271,16 @@ export function FormRenderer({
                 <section className="grid gap-2" aria-label="Medical profile confirmation">
                   <h3>Medical profile</h3>
                   {medicalQuery.isLoading ? <LoadingSpinner label="Loading medical summary…" /> : null}
-                  {medicalQuery.data ? (
+                  {medicalQuery.isError ? (
+                    <Alert variant="destructive">
+                      <AlertTitle>Medical profile</AlertTitle>
+                      <AlertDescription>
+                        {medicalQuery.error instanceof Error
+                          ? medicalQuery.error.message
+                          : 'Could not load medical summary.'}
+                      </AlertDescription>
+                    </Alert>
+                  ) : medicalQuery.data ? (
                     <MedicalProfileDisplay conditions={medicalQuery.data.conditions} />
                   ) : null}
                   <Controller
@@ -274,14 +305,27 @@ export function FormRenderer({
                 <section className="grid gap-2" aria-label="Additional contacts confirmation">
                   <h3>Additional contacts</h3>
                   {contactsQuery.isLoading ? <LoadingSpinner label="Loading contacts…" /> : null}
-                  <ul>
-                    {(contactsQuery.data ?? []).map((c) => (
-                      <li key={c.contact_id}>
-                        {c.first_name} {c.last_name} — {c.contact_type_name}
-                      </li>
-                    ))}
-                  </ul>
-                  {(contactsQuery.data ?? []).length === 0 ? <p>No additional contacts on file.</p> : null}
+                  {contactsQuery.isError ? (
+                    <Alert variant="destructive">
+                      <AlertTitle>Additional contacts</AlertTitle>
+                      <AlertDescription>
+                        {contactsQuery.error instanceof Error
+                          ? contactsQuery.error.message
+                          : 'Could not load additional contacts.'}
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <>
+                      <ul>
+                        {(contactsQuery.data ?? []).map((c) => (
+                          <li key={c.contact_id}>
+                            {c.first_name} {c.last_name} — {c.contact_type_name}
+                          </li>
+                        ))}
+                      </ul>
+                      {(contactsQuery.data ?? []).length === 0 ? <p>No additional contacts on file.</p> : null}
+                    </>
+                  )}
                   <Controller
                     name={'confirmations.additional_contacts' as never}
                     control={form.control}

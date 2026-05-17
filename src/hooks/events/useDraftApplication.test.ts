@@ -151,6 +151,7 @@ describe('persistDraftValues', () => {
       from: vi.fn((table: string) => {
         if (table === 'core_form_response_values') {
           return {
+            select: vi.fn(() => responsesThenable([])),
             delete: del,
             insert,
           };
@@ -165,5 +166,71 @@ describe('persistDraftValues', () => {
     expect(isOk(r)).toBe(true);
     expect(del).toHaveBeenCalled();
     expect(insert).toHaveBeenCalled();
+  });
+
+  it('deletes orphaned field ids missing from dynamic snapshot', async () => {
+    const del = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      }),
+    });
+    const insert = vi.fn().mockResolvedValue({ error: null });
+
+    const client = {
+      from: vi.fn((table: string) => {
+        if (table === 'core_form_response_values') {
+          return {
+            select: vi.fn(() =>
+              responsesThenable([{ form_field_id: 'gone' }, { form_field_id: 'stay' }])
+            ),
+            delete: del,
+            insert,
+          };
+        }
+        return {};
+      }),
+    } as unknown as Client;
+
+    const r = await persistDraftValues(client, 'o1', 'resp-1', [fieldRow('stay')], {
+      stay: 'next',
+    });
+    expect(isOk(r)).toBe(true);
+    expect(del).toHaveBeenCalledTimes(2);
+    expect(insert).toHaveBeenCalledTimes(1);
+  });
+
+  it('deletes values for active fields omitted from persisted snapshot keys', async () => {
+    const del = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      }),
+    });
+    const insert = vi.fn().mockResolvedValue({ error: null });
+
+    const client = {
+      from: vi.fn((table: string) => {
+        if (table === 'core_form_response_values') {
+          return {
+            select: vi.fn(() =>
+              responsesThenable([{ form_field_id: 'stay-a' }, { form_field_id: 'stay-b' }])
+            ),
+            delete: del,
+            insert,
+          };
+        }
+        return {};
+      }),
+    } as unknown as Client;
+
+    const r = await persistDraftValues(
+      client,
+      'o1',
+      'resp-1',
+      [fieldRow('stay-a'), fieldRow('stay-b')],
+      { 'stay-a': 'kept' }
+    );
+    expect(isOk(r)).toBe(true);
+    expect(del).toHaveBeenCalledTimes(2);
+    expect(insert).toHaveBeenCalledTimes(1);
   });
 });

@@ -56,17 +56,18 @@ export async function fetchFieldCatalogueAndPrefill(
   const tables = collectPrefillTables(fieldRows);
 
   const rpcResult = await client.rpc('data_core_field_list_core_form');
-  let catalogueIndex = new Map<string, CoreFieldCatalogueRow>();
-  let prefillWarning: string | null = null;
 
   if (rpcResult.error) {
-    prefillWarning = rpcResult.error.message ?? 'Could not load field catalogue; using defaults.';
-  } else {
-    catalogueIndex = buildCatalogueIndex(rpcResult.data as CoreFieldCatalogueRow[] | null);
+    return err({
+      code: 'FIELD_CATALOGUE_RPC',
+      message: rpcResult.error.message ?? 'Could not load field catalogue.',
+    });
   }
+  const catalogueIndex = buildCatalogueIndex(rpcResult.data as CoreFieldCatalogueRow[] | null);
 
   const fieldMetas = fieldRows.map((r) => buildFormFieldMeta(r, catalogueIndex));
 
+  let prefillWarning: string | null = null;
   let person: CorePersonRow | null = null;
   let member: CoreMemberRow | null = null;
   let medi: MediProfileRow | null = null;
@@ -167,15 +168,19 @@ export function useFormFieldData(
     queryKey: ['formFieldData', 'v1', personId, organisationId, eventId, stableFields],
     enabled: Boolean(client && personId && organisationId && eventId && fieldRows.length > 0),
     staleTime: 20_000,
-    queryFn: async (): Promise<ApiResult<FormFieldDataResult>> => {
+    queryFn: async (): Promise<FormFieldDataResult> => {
       if (!client || !personId || !organisationId || !eventId) {
-        return err({ code: 'PREFILL_CONTEXT', message: 'Prefill requires person, organisation, and event.' });
+        throw new Error('Prefill requires person, organisation, and event.');
       }
-      return fetchFieldCatalogueAndPrefill(client, fieldRows, personId, organisationId, eventId);
+      const r = await fetchFieldCatalogueAndPrefill(client, fieldRows, personId, organisationId, eventId);
+      if (!isOk(r)) {
+        throw new Error(r.error.message ?? 'Could not load field defaults.');
+      }
+      return r.data;
     },
   });
 
-  const res = query.data && isOk(query.data) ? query.data.data : undefined;
+  const res = query.data;
 
   const emptyMetas = useMemo(() => {
     const idx = buildCatalogueIndex(null);
@@ -186,27 +191,20 @@ export function useFormFieldData(
   const fieldDefaults = res?.fieldDefaults ?? {};
   const prefillWarning = res?.prefillWarning ?? null;
 
-  const apiFailure =
-    query.data != null && !isOk(query.data)
-      ? (query.data.error.message ?? 'Could not load field defaults.')
+  const fetchErrorMessage =
+    query.status === 'error'
+      ? query.error instanceof Error
+        ? query.error.message
+        : 'Could not load field defaults.'
       : null;
-  const fetchFailure =
-    query.error instanceof Error
-      ? query.error.message
-      : query.error != null
-        ? 'Could not load field defaults.'
-        : null;
-  const fieldLoadError = apiFailure ?? fetchFailure;
 
   return {
     fieldMetas,
     fieldDefaults,
     prefillWarning,
-    fieldLoadError,
+    fetchErrorMessage,
     isLoading:
-      Boolean(client && personId && organisationId && eventId && fieldRows.length > 0) &&
-      (query.isLoading || query.isFetching),
-    error: query.error,
+      Boolean(client && personId && organisationId && eventId && fieldRows.length > 0) && query.isLoading,
     refetch: query.refetch,
   };
 }

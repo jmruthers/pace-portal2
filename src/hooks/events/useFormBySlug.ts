@@ -230,9 +230,7 @@ export function useFormBySlug(eventSlugRaw: string | undefined, formSlugExplicit
 
   return {
     data: payload,
-    isLoading:
-      Boolean(client && userId && organisationId && slug && !reserved) &&
-      (query.isLoading || query.isFetching),
+    isLoading: Boolean(client && userId && organisationId && slug && !reserved) && query.isLoading,
     error: apiError,
     refetch: query.refetch,
     notFound: apiError?.code === 'EVENT_NOT_FOUND' || apiError?.code === 'FORM_NOT_FOUND',
