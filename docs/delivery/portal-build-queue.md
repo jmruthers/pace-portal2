@@ -21,7 +21,7 @@
 | PR01 — App shell routing | - | Done | — |
 | PR02 — Shared services hooks | PR01 | Done | — |
 | PR04 — Register placeholder | PR01 | Done | — |
-| PR20 — Token approval host surfaces | PR01 |  |  |
+| PR20 — Token approval host surfaces | PR01 | Done | — |
 | PR03 — Dashboard composition | PR01, PR02 | Done | — |
 | PR05 — Profile wizard shell | PR01, PR02 | Done | — |
 | PR12 — Contacts listing | PR01, PR02 | Done | — |
@@ -61,7 +61,8 @@
 
 - authority: [`docs/requirements/PR20-token-approval-host.md`](../requirements/PR20-token-approval-host.md)
 - backend freeze: None — BA07 RPCs verified PASS (portal-backend-ready-report contract verification matrix / RPC table)
-- contract (queue prereq only via PR01): BASE BA07 — requirement dependency; consume portal-backend-ready-report + BA07 requirement doc referenced from PR20
+- contract (Evidence only): BASE BA07 — `app_base_application_check_resolve_token`, `app_base_application_check_submit`; authority doc [`../../../pace-core2/docs/requirements/base/BA07-token-approval-actions-requirements.md`](../../../pace-core2/docs/requirements/base/BA07-token-approval-actions-requirements.md)
+- implementation: public route `/approvals/:token` in `src/App.tsx`; page `src/pages/public/TokenApprovalPage.tsx`; hook `src/hooks/approvals/useTokenApproval.ts` + `tokenApprovalContracts.ts`; RPC bridge `src/lib/tokenApprovalRpc.ts`; `approvals` reserved in `src/routing/eventFormPaths.ts`
 
 ### PR03 — Dashboard composition
 

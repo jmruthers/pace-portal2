@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useUnifiedAuthContext } from '@solvera/pace-core';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
-import { isOk } from '@solvera/pace-core/types';
+import { err, isOk, ok, type ApiResult } from '@solvera/pace-core/types';
 import type { Database } from '@/types/pace-database';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 import { fetchCurrentPersonMember, NO_PERSON_PROFILE_ERROR_CODE } from '@/shared/lib/utils/userUtils';
@@ -93,9 +93,12 @@ export async function fetchDelegatedMemberProfileLoadModel(
   secure: SecureSupabase,
   client: TypedPaceClient,
   memberId: string
-): Promise<MemberProfileLoadModel> {
+): Promise<ApiResult<MemberProfileLoadModel>> {
   if (!secure || !client) {
-    throw new Error('Member profile requires a secure client.');
+    return err({
+      code: 'DELEGATED_NO_CLIENT',
+      message: 'Member profile requires a secure client.',
+    });
   }
 
   const rpcResult = (await secure.rpc(
@@ -105,10 +108,16 @@ export async function fetchDelegatedMemberProfileLoadModel(
   )) as { data: boolean | null; error: Error | null };
 
   if (rpcResult.error) {
-    throw new Error('Could not verify delegated access.');
+    return err({
+      code: 'DELEGATED_ACCESS_VERIFY',
+      message: 'Could not verify delegated access.',
+    });
   }
   if (rpcResult.data !== true) {
-    throw new Error('Delegated access was denied.');
+    return err({
+      code: 'DELEGATED_ACCESS_DENIED',
+      message: 'Delegated access was denied.',
+    });
   }
 
   const { data: member, error: memberError } = await client
@@ -118,7 +127,10 @@ export async function fetchDelegatedMemberProfileLoadModel(
     .maybeSingle();
 
   if (memberError || !member?.person_id) {
-    throw new Error('Could not load member record.');
+    return err({
+      code: 'DELEGATED_MEMBER_LOAD',
+      message: 'Could not load member record.',
+    });
   }
 
   const [personRes, phonesRes] = await Promise.all([
@@ -132,10 +144,16 @@ export async function fetchDelegatedMemberProfileLoadModel(
 
   const batchErr = personRes.error ?? phonesRes.error;
   if (batchErr) {
-    throw new Error(batchErr.message || 'Could not load profile.');
+    return err({
+      code: 'DELEGATED_PROFILE_LOAD',
+      message: batchErr.message || 'Could not load profile.',
+    });
   }
   if (!personRes.data) {
-    throw new Error('Could not load person record.');
+    return err({
+      code: 'DELEGATED_PERSON_LOAD',
+      message: 'Could not load person record.',
+    });
   }
 
   const person = personRes.data;
@@ -150,16 +168,19 @@ export async function fetchDelegatedMemberProfileLoadModel(
 
   const addrErr = resAddrRes.error ?? postAddrRes.error;
   if (addrErr) {
-    throw new Error(addrErr.message || 'Could not load address details.');
+    return err({
+      code: 'DELEGATED_ADDRESS_LOAD',
+      message: addrErr.message || 'Could not load address details.',
+    });
   }
 
-  return {
+  return ok({
     person,
     member,
     phones: phonesRes.data ?? [],
     residentialAddress: resAddrRes.data,
     postalAddress: postAddrRes.data,
-  };
+  });
 }
 
 /**
@@ -194,7 +215,15 @@ export function useMemberProfileData() {
       }
 
       if (proxy.isProxyActive && proxy.targetMemberId) {
-        return fetchDelegatedMemberProfileLoadModel(secure, client, proxy.targetMemberId);
+        const delegated = await fetchDelegatedMemberProfileLoadModel(
+          secure,
+          client,
+          proxy.targetMemberId
+        );
+        if (!isOk(delegated)) {
+          throw new Error(delegated.error.message);
+        }
+        return delegated.data;
       }
 
       const pm = await fetchCurrentPersonMember(secure, userId, organisationId);

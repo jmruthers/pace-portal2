@@ -2,7 +2,7 @@ import { createElement, type ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { err } from '@solvera/pace-core/types';
+import { err, isOk } from '@solvera/pace-core/types';
 import * as userUtils from '@/shared/lib/utils/userUtils';
 import {
   fetchDelegatedMemberProfileLoadModel,
@@ -183,9 +183,13 @@ describe('fetchDelegatedMemberProfileLoadModel', () => {
       'm1'
     );
 
-    expect(result.person.last_name).toBe('Target');
-    expect(result.member?.id).toBe('m1');
-    expect(result.phones).toEqual([]);
+    expect(isOk(result)).toBe(true);
+    if (!isOk(result)) {
+      throw new Error('expected delegated load to succeed');
+    }
+    expect(result.data.person.last_name).toBe('Target');
+    expect(result.data.member?.id).toBe('m1');
+    expect(result.data.phones).toEqual([]);
   });
 });
 

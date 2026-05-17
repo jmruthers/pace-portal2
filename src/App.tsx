@@ -19,6 +19,10 @@ const RegistrationPage = lazy(async () => {
   const m = await import('@/pages/auth/public/RegistrationPage');
   return { default: m.RegistrationPage };
 });
+const TokenApprovalPage = lazy(async () => {
+  const m = await import('@/pages/public/TokenApprovalPage');
+  return { default: m.TokenApprovalPage };
+});
 const DashboardPage = lazy(async () => {
   const m = await import('@/pages/DashboardPage');
   return { default: m.DashboardPage };
@@ -148,6 +152,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegistrationPage />} />
+          <Route path="/approvals/:token" element={<TokenApprovalPage />} />
           <Route path="/" element={<ProtectedRouteWithRedirect />}>
             <Route element={<OrganisationLoadingGate />}>
               <Route path="profile-complete" element={<ProfileCompleteRoute />} />

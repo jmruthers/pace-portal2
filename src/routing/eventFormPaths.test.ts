@@ -7,6 +7,7 @@ describe('eventFormPaths', () => {
     expect(isReservedEventSlug('dashboard')).toBe(true);
     expect(isReservedEventSlug('profile-complete')).toBe(true);
     expect(isReservedEventSlug('profile')).toBe(true);
+    expect(isReservedEventSlug('approvals')).toBe(true);
   });
 
   it('does not reserve typical event slugs', () => {

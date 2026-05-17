@@ -2,6 +2,7 @@
 export const RESERVED_EVENT_SLUGS = new Set([
   'login',
   'register',
+  'approvals',
   'dashboard',
   'profile-complete',
   'member-profile',

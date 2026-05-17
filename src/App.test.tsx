@@ -116,6 +116,10 @@ vi.mock('@/pages/ProfileCompletionWizardPage', () => ({
   ProfileCompletionWizardPage: () => <h1>Profile complete wizard</h1>,
 }));
 
+vi.mock('@/pages/public/TokenApprovalPage', () => ({
+  TokenApprovalPage: () => <h1>Token approval surface</h1>,
+}));
+
 function renderApp(initialEntry: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -189,5 +193,13 @@ describe('App shell routing (PR01)', () => {
       expect(screen.getByRole('heading', { name: 'Profile complete wizard' })).toBeInTheDocument();
     });
     expect(screen.queryByTestId('portal-layout')).toBeNull();
+  });
+
+  it('renders token approval route without protected redirect (PR20)', async () => {
+    renderApp('/approvals/some-token');
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Token approval surface' })).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('protected-redirect')).toBeNull();
   });
 });

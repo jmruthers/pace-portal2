@@ -11,12 +11,9 @@ import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ApiResult } from '@solvera/pace-core/types';
 import { err, ok } from '@solvera/pace-core/types';
+import { hasSupabaseBrowserConfig } from '@/lib/supabaseBrowserEnv';
 
-export function hasSupabaseBrowserConfig(): boolean {
-  const url = import.meta.env.VITE_SUPABASE_URL ?? '';
-  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '';
-  return Boolean(url && key);
-}
+export { hasSupabaseBrowserConfig };
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '';
