@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef } from 'react';
-import { useZodForm } from '@solvera/pace-core/hooks';
+import type { UseFormReturn } from '@solvera/pace-core/forms';
 import {
   Alert,
   AlertDescription,
@@ -7,13 +7,15 @@ import {
   Button,
   Card,
   CardContent,
+  CardFooter,
   CardHeader,
   CardTitle,
   Checkbox,
+  Form,
   Label,
   LoadingSpinner,
 } from '@solvera/pace-core/components';
-import { Controller, FormProvider, resolveFieldRenderer, type FormFieldMeta } from '@solvera/pace-core/forms';
+import { Controller, resolveFieldRenderer, type FormFieldMeta } from '@solvera/pace-core/forms';
 import {
   buildConfirmationZodSchema,
   composeDynamicFormSchema,
@@ -23,6 +25,7 @@ import { usePhoneNumbers } from '@/hooks/auth/usePhoneNumbers';
 import { useMedicalProfileData } from '@/hooks/medical-profile/useMedicalProfileData';
 import { useFormAdditionalContactsPreview } from '@/hooks/events/useFormAdditionalContactsPreview';
 import { MedicalProfileDisplay } from '@/components/medical-profile/MedicalProfile/MedicalProfileDisplay';
+import type { EventFormRegistry } from '@/shared/lib/formFieldMeta';
 
 export type FormRendererProps = {
   eventTitle: string;
@@ -43,6 +46,15 @@ export type FormRendererProps = {
   scheduleSaveDraft: (dynamicValues: Record<string, unknown>) => void;
   isSavingDraft: boolean;
   saveDraftError: string | null;
+  /** PR16 final submit */
+  onSubmitForm: (values: Record<string, unknown>) => void | Promise<void>;
+  isSubmitting: boolean;
+  submitError: string | null;
+};
+
+type FormRendererBodyProps = FormRendererProps & {
+  form: UseFormReturn<Record<string, unknown>>;
+  registry: EventFormRegistry;
 };
 
 function emptyAddress() {
@@ -83,10 +95,8 @@ function buildDefaultValues(
   return out;
 }
 
-/**
- * PR15 dynamic event form: single `useZodForm` boundary, CR20 registry, confirmation blocks in-schema.
- */
-export function FormRenderer({
+/* eslint-disable complexity -- PR15/16 shell: confirmations, draft autosave, and dynamic fields share one form contract. */
+function FormRendererBody({
   eventTitle,
   formTitle,
   formDescription,
@@ -105,33 +115,11 @@ export function FormRenderer({
   scheduleSaveDraft,
   isSavingDraft,
   saveDraftError,
-}: FormRendererProps) {
-  const registry = useMemo(() => createEventFormFieldRegistry(), []);
-  const dynamicSchema = useMemo(
-    () => composeDynamicFormSchema(registry, fieldMetas),
-    [registry, fieldMetas]
-  );
-  const confirmationSchema = useMemo(
-    () => buildConfirmationZodSchema(confirmationKeys),
-    [confirmationKeys]
-  );
-
-  const fullSchema = useMemo(
-    () => dynamicSchema.extend({ confirmations: confirmationSchema }),
-    [dynamicSchema, confirmationSchema]
-  );
-
-  const defaultValues = useMemo(
-    () => buildDefaultValues(fieldMetas, fieldDefaults, draftValues, confirmationKeys),
-    [fieldMetas, fieldDefaults, draftValues, confirmationKeys]
-  );
-
-  const form = useZodForm<Record<string, unknown>>({
-    schema: fullSchema,
-    defaultValues,
-    mode: 'onSubmit',
-  });
-
+  isSubmitting,
+  submitError,
+  form,
+  registry,
+}: FormRendererBodyProps) {
   /** Blocks one `watch` emission after programmatic `reset` (draft/field hydrate) so autosave cannot echo defaults. */
   const skipDraftPersistenceRef = useRef(false);
 
@@ -173,6 +161,259 @@ export function FormRenderer({
     [draftValues]
   );
 
+  return (
+    <>
+      <h1>{eventTitle}</h1>
+      <h2>{formTitle}</h2>
+
+      {prefillWarning ? (
+        <Alert variant="default">
+          <AlertTitle>Prefill</AlertTitle>
+          <AlertDescription>{prefillWarning}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {hasDraftRestore ? (
+        <Alert variant="default">
+          <AlertTitle>Resuming your application</AlertTitle>
+          <AlertDescription>Your saved answers for this form have been restored.</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {formDescription ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>About this form</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>{formDescription}</p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {confirmationKeys.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Confirmations</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-6">
+            {confirmationKeys.includes('member_profile') ? (
+              <section className="grid gap-2" aria-label="Member profile confirmation">
+                <h3>Member profile</h3>
+                <Card>
+                  <CardContent className="grid gap-2">
+                    <p>
+                      {(personFirstName ?? '').trim()} {(personLastName ?? '').trim()}
+                    </p>
+                    <p>{(personEmail ?? '').trim()}</p>
+                    {phonesQuery.isError ? (
+                      <Alert variant="destructive">
+                        <AlertTitle>Phone numbers</AlertTitle>
+                        <AlertDescription>
+                          {phonesQuery.error instanceof Error
+                            ? phonesQuery.error.message
+                            : 'Could not load phone numbers.'}
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <ul>
+                        {(phonesQuery.data ?? []).map((ph) => (
+                          <li key={ph.id}>
+                            {ph.phone_number}
+                            {ph.phone_type_id != null ? ` (type ${ph.phone_type_id})` : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+                <Controller
+                  name={'confirmations.member_profile' as never}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Label className="grid grid-cols-[auto_1fr] items-start gap-3">
+                      <Checkbox
+                        id="confirm-member-profile"
+                        checked={Boolean(field.value)}
+                        onChange={(next) => field.onChange(next)}
+                        aria-invalid={fieldState.error != null}
+                      />
+                      <p>I confirm my member profile information is accurate.</p>
+                    </Label>
+                  )}
+                />
+              </section>
+            ) : null}
+
+            {confirmationKeys.includes('medical_profile') ? (
+              <section className="grid gap-2" aria-label="Medical profile confirmation">
+                <h3>Medical profile</h3>
+                {medicalQuery.isLoading ? <LoadingSpinner label="Loading medical summary…" /> : null}
+                {medicalQuery.isError ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>Medical profile</AlertTitle>
+                    <AlertDescription>
+                      {medicalQuery.error instanceof Error
+                        ? medicalQuery.error.message
+                        : 'Could not load medical summary.'}
+                    </AlertDescription>
+                  </Alert>
+                ) : medicalQuery.data ? (
+                  <MedicalProfileDisplay conditions={medicalQuery.data.conditions} />
+                ) : null}
+                <Controller
+                  name={'confirmations.medical_profile' as never}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Label className="grid grid-cols-[auto_1fr] items-start gap-3">
+                      <Checkbox
+                        id="confirm-medical-profile"
+                        checked={Boolean(field.value)}
+                        onChange={(next) => field.onChange(next)}
+                        aria-invalid={fieldState.error != null}
+                      />
+                      <p>I confirm my medical profile summary is accurate.</p>
+                    </Label>
+                  )}
+                />
+              </section>
+            ) : null}
+
+            {confirmationKeys.includes('additional_contacts') ? (
+              <section className="grid gap-2" aria-label="Additional contacts confirmation">
+                <h3>Additional contacts</h3>
+                {contactsQuery.isLoading ? <LoadingSpinner label="Loading contacts…" /> : null}
+                {contactsQuery.isError ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>Additional contacts</AlertTitle>
+                    <AlertDescription>
+                      {contactsQuery.error instanceof Error
+                        ? contactsQuery.error.message
+                        : 'Could not load additional contacts.'}
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <>
+                    <ul>
+                      {(contactsQuery.data ?? []).map((c) => (
+                        <li key={c.contact_id}>
+                          {c.first_name} {c.last_name} — {c.contact_type_name}
+                        </li>
+                      ))}
+                    </ul>
+                    {(contactsQuery.data ?? []).length === 0 ? <p>No additional contacts on file.</p> : null}
+                  </>
+                )}
+                <Controller
+                  name={'confirmations.additional_contacts' as never}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Label className="grid grid-cols-[auto_1fr] items-start gap-3">
+                      <Checkbox
+                        id="confirm-additional-contacts"
+                        checked={Boolean(field.value)}
+                        onChange={(next) => field.onChange(next)}
+                        aria-invalid={fieldState.error != null}
+                      />
+                      <p>I confirm my additional contacts are up to date.</p>
+                    </Label>
+                  )}
+                />
+              </section>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Form fields</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          {isDraftHydrating ? (
+            <section className="grid place-items-center py-4" aria-busy="true">
+              <LoadingSpinner label="Loading draft…" />
+            </section>
+          ) : null}
+
+          {fieldMetas.length === 0 ? <p>This form has no fields yet.</p> : null}
+
+          {fieldMetas.map((meta) => (
+            <Fragment key={meta.id}>
+              {resolveFieldRenderer(registry, meta, {
+                control: form.control,
+                name: meta.id,
+              })}
+            </Fragment>
+          ))}
+
+          {saveDraftError ? (
+            <Alert variant="destructive">
+              <AlertTitle>Draft save</AlertTitle>
+              <AlertDescription>{saveDraftError}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          {submitError ? (
+            <Alert variant="destructive">
+              <AlertTitle>Submit</AlertTitle>
+              <AlertDescription>{submitError}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          <output aria-live="polite" className="grid min-h-0">
+            {isSavingDraft && !saveDraftError ? <LoadingSpinner label="Saving draft…" /> : null}
+          </output>
+        </CardContent>
+        <CardFooter className="text-right">
+          <Button
+            type="submit"
+            variant="default"
+            disabled={
+              isDraftHydrating || Boolean(draftHydrateError) || isSavingDraft || isSubmitting
+            }
+          >
+            {isSubmitting ? 'Submitting…' : 'Submit'}
+          </Button>
+        </CardFooter>
+      </Card>
+    </>
+  );
+}
+/* eslint-enable complexity */
+
+/**
+ * PR15 dynamic event form: pace-core `Form` + CR20 registry, confirmation blocks in-schema; PR16 submit wired to the same RHF instance.
+ */
+export function FormRenderer(props: FormRendererProps) {
+  const { onSubmitForm, draftHydrateError } = props;
+
+  const registry = useMemo(() => createEventFormFieldRegistry(), []);
+  const dynamicSchema = useMemo(
+    () => composeDynamicFormSchema(registry, props.fieldMetas),
+    [registry, props.fieldMetas]
+  );
+  const confirmationSchema = useMemo(
+    () => buildConfirmationZodSchema(props.confirmationKeys),
+    [props.confirmationKeys]
+  );
+
+  const fullSchema = useMemo(
+    () => dynamicSchema.extend({ confirmations: confirmationSchema }),
+    [dynamicSchema, confirmationSchema]
+  );
+
+  const defaultValues = useMemo(
+    () =>
+      buildDefaultValues(
+        props.fieldMetas,
+        props.fieldDefaults,
+        props.draftValues,
+        props.confirmationKeys
+      ),
+    [props.fieldMetas, props.fieldDefaults, props.draftValues, props.confirmationKeys]
+  );
+
   if (draftHydrateError) {
     return (
       <Alert variant="destructive">
@@ -183,214 +424,16 @@ export function FormRenderer({
   }
 
   return (
-    <FormProvider {...form}>
-      <section className="grid max-w-(--app-width) gap-4">
-        <h1>{eventTitle}</h1>
-        <h2>{formTitle}</h2>
-
-        {prefillWarning ? (
-          <Alert variant="default">
-            <AlertTitle>Prefill</AlertTitle>
-            <AlertDescription>{prefillWarning}</AlertDescription>
-          </Alert>
-        ) : null}
-
-        {hasDraftRestore ? (
-          <Alert variant="default">
-            <AlertTitle>Resuming your application</AlertTitle>
-            <AlertDescription>Your saved answers for this form have been restored.</AlertDescription>
-          </Alert>
-        ) : null}
-
-        {formDescription ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>About this form</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>{formDescription}</p>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {confirmationKeys.length > 0 ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Confirmations</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-6">
-              {confirmationKeys.includes('member_profile') ? (
-                <section className="grid gap-2" aria-label="Member profile confirmation">
-                  <h3>Member profile</h3>
-                  <Card>
-                    <CardContent className="grid gap-2">
-                      <p>
-                        {(personFirstName ?? '').trim()} {(personLastName ?? '').trim()}
-                      </p>
-                      <p>{(personEmail ?? '').trim()}</p>
-                      {phonesQuery.isError ? (
-                        <Alert variant="destructive">
-                          <AlertTitle>Phone numbers</AlertTitle>
-                          <AlertDescription>
-                            {phonesQuery.error instanceof Error
-                              ? phonesQuery.error.message
-                              : 'Could not load phone numbers.'}
-                          </AlertDescription>
-                        </Alert>
-                      ) : (
-                        <ul>
-                          {(phonesQuery.data ?? []).map((ph) => (
-                            <li key={ph.id}>
-                              {ph.phone_number}
-                              {ph.phone_type_id != null ? ` (type ${ph.phone_type_id})` : ''}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </CardContent>
-                  </Card>
-                  <Controller
-                    name={'confirmations.member_profile' as never}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <Label className="grid grid-cols-[auto_1fr] items-start gap-3">
-                        <Checkbox
-                          id="confirm-member-profile"
-                          checked={Boolean(field.value)}
-                          onChange={(next) => field.onChange(next)}
-                          aria-invalid={fieldState.error != null}
-                        />
-                        <p>I confirm my member profile information is accurate.</p>
-                      </Label>
-                    )}
-                  />
-                </section>
-              ) : null}
-
-              {confirmationKeys.includes('medical_profile') ? (
-                <section className="grid gap-2" aria-label="Medical profile confirmation">
-                  <h3>Medical profile</h3>
-                  {medicalQuery.isLoading ? <LoadingSpinner label="Loading medical summary…" /> : null}
-                  {medicalQuery.isError ? (
-                    <Alert variant="destructive">
-                      <AlertTitle>Medical profile</AlertTitle>
-                      <AlertDescription>
-                        {medicalQuery.error instanceof Error
-                          ? medicalQuery.error.message
-                          : 'Could not load medical summary.'}
-                      </AlertDescription>
-                    </Alert>
-                  ) : medicalQuery.data ? (
-                    <MedicalProfileDisplay conditions={medicalQuery.data.conditions} />
-                  ) : null}
-                  <Controller
-                    name={'confirmations.medical_profile' as never}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <Label className="grid grid-cols-[auto_1fr] items-start gap-3">
-                        <Checkbox
-                          id="confirm-medical-profile"
-                          checked={Boolean(field.value)}
-                          onChange={(next) => field.onChange(next)}
-                          aria-invalid={fieldState.error != null}
-                        />
-                        <p>I confirm my medical profile summary is accurate.</p>
-                      </Label>
-                    )}
-                  />
-                </section>
-              ) : null}
-
-              {confirmationKeys.includes('additional_contacts') ? (
-                <section className="grid gap-2" aria-label="Additional contacts confirmation">
-                  <h3>Additional contacts</h3>
-                  {contactsQuery.isLoading ? <LoadingSpinner label="Loading contacts…" /> : null}
-                  {contactsQuery.isError ? (
-                    <Alert variant="destructive">
-                      <AlertTitle>Additional contacts</AlertTitle>
-                      <AlertDescription>
-                        {contactsQuery.error instanceof Error
-                          ? contactsQuery.error.message
-                          : 'Could not load additional contacts.'}
-                      </AlertDescription>
-                    </Alert>
-                  ) : (
-                    <>
-                      <ul>
-                        {(contactsQuery.data ?? []).map((c) => (
-                          <li key={c.contact_id}>
-                            {c.first_name} {c.last_name} — {c.contact_type_name}
-                          </li>
-                        ))}
-                      </ul>
-                      {(contactsQuery.data ?? []).length === 0 ? <p>No additional contacts on file.</p> : null}
-                    </>
-                  )}
-                  <Controller
-                    name={'confirmations.additional_contacts' as never}
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <Label className="grid grid-cols-[auto_1fr] items-start gap-3">
-                        <Checkbox
-                          id="confirm-additional-contacts"
-                          checked={Boolean(field.value)}
-                          onChange={(next) => field.onChange(next)}
-                          aria-invalid={fieldState.error != null}
-                        />
-                        <p>I confirm my additional contacts are up to date.</p>
-                      </Label>
-                    )}
-                  />
-                </section>
-              ) : null}
-            </CardContent>
-          </Card>
-        ) : null}
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Form fields</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            {isDraftHydrating ? (
-              <section className="grid place-items-center py-4" aria-busy="true">
-                <LoadingSpinner label="Loading draft…" />
-              </section>
-            ) : null}
-
-            {fieldMetas.length === 0 ? <p>This form has no fields yet.</p> : null}
-
-            {fieldMetas.map((meta) => (
-              <Fragment key={meta.id}>
-                {resolveFieldRenderer(registry, meta, {
-                  control: form.control,
-                  name: meta.id,
-                })}
-              </Fragment>
-            ))}
-
-            {saveDraftError ? (
-              <Alert variant="destructive">
-                <AlertTitle>Draft save</AlertTitle>
-                <AlertDescription>{saveDraftError}</AlertDescription>
-              </Alert>
-            ) : null}
-
-            <output aria-live="polite" className="grid min-h-0">
-              {isSavingDraft && !saveDraftError ? (
-                <LoadingSpinner label="Saving draft…" />
-              ) : null}
-            </output>
-
-            <fieldset className="text-right">
-              <Button type="button" variant="secondary" disabled>
-                Submit
-              </Button>
-            </fieldset>
-            <p>Submission is not available in this release (PR16).</p>
-          </CardContent>
-        </Card>
-      </section>
-    </FormProvider>
+    <Form
+      className="grid max-w-(--app-width) gap-4"
+      schema={fullSchema}
+      defaultValues={defaultValues}
+      mode="onSubmit"
+      onSubmit={(data) => {
+        void onSubmitForm(data as Record<string, unknown>);
+      }}
+    >
+      {(form) => <FormRendererBody {...props} form={form} registry={registry} />}
+    </Form>
   );
 }

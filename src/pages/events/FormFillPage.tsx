@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useToast } from '@solvera/pace-core/hooks';
 import { useUnifiedAuthContext } from '@solvera/pace-core';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
 import {
@@ -21,11 +22,145 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ProxyModeBanner } from '@/shared/components/ProxyModeBanner';
 import { useProxyMode } from '@/shared/hooks/useProxyMode';
 import { fetchCurrentPersonMember, NO_PERSON_PROFILE_ERROR_CODE } from '@/shared/lib/utils/userUtils';
-import { useFormBySlug } from '@/hooks/events/useFormBySlug';
+import { useFormBySlug, type FormBySlugReady } from '@/hooks/events/useFormBySlug';
 import { useFormFieldData } from '@/hooks/events/useFormFieldData';
 import { useDraftApplication } from '@/hooks/events/useDraftApplication';
+import {
+  mapSubmissionErrorToToast,
+  useApplicationSubmission,
+} from '@/hooks/events/useApplicationSubmission';
 import { useFormFillTargetPerson } from '@/hooks/events/useFormFillTargetPerson';
+import type { EventSubmissionErrorCode } from '@/lib/eventApplicationSubmission';
+import type { FormFieldMeta } from '@solvera/pace-core/forms';
 import { FormRenderer } from '@/components/events/FormRenderer';
+
+function dynamicValuesForDraft(values: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const k of Object.keys(values)) {
+    if (k === 'confirmations') continue;
+    out[k] = values[k];
+  }
+  return out;
+}
+
+type EventFormFillReadyProps = {
+  ready: FormBySlugReady;
+  userId: string;
+  organisationId: string;
+  effectivePersonId: string;
+  memberId: string | null;
+  displayPerson: {
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+  } | null;
+  proxyActive: boolean;
+  fieldMetas: FormFieldMeta[];
+  fieldDefaults: Record<string, unknown>;
+  prefillWarning: string | null;
+  fieldDataLoading: boolean;
+  draft: ReturnType<typeof useDraftApplication>;
+};
+
+function EventFormFillReady({
+  ready,
+  userId,
+  organisationId,
+  effectivePersonId,
+  memberId,
+  displayPerson,
+  proxyActive,
+  fieldMetas,
+  fieldDefaults,
+  prefillWarning,
+  fieldDataLoading,
+  draft,
+}: EventFormFillReadyProps) {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const submissionContext = useMemo(
+    () => ({
+      actingUserId: userId,
+      applicantPersonId: effectivePersonId,
+      organisationId,
+      eventId: ready.event.event_id,
+      formId: ready.form.id,
+      fieldRows: ready.fieldRows,
+    }),
+    [userId, effectivePersonId, organisationId, ready.event.event_id, ready.form.id, ready.fieldRows]
+  );
+
+  const submission = useApplicationSubmission(submissionContext);
+
+  const onSubmitForm = useCallback(
+    async (values: Record<string, unknown>) => {
+      setSubmitError(null);
+      try {
+        await draft.saveDraftNow(dynamicValuesForDraft(values));
+      } catch (e) {
+        const desc =
+          e instanceof Error ? e.message : 'Could not save your latest answers before submitting.';
+        setSubmitError(desc);
+        toast({
+          title: 'Draft save',
+          description: desc,
+          variant: 'destructive',
+        });
+        return;
+      }
+      const result = await submission.submit(values);
+      if (isOk(result)) {
+        toast({
+          title: 'Application submitted',
+          description: proxyActive
+            ? 'The application was submitted for the member you are assisting.'
+            : 'Your application was submitted successfully.',
+        });
+        navigate('/');
+      } else {
+        const msg = mapSubmissionErrorToToast(
+          result.error.code as EventSubmissionErrorCode,
+          result.error.message ?? ''
+        );
+        setSubmitError(msg.description);
+        toast({
+          title: msg.title,
+          description: msg.description,
+          variant: msg.variant,
+        });
+      }
+    },
+    [draft, submission, toast, navigate, proxyActive]
+  );
+
+  return (
+    <FormRenderer
+      eventTitle={ready.event.event_name}
+      formTitle={ready.form.title ?? ready.form.name}
+      formDescription={ready.form.description ?? null}
+      fieldMetas={fieldMetas}
+      confirmationKeys={ready.confirmationKeys}
+      personId={effectivePersonId}
+      memberId={memberId}
+      personFirstName={displayPerson?.first_name ?? null}
+      personLastName={displayPerson?.last_name ?? null}
+      personEmail={displayPerson?.email ?? null}
+      fieldDefaults={fieldDefaults}
+      draftValues={draft.valueByFieldId}
+      prefillWarning={prefillWarning}
+      isDraftHydrating={draft.isHydrating || fieldDataLoading}
+      draftHydrateError={draft.hydrateError}
+      scheduleSaveDraft={draft.scheduleSaveDraft}
+      isSavingDraft={draft.isSavingDraft}
+      saveDraftError={draft.saveDraftError}
+      onSubmitForm={onSubmitForm}
+      isSubmitting={submission.isSubmitting}
+      submitError={submitError}
+    />
+  );
+}
 
 export interface FormFillPageProps {
   eventSlug: string;
@@ -273,25 +408,27 @@ export function FormFillPage({ eventSlug, formSlug }: FormFillPageProps) {
           <main className="mx-auto grid max-w-(--app-width) gap-4 p-4">
             {proxy.isProxyActive ? <ProxyModeBanner /> : null}
             {fieldData.isLoading ? <LoadingSpinner label="Loading field defaults…" /> : null}
-            <FormRenderer
-              eventTitle={ready.event.event_name}
-              formTitle={ready.form.title ?? ready.form.name}
-              formDescription={ready.form.description ?? null}
-              fieldMetas={fieldData.fieldMetas}
-              confirmationKeys={ready.confirmationKeys}
-              personId={effectivePersonId}
+            <EventFormFillReady
+              ready={ready}
+              userId={user!.id}
+              organisationId={organisationId!}
+              effectivePersonId={effectivePersonId}
               memberId={memberId}
-              personFirstName={displayPerson?.first_name ?? null}
-              personLastName={displayPerson?.last_name ?? null}
-              personEmail={displayPerson?.email ?? null}
+              displayPerson={
+                displayPerson
+                  ? {
+                      first_name: displayPerson.first_name,
+                      last_name: displayPerson.last_name,
+                      email: displayPerson.email,
+                    }
+                  : null
+              }
+              proxyActive={proxy.isProxyActive}
+              fieldMetas={fieldData.fieldMetas}
               fieldDefaults={fieldData.fieldDefaults}
-              draftValues={draft.valueByFieldId}
               prefillWarning={fieldData.prefillWarning}
-              isDraftHydrating={draft.isHydrating || fieldData.isLoading}
-              draftHydrateError={draft.hydrateError}
-              scheduleSaveDraft={draft.scheduleSaveDraft}
-              isSavingDraft={draft.isSavingDraft}
-              saveDraftError={draft.saveDraftError}
+              fieldDataLoading={fieldData.isLoading}
+              draft={draft}
             />
           </main>
         );

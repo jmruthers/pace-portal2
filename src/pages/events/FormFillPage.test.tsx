@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { err, ok } from '@solvera/pace-core/types';
+import { FormFillPage } from '@/pages/events/FormFillPage';
 import * as userUtils from '@/shared/lib/utils/userUtils';
 
 const mockNavigate = vi.hoisted(() => vi.fn());
@@ -15,8 +18,51 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-import { MemoryRouter } from 'react-router-dom';
-import { FormFillPage } from '@/pages/events/FormFillPage';
+const toastMock = vi.hoisted(() => vi.fn());
+const submitAsync = vi.hoisted(() => vi.fn());
+const lastSubmissionInput = vi.hoisted(() => ({
+  current: null as {
+    actingUserId: string;
+    applicantPersonId: string;
+    organisationId: string;
+    eventId: string;
+    formId: string;
+    fieldRows: unknown[];
+  } | null,
+}));
+
+vi.mock('@solvera/pace-core/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@solvera/pace-core/hooks')>();
+  return {
+    ...actual,
+    useToast: () => ({ toast: toastMock }),
+  };
+});
+
+vi.mock('@/hooks/events/useApplicationSubmission', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/events/useApplicationSubmission')>();
+  return {
+    ...actual,
+    useApplicationSubmission: (
+      input: {
+        actingUserId: string;
+        applicantPersonId: string;
+        organisationId: string;
+        eventId: string;
+        formId: string;
+        fieldRows: unknown[];
+      } | null
+    ) => {
+      lastSubmissionInput.current = input;
+      return {
+        submit: submitAsync,
+        isSubmitting: false,
+        resetSubmission: vi.fn(),
+        lastResult: undefined,
+      };
+    },
+  };
+});
 
 vi.mock('@solvera/pace-core/rbac', () => ({
   useSecureSupabase: () => ({}),
@@ -141,6 +187,11 @@ describe('FormFillPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockNavigate.mockClear();
+    toastMock.mockClear();
+    lastSubmissionInput.current = null;
+    submitAsync.mockImplementation(async () =>
+      ok({ applicationId: 'app-x', responseId: 'resp-x' })
+    );
     authState.isAuthenticated = true;
     authState.user = { id: 'user-1' };
     orgState.selectedOrganisation = { id: 'org-1' };
@@ -163,13 +214,13 @@ describe('FormFillPage', () => {
     });
 
     useDraftMock.mockReturnValue({
-      applicationId: 'app-1',
+      applicationId: null,
       responseId: 'r1',
       valueByFieldId: {},
       isHydrating: false,
       hydrateError: null,
       scheduleSaveDraft: vi.fn(),
-      saveDraftNow: vi.fn(),
+      saveDraftNow: vi.fn().mockResolvedValue(undefined),
       isSavingDraft: false,
       saveDraftError: null,
       refetchBundle: vi.fn(),
@@ -246,7 +297,7 @@ describe('FormFillPage', () => {
       isHydrating: false,
       hydrateError: null,
       scheduleSaveDraft: vi.fn(),
-      saveDraftNow: vi.fn(),
+      saveDraftNow: vi.fn().mockResolvedValue(undefined),
       isSavingDraft: false,
       saveDraftError: null,
       refetchBundle: vi.fn(),
@@ -291,7 +342,7 @@ describe('FormFillPage', () => {
       isHydrating: false,
       hydrateError: 'An application for this event already exists and is not a draft.',
       scheduleSaveDraft: vi.fn(),
-      saveDraftNow: vi.fn(),
+      saveDraftNow: vi.fn().mockResolvedValue(undefined),
       isSavingDraft: false,
       saveDraftError: null,
       refetchBundle: vi.fn(),
@@ -300,5 +351,152 @@ describe('FormFillPage', () => {
     expect(
       await screen.findByText(/an application for this event already exists/i)
     ).toBeInTheDocument();
+  });
+
+  it('shows success toast and navigates home after submit succeeds', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(submitAsync).toHaveBeenCalled();
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Application submitted',
+        description: expect.stringMatching(/submitted successfully/i),
+      })
+    );
+    expect(mockNavigate).toHaveBeenCalledWith('/');
+  });
+
+  it('uses delegated copy in success toast when proxy is active', async () => {
+    proxyState.isProxyActive = true;
+    proxyState.targetPersonId = 'p-proxy';
+    proxyState.targetMemberId = 'm-proxy';
+    useFormFillTargetPersonMock.mockReturnValue({
+      data: { first_name: 'Proxy', last_name: 'User', email: 'p@example.com' },
+      isLoading: false,
+      isError: false,
+    });
+    const user = userEvent.setup();
+    renderPage();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Application submitted',
+        description: expect.stringMatching(/member you are assisting/i),
+      })
+    );
+    expect(mockNavigate).toHaveBeenCalledWith('/');
+  });
+
+  it('passes proxy target person id into submission context', async () => {
+    proxyState.isProxyActive = true;
+    proxyState.targetPersonId = 'p-proxy';
+    proxyState.targetMemberId = 'm-proxy';
+    useFormFillTargetPersonMock.mockReturnValue({
+      data: { first_name: 'Proxy', last_name: 'User', email: 'p@example.com' },
+      isLoading: false,
+      isError: false,
+    });
+    renderPage();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
+    expect(lastSubmissionInput.current?.applicantPersonId).toBe('p-proxy');
+    expect(lastSubmissionInput.current?.actingUserId).toBe('user-1');
+  });
+
+  it('does not navigate home and shows error when submit returns PARTIAL_PERSISTENCE', async () => {
+    submitAsync.mockResolvedValue(
+      err({
+        code: 'PARTIAL_PERSISTENCE',
+        message: 'Your application was created but the form response could not be finalised.',
+      })
+    );
+    const user = userEvent.setup();
+    renderPage();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variant: 'destructive',
+        title: expect.stringMatching(/submission incomplete/i),
+      })
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText(/could not be finalised/i)
+    ).toBeInTheDocument();
+  });
+
+  it('does not navigate home when submit returns APPLICATION_RPC_FAILED', async () => {
+    submitAsync.mockResolvedValue(
+      err({
+        code: 'APPLICATION_RPC_FAILED',
+        message: 'Application RPC rejected.',
+      })
+    );
+    const user = userEvent.setup();
+    renderPage();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variant: 'destructive',
+        title: expect.stringMatching(/submission failed/i),
+      })
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(await screen.findByText(/application rpc rejected/i)).toBeInTheDocument();
+  });
+
+  it('does not navigate home when submit returns DUPLICATE_SUBMIT_PREVENTED', async () => {
+    submitAsync.mockResolvedValue(
+      err({
+        code: 'DUPLICATE_SUBMIT_PREVENTED',
+        message: 'You already submitted.',
+      })
+    );
+    const user = userEvent.setup();
+    renderPage();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variant: 'destructive',
+        title: expect.stringMatching(/already submitted/i),
+      })
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(await screen.findByText(/you already submitted/i)).toBeInTheDocument();
+  });
+
+  it('does not submit when flushing draft fails', async () => {
+    const saveDraftNow = vi.fn().mockRejectedValue(new Error('Network dropped during flush'));
+    useDraftMock.mockReturnValue({
+      applicationId: null,
+      responseId: 'r1',
+      valueByFieldId: {},
+      isHydrating: false,
+      hydrateError: null,
+      scheduleSaveDraft: vi.fn(),
+      saveDraftNow,
+      isSavingDraft: false,
+      saveDraftError: null,
+      refetchBundle: vi.fn(),
+    });
+    const user = userEvent.setup();
+    renderPage();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(saveDraftNow).toHaveBeenCalled();
+    expect(submitAsync).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variant: 'destructive',
+        title: 'Draft save',
+      })
+    );
+    expect(await screen.findByText(/network dropped during flush/i)).toBeInTheDocument();
   });
 });

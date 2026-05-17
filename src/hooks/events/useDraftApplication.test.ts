@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { isOk } from '@solvera/pace-core/types';
-import { ensureDraftBundle, persistDraftValues } from '@/hooks/events/useDraftApplication';
+import { ensureDraftBundle, persistDraftValues } from '@/lib/eventDraftPersistence';
 import type { CoreFormFieldRow } from '@/shared/lib/formFieldMeta';
 import type { Database } from '@/types/pace-database';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -83,7 +83,7 @@ describe('ensureDraftBundle', () => {
     }
   });
 
-  it('creates application + response when none exist', async () => {
+  it('creates unlinked draft response when no application exists (PR16 no base_application at draft time)', async () => {
     const client = {
       from: vi.fn((table: string) => {
         if (table === 'base_application') {
@@ -91,29 +91,15 @@ describe('ensureDraftBundle', () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             maybeSingle: vi.fn().mockResolvedValueOnce({ data: null, error: null }),
-            insert: vi.fn().mockReturnValue({
-              select: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: { id: 'app-new' }, error: null }),
-              }),
-            }),
-          };
-        }
-        if (table === 'base_form_registration_type') {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            order: vi.fn().mockReturnThis(),
-            limit: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: { registration_type_id: 'rt-1' },
-              error: null,
-            }),
           };
         }
         if (table === 'core_form_responses') {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
             maybeSingle: vi.fn().mockResolvedValueOnce({ data: null, error: null }),
             insert: vi.fn().mockReturnValue({
               select: vi.fn().mockReturnValue({
@@ -132,7 +118,7 @@ describe('ensureDraftBundle', () => {
     const r = await ensureDraftBundle(client, 'p1', 'o1', 'ev1', 'form-1');
     expect(isOk(r)).toBe(true);
     if (isOk(r)) {
-      expect(r.data.applicationId).toBe('app-new');
+      expect(r.data.applicationId).toBeNull();
       expect(r.data.responseId).toBe('resp-new');
     }
   });

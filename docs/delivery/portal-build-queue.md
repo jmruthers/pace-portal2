@@ -34,7 +34,7 @@
 | PR10 — Medical conditions CRUD | PR09, PR11 | Built | — |
 | PR14 — Event selector and participant hub | PR03 | Built | — |
 | PR15 — Authenticated form rendering | PR01, PR02, PR14 | Built | — |
-| PR16 — Event application submission | PR15 |  |  |
+| PR16 — Event application submission | PR15 | Built | — |
 | PR17 — Shared form journey shell | PR01, PR02, PR14, PR15, PR16 |  |  |
 | PR18 — Participant application progress | PR14, PR17 |  |  |
 | PR19 — Participant activity booking | PR14, PR17 |  |  |
@@ -139,10 +139,16 @@
 
 ### PR16 — Event application submission
 
+- acceptance: **four** acceptance criteria fully satisfied in [`PR16-event-application-submission.md`](../requirements/PR16-event-application-submission.md); **three** marked partial — legacy draft `base_application` submit path, duplicate-safe semantics under legacy rows, and orphan-row possibility after RPC success when response finalisation fails (documented in requirement Implementation notes + code comment in `eventApplicationSubmission.ts`).
 - authority: [`docs/requirements/PR16-event-application-submission.md`](../requirements/PR16-event-application-submission.md)
 - backend freeze: None — BA05a application RPCs PASS (portal-backend-ready-report slice coverage)
 - depends_on rationale: Executable prereq PR15 inferred from [`PR17-form-journey-shell.md`](../requirements/PR17-form-journey-shell.md) journey composition
+- implementation: `src/lib/eventApplicationSubmission.ts`; `src/hooks/events/useApplicationSubmission.ts`; submit wiring in `src/pages/events/FormFillPage.tsx` and `src/components/events/FormRenderer.tsx`; draft bundle/value persistence `src/hooks/events/useDraftApplication.ts` (shared with PR15).
+- tests: `src/lib/eventApplicationSubmission.test.ts`, `src/hooks/events/useApplicationSubmission.test.ts`, `src/pages/events/FormFillPage.test.tsx`, `src/components/events/FormRenderer.test.tsx`, plus draft coverage `src/hooks/events/useDraftApplication.test.ts`.
+- validate: `npm run validate` — PASS (`audit/202605171501-*` step reports + `audit/202605171502-pace-core-audit.md`)
 - contract note (documentation alignment, not blocker): Duplicate/idempotency vs DB unique key **`UNIQUE (event_id, person_id)`** — PR16 aspiration for per-form wording documented vs DB in portal-backend-ready-report PR16 uniqueness note
+- contract note: **`PARTIAL_PERSISTENCE`** — if `app_base_application_create` succeeds and the subsequent `core_form_responses` update fails, the client cannot roll back the RPC; user sees error UX only (see implementation comment).
+- contract (Evidence only): BASE BA05a — [`../../../pace-core2/docs/requirements/base/BA05a-registration-entry-and-application-submission_requirements.md`](../../../pace-core2/docs/requirements/base/BA05a-registration-entry-and-application-submission_requirements.md); portal submit persists response values then invokes `app_base_application_create` with `p_form_response_id` per requirement Implementation notes.
 
 ### PR17 — Shared form journey shell
 

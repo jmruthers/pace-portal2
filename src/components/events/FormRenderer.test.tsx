@@ -6,6 +6,13 @@ import { FormRenderer } from '@/components/events/FormRenderer';
 import type { FormFieldMeta } from '@solvera/pace-core/forms';
 
 const scheduleSaveDraft = vi.fn();
+const onSubmitForm = vi.fn();
+
+const submitProps = {
+  onSubmitForm,
+  isSubmitting: false,
+  submitError: null as string | null,
+};
 
 vi.mock('@solvera/pace-core/rbac', () => ({
   useSecureSupabase: () => null,
@@ -36,6 +43,7 @@ function wrapper(client: QueryClient) {
 describe('FormRenderer', () => {
   beforeEach(() => {
     scheduleSaveDraft.mockClear();
+    onSubmitForm.mockClear();
   });
 
   it('renders zero-field message and disabled submit note', () => {
@@ -60,13 +68,13 @@ describe('FormRenderer', () => {
         scheduleSaveDraft={scheduleSaveDraft}
         isSavingDraft={false}
         saveDraftError={null}
+        {...submitProps}
       />,
       { wrapper: wrapper(qc) }
     );
     expect(screen.getByRole('heading', { level: 1, name: 'Camp' })).toBeInTheDocument();
     expect(screen.getByText(/this form has no fields yet/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /submit/i })).toBeDisabled();
-    expect(screen.getByText(/submission is not available/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /submit/i })).not.toBeDisabled();
   });
 
   it('renders member_profile confirmation inside the form schema context', () => {
@@ -91,6 +99,7 @@ describe('FormRenderer', () => {
         scheduleSaveDraft={scheduleSaveDraft}
         isSavingDraft={false}
         saveDraftError={null}
+        {...submitProps}
       />,
       { wrapper: wrapper(qc) }
     );
@@ -130,6 +139,7 @@ describe('FormRenderer', () => {
         scheduleSaveDraft={scheduleSaveDraft}
         isSavingDraft={false}
         saveDraftError={null}
+        {...submitProps}
       />,
       { wrapper: wrapper(qc) }
     );
@@ -168,6 +178,7 @@ describe('FormRenderer', () => {
         scheduleSaveDraft={scheduleSaveDraft}
         isSavingDraft={false}
         saveDraftError={null}
+        {...submitProps}
       />,
       { wrapper: wrapper(qc) }
     );
@@ -196,10 +207,42 @@ describe('FormRenderer', () => {
         scheduleSaveDraft={scheduleSaveDraft}
         isSavingDraft={false}
         saveDraftError="Network dropped"
+        {...submitProps}
       />,
       { wrapper: wrapper(qc) }
     );
     expect(screen.getByText(/network dropped/i)).toBeInTheDocument();
+  });
+
+  it('disables submit and shows submitting label while isSubmitting', () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <FormRenderer
+        eventTitle="Camp"
+        formTitle="Registration"
+        formDescription={null}
+        fieldMetas={[]}
+        confirmationKeys={[]}
+        personId="p1"
+        memberId="m1"
+        personFirstName="A"
+        personLastName="B"
+        personEmail="a@b.c"
+        fieldDefaults={{}}
+        draftValues={{}}
+        prefillWarning={null}
+        isDraftHydrating={false}
+        draftHydrateError={null}
+        scheduleSaveDraft={scheduleSaveDraft}
+        isSavingDraft={false}
+        saveDraftError={null}
+        {...submitProps}
+        isSubmitting={true}
+      />,
+      { wrapper: wrapper(qc) }
+    );
+    const btn = screen.getByRole('button', { name: /submitting/i });
+    expect(btn).toBeDisabled();
   });
 
   it('does not schedule draft persistence solely from hydrate boundary crossing', async () => {
@@ -224,6 +267,7 @@ describe('FormRenderer', () => {
       scheduleSaveDraft,
       isSavingDraft: false,
       saveDraftError: null,
+      ...submitProps,
     };
 
     try {
