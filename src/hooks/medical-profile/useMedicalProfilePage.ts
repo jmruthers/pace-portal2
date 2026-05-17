@@ -73,22 +73,24 @@ export function useEffectiveMedicalMemberId(): {
     return { effectiveMemberId: null, isReady: true, blockedReason: 'no_organisation' };
   }
 
+  if (proxy.targetMemberId && proxy.isValidating) {
+    return { effectiveMemberId: null, isReady: false, blockedReason: null };
+  }
+
+  if (proxy.targetMemberId && proxy.validationError) {
+    return { effectiveMemberId: null, isReady: true, blockedReason: 'proxy_invalid' };
+  }
+
+  if (proxy.isProxyActive && proxy.targetMemberId) {
+    return { effectiveMemberId: proxy.targetMemberId, isReady: true, blockedReason: null };
+  }
+
   if (isLoading) {
     return { effectiveMemberId: null, isReady: false, blockedReason: null };
   }
 
   if (isError || !memberData || memberData === 'needs_setup') {
     return { effectiveMemberId: null, isReady: true, blockedReason: 'needs_member_profile' };
-  }
-
-  if (proxy.isProxyActive) {
-    if (proxy.isValidating) {
-      return { effectiveMemberId: null, isReady: false, blockedReason: null };
-    }
-    if (proxy.validationError || !proxy.targetMemberId) {
-      return { effectiveMemberId: null, isReady: true, blockedReason: 'proxy_invalid' };
-    }
-    return { effectiveMemberId: proxy.targetMemberId, isReady: true, blockedReason: null };
   }
 
   const selfMemberId = memberData.member?.id ?? null;

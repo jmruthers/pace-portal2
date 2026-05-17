@@ -2,8 +2,8 @@
 
 ## Overview
 
-- Purpose and scope: implement member-facing activity booking in portal aligned to BASE S10 contracts.
-- Dependencies: PR14, PR17, BASE S10/S11.
+- Purpose and scope: implement member-facing activity booking in portal aligned to BASE BA10 contracts.
+- Dependencies: PR14, PR17, BASE BA10/BA11.
 
 ## Acceptance criteria
 
@@ -28,6 +28,6 @@
 
 ## References
 
-- [../base/slices/S10-participant-activity-booking-experience_requirements.md](../base/slices/S10-participant-activity-booking-experience_requirements.md)
+- [../base/BA10-participant-activity-booking-experience_requirements.md](../base/BA10-participant-activity-booking-experience_requirements.md)
 - [PR14-event-selector-and-hub.md](./PR14-event-selector-and-hub.md)
 - [PR17-form-journey-shell.md](./PR17-form-journey-shell.md)

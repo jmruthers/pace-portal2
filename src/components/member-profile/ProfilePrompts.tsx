@@ -30,7 +30,7 @@ export function ProfilePrompts({ profileProgress, navContext = { kind: 'self' } 
 
   const goMemberProfile = () => {
     if (navContext.kind === 'delegated') {
-      navigate(`/profile/edit/${navContext.memberId}`);
+      navigate(`/member-profile?targetMemberId=${encodeURIComponent(navContext.memberId)}`);
       return;
     }
     navigate('/member-profile');
@@ -69,7 +69,19 @@ export function ProfilePrompts({ profileProgress, navContext = { kind: 'self' } 
           <p>Review or update medical details.</p>
         </CardContent>
         <CardFooter className="text-right">
-          <Button type="button" variant="default" onClick={() => navigate('/medical-profile')}>
+          <Button
+            type="button"
+            variant="default"
+            onClick={() => {
+              if (navContext.kind === 'delegated') {
+                navigate(
+                  `/medical-profile?targetMemberId=${encodeURIComponent(navContext.memberId)}`
+                );
+                return;
+              }
+              navigate('/medical-profile');
+            }}
+          >
             Open
           </Button>
         </CardFooter>

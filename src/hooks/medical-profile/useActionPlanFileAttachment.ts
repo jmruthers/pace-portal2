@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { deleteAttachment } from '@solvera/pace-core/crud';
-import { isErr } from '@solvera/pace-core/types';
+import { err, isErr, isOk, ok, type ApiResult } from '@solvera/pace-core/types';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
 import { uploadFile } from '@solvera/pace-core/utils';
 import { toSupabaseClientLike, toTypedSupabase } from '@/lib/supabase-typed';
@@ -21,7 +21,7 @@ async function linkUploadedActionPlanFile(params: {
   conditionId: string;
   newFileReferenceId: string;
   queryClient: QueryClient;
-}): Promise<void> {
+}): Promise<ApiResult<void>> {
   const { typedClient, secure, conditionId, newFileReferenceId, queryClient } = params;
 
   const condition = await typedClient
@@ -30,7 +30,10 @@ async function linkUploadedActionPlanFile(params: {
     .eq('id', conditionId)
     .maybeSingle();
   if (condition.error || !condition.data) {
-    throw new Error(condition.error?.message ?? 'Could not load condition for file upload.');
+    return err({
+      code: 'ACTION_PLAN_CONDITION_LOAD',
+      message: condition.error?.message ?? 'Could not load condition for file upload.',
+    });
   }
 
   const previousRefId = condition.data.action_plan_file_id ?? null;
@@ -44,13 +47,18 @@ async function linkUploadedActionPlanFile(params: {
     .eq('id', conditionId)
     .select('id');
   if (link.error) {
-    throw new Error(link.error.message ?? 'Could not link uploaded action plan file.');
+    return err({
+      code: 'ACTION_PLAN_LINK',
+      message: link.error.message ?? 'Could not link uploaded action plan file.',
+    });
   }
   const updatedRows = Array.isArray(link.data) ? link.data.length : 0;
   if (updatedRows !== 1) {
-    throw new Error(
-      'Could not link uploaded action plan file. You may not have permission to update this condition.'
-    );
+    return err({
+      code: 'ACTION_PLAN_LINK_PERMISSION',
+      message:
+        'Could not link uploaded action plan file. You may not have permission to update this condition.',
+    });
   }
 
   if (previousRefId && previousRefId !== newFileReferenceId) {
@@ -87,6 +95,7 @@ async function linkUploadedActionPlanFile(params: {
 
   await queryClient.invalidateQueries({ queryKey: ['mediActionPlan'] });
   await queryClient.invalidateQueries({ queryKey: ['medicalProfile'] });
+  return ok(undefined);
 }
 
 /**
@@ -126,15 +135,14 @@ export function useActionPlanFileAttachment() {
         },
       });
 
-      try {
-        await linkUploadedActionPlanFile({
-          typedClient,
-          secure,
-          conditionId: input.conditionId,
-          newFileReferenceId: uploaded.file_reference.id,
-          queryClient,
-        });
-      } catch (linkError) {
+      const linkResult = await linkUploadedActionPlanFile({
+        typedClient,
+        secure,
+        conditionId: input.conditionId,
+        newFileReferenceId: uploaded.file_reference.id,
+        queryClient,
+      });
+      if (!isOk(linkResult)) {
         const newPath = uploaded.file_reference.file_path ?? null;
         if (newPath) {
           const orphanDel = await deleteAttachment({
@@ -159,7 +167,7 @@ export function useActionPlanFileAttachment() {
         } else {
           await typedClient.from('core_file_references').delete().eq('id', uploaded.file_reference.id);
         }
-        throw linkError;
+        throw new Error(linkResult.error.message);
       }
     },
     [queryClient, secure, supabaseLike, typedClient]

@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
 import { Alert, AlertDescription, AlertTitle, LoadingSpinner } from '@solvera/pace-core/components';
 import { useToast } from '@solvera/pace-core/hooks';
@@ -17,10 +17,19 @@ import {
 
 function MedicalProfileContent() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const org = useOrganisationsContextOptional();
   const organisationId = org?.selectedOrganisation?.id ?? null;
   const proxy = useProxyMode();
+  const { setProxyTargetMemberId } = proxy;
+  const targetMemberId = searchParams.get('targetMemberId');
+
+  useEffect(() => {
+    if (targetMemberId) {
+      setProxyTargetMemberId(targetMemberId);
+    }
+  }, [targetMemberId, setProxyTargetMemberId]);
   /** Member reference lookups plus active `cake_diettype` rows for the dietary menu select. */
   const medicalRef = useMedicalReferenceData();
   const editor = useMedicalProfilePage();
@@ -31,9 +40,12 @@ function MedicalProfileContent() {
         completeMemberFirst: '1',
         returnTo: '/medical-profile',
       });
+      if (proxy.targetMemberId) {
+        q.set('targetMemberId', proxy.targetMemberId);
+      }
       navigate(`/member-profile?${q.toString()}`, { replace: true });
     }
-  }, [editor.blockedReason, navigate]);
+  }, [editor.blockedReason, navigate, proxy.targetMemberId]);
 
   const formSchema = useMemo(
     () => createMedicalProfileSchema(medicalRef.dietTypes ?? []),

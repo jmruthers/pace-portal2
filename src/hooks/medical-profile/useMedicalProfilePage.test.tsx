@@ -128,7 +128,7 @@ describe('useEffectiveMedicalMemberId', () => {
   });
 
   it('waits while proxy is validating', () => {
-    proxy.isProxyActive = true;
+    proxy.isProxyActive = false;
     proxy.isValidating = true;
     proxy.targetMemberId = 'm-proxy';
 
@@ -157,8 +157,9 @@ describe('useEffectiveMedicalMemberId', () => {
   });
 
   it('blocks when proxy is invalid', () => {
-    proxy.isProxyActive = true;
+    proxy.isProxyActive = false;
     proxy.validationError = 'denied';
+    proxy.targetMemberId = 'm-proxy';
 
     const { result } = renderHook(() => useEffectiveMedicalMemberId(), { wrapper });
 
@@ -166,14 +167,28 @@ describe('useEffectiveMedicalMemberId', () => {
     expect(result.current.blockedReason).toBe('proxy_invalid');
   });
 
-  it('blocks when proxy active but target member id missing', () => {
+  it('falls back to self member when proxy is active without target id (inconsistent mock state)', () => {
     proxy.isProxyActive = true;
     proxy.validationError = null;
     proxy.targetMemberId = null;
 
     const { result } = renderHook(() => useEffectiveMedicalMemberId(), { wrapper });
 
-    expect(result.current.blockedReason).toBe('proxy_invalid');
+    expect(result.current.effectiveMemberId).toBe('self-m');
+    expect(result.current.blockedReason).toBeNull();
+  });
+
+  it('uses proxy target when delegate themselves have no member profile row', () => {
+    memberData.data = 'needs_setup';
+    proxy.isProxyActive = true;
+    proxy.targetMemberId = 'proxy-m';
+    proxy.isValidating = false;
+    proxy.validationError = null;
+
+    const { result } = renderHook(() => useEffectiveMedicalMemberId(), { wrapper });
+
+    expect(result.current.effectiveMemberId).toBe('proxy-m');
+    expect(result.current.blockedReason).toBeNull();
   });
 
   it('blocks when user id missing for self path', () => {

@@ -58,3 +58,6 @@ export function useActionPlanForCondition(conditionId: string | null) {
     },
   });
 }
+
+/** PR11 public name — identical to {@link useActionPlanForCondition}. */
+export const useActionPlans = useActionPlanForCondition;

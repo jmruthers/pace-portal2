@@ -84,6 +84,39 @@ describe('supabase bootstrap + event lookup', () => {
     }
   });
 
+  it('returns EVENT_CODE_LOOKUP when lowercase retry rpc returns an error', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
+    vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', 'pk-test');
+    rpc
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: 'retry rpc failed' } });
+
+    const { fetchEventExistsWithCaseFallback } = await import('./supabase');
+    const r = await fetchEventExistsWithCaseFallback('RetryFail', null, null);
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.code).toBe('EVENT_CODE_LOOKUP');
+      expect(r.error.message).toBe('retry rpc failed');
+    }
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
+  it('uses fallback message when rpc error has no message string', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
+    vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', 'pk-test');
+    rpc.mockResolvedValue({ data: null, error: {} });
+
+    const { fetchEventExistsWithCaseFallback } = await import('./supabase');
+    const r = await fetchEventExistsWithCaseFallback('evt', 'u', 'o');
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.code).toBe('EVENT_CODE_LOOKUP');
+      expect(r.error.message).toBe('Event lookup failed.');
+    }
+  });
+
   it('does not retry lowercase when code is already lowercase', async () => {
     vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
     vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', 'pk-test');

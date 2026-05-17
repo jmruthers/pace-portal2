@@ -2,9 +2,9 @@
 
 ## Overview
 
-- Purpose and scope: host guardian/referee token approval pages in portal as thin standalone member-adjacent surfaces aligned to BASE S07 contracts.
-- Dependencies: PR01, BASE S07.
-- Recommended canonical route: `/approvals/:token` (public entry, minimal chrome, no app navigation).
+- Purpose and scope: host guardian/referee token approval pages in portal as thin standalone member-adjacent surfaces aligned to **[BASE BA07 — Token approval actions](../base/BA07-token-approval-actions_requirements.md)** contracts (backend/RPC semantics). **UI lives here only**—not in `@solvera/pace-core`.
+- Dependencies: PR01, BASE BA07.
+- Canonical route: `/approvals/:token` (public entry, minimal chrome, no app navigation).
 
 ## Acceptance criteria
 
@@ -29,5 +29,5 @@
 
 ## References
 
-- [../base/slices/S07-token-approval-actions_requirements.md](../base/slices/S07-token-approval-actions_requirements.md)
+- [../base/BA07-token-approval-actions_requirements.md](../base/BA07-token-approval-actions_requirements.md)
 - [portal-architecture.md](./portal-architecture.md)

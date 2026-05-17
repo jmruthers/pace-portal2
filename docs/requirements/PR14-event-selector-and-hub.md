@@ -22,21 +22,8 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 - [ ] `Manage`/open routes to `/:eventSlug` (participant event hub) and not a modal-only dead-end.
 - [ ] The participant event hub page shows event name, logo, dates, participant blurb, admin email, website (when present), application status, and active forms/workflow links without `context_id` grouping.
 - [ ] Missing event, inactive-window, and logo-fallback states are visible and testable on selector/hub surfaces.
-- [ ] The dashboard event list shows **only** events that have at least one **published** form that is active (not deactivated) and within its open window, scoped to organisations the user can access (see **Dashboard event list visibility** below).
-- [ ] When no event qualifies, the dashboard events section is empty while other landing sections still load.
 
 ## API / Contract
-
-### Dashboard event list visibility (normative)
-
-- **Eligibility:** Show a dashboard event card **only if** the event has at least one qualifying form row in `core_forms`.
-- **Organisation scope:** Consider only forms whose `organisation_id` is in the same set of organisations the user may access for enhanced landing (membership / RBAC-derived list used by `useEnhancedLanding`).
-- **Qualifying form (“open” for members):**
-  - **`status = 'published'`** — product meaning of “open”; `draft` and `closed` do not count.
-  - **`event_id` is non-null** and identifies the event row in `core_events`.
-  - **`is_active` is not `false`** (both `true` and `null` are allowed).
-  - **Time window** evaluated at request time: if `opens_at` is set, it must be **≤ now**; if `closes_at` is set, it must be **≥ now**; if either bound is `null`, that side imposes no restriction (both null ⇒ not time-gated).
-- **Implementation note:** If authenticated `core_forms` reads are blocked by RLS, resolve via a pace-core2 RPC or policy change; do not silently show all org events.
 
 - Public exports: `src/pages/events/EventHubPage.tsx`, `src/hooks/events/useEventHub.ts`, `src/hooks/events/useFileReferences.ts`, `src/components/events/EventList.tsx`, and the dashboard event composition in `src/pages/DashboardPage.tsx` / `src/shared/hooks/useEnhancedLanding.ts` where applicable.
 - Public service contracts: event lookup, application-status action mapping (`Apply`/`Resume`/`Manage`), event-hub data assembly, and authenticated handoff routes must remain typed and explicit.
@@ -65,7 +52,6 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 
 - Required automated coverage: unit coverage for action-state mapping/file-reference resolution and integration coverage for dashboard selector + event-hub routing.
 - Required scenarios: `Apply` / `Resume` / `Manage` state derivation, logo fallback, missing event, inactive form window, RLS or RPC failure, and event-hub content rendering.
-- Dashboard event list: unit tests for **published / draft / closed**, **`is_active` false vs null/true**, and **`opens_at` / `closes_at`** boundary and null semantics; integration or orchestration tests ensuring `fetchEnhancedLanding` (or equivalent) only returns events with a qualifying form across accessible organisations.
 
 ## Do not
 

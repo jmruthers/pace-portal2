@@ -98,6 +98,40 @@ describe('useContactOperations', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['additionalContacts', 'v1'] });
   });
 
+  it('passes delegated target member id through create RPC', async () => {
+    rpc.mockResolvedValue({
+      data: [{ contact_id: 'c1' }],
+      error: null,
+    });
+
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+
+    function Wrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    }
+
+    const { result } = renderHook(() => useContactOperations(), { wrapper: Wrapper });
+
+    await result.current.createContact.mutateAsync({
+      memberId: 'm-delegated',
+      firstName: 'Sam',
+      lastName: 'Lee',
+      preferredName: 'Sam',
+      email: 'sam@example.com',
+      contactTypeId: 'ct-1',
+      permissionType: 'view',
+      phoneNumber: '0400',
+      phoneTypeId: 1,
+    });
+
+    expect(rpc).toHaveBeenCalledWith(
+      'app_pace_contact_create',
+      expect.objectContaining({ p_member_id: 'm-delegated' })
+    );
+  });
+
   it('calls app_pace_contact_update and invalidates additionalContacts queries on success', async () => {
     rpc.mockResolvedValue({
       data: [{ id: 'c1' }],

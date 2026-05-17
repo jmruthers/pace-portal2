@@ -2,8 +2,8 @@
 
 ## Overview
 
-- Purpose and scope: implement the participant-facing application progress experience in portal for BASE S05b contract coverage.
-- Dependencies: PR14, PR17, BASE S05b.
+- Purpose and scope: implement the participant-facing application progress experience in portal for BASE BA05b contract coverage.
+- Dependencies: PR14, PR17, BASE BA05b.
 
 ## Acceptance criteria
 
@@ -29,5 +29,5 @@
 
 ## References
 
-- [../base/slices/S05b-participant-application-progress_requirements.md](../base/slices/S05b-participant-application-progress_requirements.md)
+- [../base/BA05b-participant-application-progress_requirements.md](../base/BA05b-participant-application-progress_requirements.md)
 - [PR14-event-selector-and-hub.md](./PR14-event-selector-and-hub.md)
