@@ -11,7 +11,7 @@ import { AdditionalContactsPage } from '@/pages/AdditionalContactsPage';
 import { ProfileCompletionWizardPage } from '@/pages/ProfileCompletionWizardPage';
 import { ProfileViewPage } from '@/pages/member-profile/ProfileViewPage';
 import { ProfileEditProxyPage } from '@/pages/member-profile/ProfileEditProxyPage';
-import { FormFillPage } from '@/pages/public/FormFillPage';
+import { FormFillPage } from '@/pages/events/FormFillPage';
 
 vi.mock('@/hooks/auth/useProfileCompletionWizard', () => ({
   useProfileCompletionWizard: () => ({
@@ -353,10 +353,13 @@ describe('placeholder pages', () => {
 
   it('redirects unauthenticated users to login with return URL (PR01 handoff)', async () => {
     const { MemoryRouter } = await import('react-router-dom');
+    const client = new QueryClient();
     render(
-      <MemoryRouter initialEntries={['/evt/frm']}>
-        <FormFillPage eventSlug="evt" formSlug="frm" />
-      </MemoryRouter>
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/evt/frm']}>
+          <FormFillPage eventSlug="evt" formSlug="frm" />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
     expect(await screen.findByText(/redirecting to sign in/i)).toBeInTheDocument();
   });

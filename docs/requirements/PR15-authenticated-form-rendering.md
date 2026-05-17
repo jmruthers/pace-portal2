@@ -17,13 +17,13 @@ This file is **`PR15-authenticated-form-rendering.md`** — portal requirement s
 
 ## Acceptance criteria
 
-- [ ] The authenticated form page loads the correct event and form header for the resolved slugs.
-- [ ] Auth-required handoff and authenticated behavior on event form routes are explicit rather than implicit.
-- [ ] Existing values load into the form where a matching table/column exists.
-- [ ] Required profile confirmation sections render when configured.
-- [ ] Draft applications are created or reused for event forms.
-- [ ] Draft responses are persisted and restored when the user resumes the form.
-- [ ] Unsupported field types fail clearly without crashing the page.
+- [x] The authenticated form page loads the correct event and form header for the resolved slugs.
+- [x] Auth-required handoff and authenticated behavior on event form routes are explicit rather than implicit.
+- [x] Existing values load into the form where a matching table/column exists.
+- [x] Required profile confirmation sections render when configured.
+- [x] Draft applications are created or reused for event forms.
+- [x] Draft responses are persisted and restored when the user resumes the form.
+- [x] Unsupported field types fail clearly without crashing the page.
 
 ## API / Contract
 

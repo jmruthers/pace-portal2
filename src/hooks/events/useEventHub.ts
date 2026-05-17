@@ -50,7 +50,8 @@ export type EventHubData = {
   needsProfileSetup: boolean;
 };
 
-async function lookupEventRowBySlug(
+/** Shared event lookup for participant routes (PR14 hub, PR15 forms). */
+export async function lookupEventRowBySlug(
   client: ReturnType<typeof toTypedSupabase>,
   slug: string,
   organisationIds: string[]

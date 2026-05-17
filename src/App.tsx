@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo } from 'react';
-import { Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useSessionRestoration } from '@solvera/pace-core/hooks';
 import { ProtectedRoute, LoadingSpinner, SessionRestorationLoader } from '@solvera/pace-core/components';
 import { supabaseClient } from '@/lib/supabase';
@@ -9,7 +9,7 @@ import { LoginHistoryRecorder } from '@/shared/components/LoginHistoryRecorder';
 import { OrganisationLoadingGate } from '@/shared/components/OrganisationLoadingGate';
 import { PortalAuthenticatedLayout } from '@/shared/components/PortalAuthenticatedLayout';
 import { ProfileCompleteLayout } from '@/shared/components/ProfileCompleteLayout';
-import { isReservedEventSlug } from '@/routing/eventFormPaths';
+import { EventApplicationRoute, EventFormRoute } from '@/pages/events/EventFormRoutes';
 
 const LoginPage = lazy(async () => {
   const m = await import('@/pages/auth/LoginPage');
@@ -51,21 +51,13 @@ const ProfileEditProxyPage = lazy(async () => {
   const m = await import('@/pages/member-profile/ProfileEditProxyPage');
   return { default: m.ProfileEditProxyPage };
 });
-const FormFillPage = lazy(async () => {
-  const m = await import('@/pages/public/FormFillPage');
-  return { default: m.FormFillPage };
-});
-const NotFoundPage = lazy(async () => {
-  const m = await import('@/pages/NotFoundPage');
-  return { default: m.NotFoundPage };
-});
 const EventHubPage = lazy(async () => {
   const m = await import('@/pages/events/EventHubPage');
   return { default: m.EventHubPage };
 });
-const EventApplicationPlaceholderPage = lazy(async () => {
-  const m = await import('@/pages/public/EventWorkflowPlaceholders');
-  return { default: m.EventApplicationPlaceholderPage };
+const NotFoundPage = lazy(async () => {
+  const m = await import('@/pages/NotFoundPage');
+  return { default: m.NotFoundPage };
 });
 
 function RouteLoadingFallback() {
@@ -122,17 +114,6 @@ function useSessionAuthRedirector() {
   }, [location.pathname, navigate]);
 }
 
-function EventFormRoute() {
-  const { eventSlug = '', formSlug = '' } = useParams();
-  if (eventSlug === '' || formSlug === '') {
-    return <NotFoundPage />;
-  }
-  if (isReservedEventSlug(eventSlug)) {
-    return <NotFoundPage />;
-  }
-  return <FormFillPage eventSlug={eventSlug} formSlug={formSlug} />;
-}
-
 function ProfileCompleteRoute() {
   return (
     <ProfileCompleteLayout>
@@ -165,7 +146,7 @@ export default function App() {
                 <Route path="profile/view/:memberId" element={<ProfileViewPage />} />
                 <Route path="profile/edit/:memberId" element={<ProfileEditProxyPage />} />
               </Route>
-              <Route path=":eventSlug/application" element={<EventApplicationPlaceholderPage />} />
+              <Route path=":eventSlug/application" element={<EventApplicationRoute />} />
               <Route path=":eventSlug/:formSlug" element={<EventFormRoute />} />
               <Route path=":eventSlug" element={<EventHubPage />} />
             </Route>

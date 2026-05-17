@@ -18,22 +18,22 @@
 
 | slice_id | depends_on | status | blocker_reason |
 |---|---|---|---|
-| PR01 — App shell routing | - | Done | — |
-| PR02 — Shared services hooks | PR01 | Done | — |
-| PR04 — Register placeholder | PR01 | Done | — |
-| PR20 — Token approval host surfaces | PR01 | Done | — |
-| PR03 — Dashboard composition | PR01, PR02 | Done | — |
-| PR05 — Profile wizard shell | PR01, PR02 | Done | — |
-| PR12 — Contacts listing | PR01, PR02 | Done | — |
-| PR13 — Contact create edit flow | PR12 | Done | — |
-| PR06 — Wizard field details | PR05 | Done | — |
-| PR07 — Member profile self-service | PR01, PR02 | Done | — |
-| PR08 — Proxy delegated editing | PR01, PR07 | Done | — |
-| PR09 — Medical profile summary | PR07 | Done | — |
-| PR11 — Action-plan files | PR09 | Done | — |
-| PR10 — Medical conditions CRUD | PR09, PR11 | Done | — |
-| PR14 — Event selector and participant hub | PR03 | Done | — |
-| PR15 — Authenticated form rendering | PR01, PR02, PR14 |  |  |
+| PR01 — App shell routing | - | Built | — |
+| PR02 — Shared services hooks | PR01 | Built | — |
+| PR04 — Register placeholder | PR01 | Built | — |
+| PR20 — Token approval host surfaces | PR01 | Built | — |
+| PR03 — Dashboard composition | PR01, PR02 | Built | — |
+| PR05 — Profile wizard shell | PR01, PR02 | Built | — |
+| PR12 — Contacts listing | PR01, PR02 | Built | — |
+| PR13 — Contact create edit flow | PR12 | Built | — |
+| PR06 — Wizard field details | PR05 | Built | — |
+| PR07 — Member profile self-service | PR01, PR02 | Built | — |
+| PR08 — Proxy delegated editing | PR01, PR07 | Built | — |
+| PR09 — Medical profile summary | PR07 | Built | — |
+| PR11 — Action-plan files | PR09 | Built | — |
+| PR10 — Medical conditions CRUD | PR09, PR11 | Built | — |
+| PR14 — Event selector and participant hub | PR03 | Built | — |
+| PR15 — Authenticated form rendering | PR01, PR02, PR14 | Built | — |
 | PR16 — Event application submission | PR15 |  |  |
 | PR17 — Shared form journey shell | PR01, PR02, PR14, PR15, PR16 |  |  |
 | PR18 — Participant application progress | PR14, PR17 |  |  |
@@ -129,9 +129,13 @@
 
 ### PR15 — Authenticated form rendering
 
+- acceptance: **Acceptance criteria** in authority doc marked complete (functional verification).
 - authority: [`docs/requirements/PR15-authenticated-form-rendering.md`](../requirements/PR15-authenticated-form-rendering.md)
 - backend freeze: None — CORE `core_form_*` + BASE linkage PASS (portal-backend-ready-report slice coverage)
 - depends_on rationale: Executable prereq PR14 inferred from [`PR17-form-journey-shell.md`](../requirements/PR17-form-journey-shell.md) listing PR14 alongside PR15/PR16 and event-flow architecture routing
+- implementation: page `src/pages/events/FormFillPage.tsx`; renderer `src/components/events/FormRenderer.tsx`; event form routes `src/pages/events/EventFormRoutes.tsx`; hooks `src/hooks/events/useFormBySlug.ts`, `src/hooks/events/useFormFieldData.ts`, `src/hooks/events/useDraftApplication.ts`, `src/hooks/events/useFormAdditionalContactsPreview.ts`, `src/hooks/events/useFormFillTargetPerson.ts`; field metadata/registry `src/shared/lib/formFieldMeta.tsx`; `src/hooks/auth/usePhoneNumbers.ts` re-export; `/:eventSlug/application` and `/:eventSlug/:formSlug` wired from `src/App.tsx`.
+- tests: `src/shared/lib/formFieldMeta.test.ts`, `src/components/events/FormRenderer.test.tsx`, `src/hooks/events/useFormBySlug.test.ts`, `src/hooks/events/useFormFieldData.test.ts`, `src/hooks/events/useDraftApplication.test.ts`, `src/hooks/events/useFormFillTargetPerson.test.tsx`, `src/hooks/events/useFormAdditionalContactsPreview.test.tsx`, `src/pages/events/FormFillPage.test.tsx`, `src/pages/events/EventFormRoutes.test.tsx`; smoke import `src/pages/PageSmoke.test.tsx`.
+- validate: `npm run validate` — PASS (`audit/202605171424-*` step reports + `audit/202605171425-pace-core-audit.md`)
 
 ### PR16 — Event application submission
 
