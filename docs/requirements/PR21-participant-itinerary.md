@@ -9,7 +9,7 @@ This file is **`PR21-participant-itinerary.md`** — portal requirement slice **
 ## Overview
 
 - Purpose and scope: define the portal-hosted member-facing itinerary page for participants who are already scoped in portal for an event.
-- Dependencies: PR01 app shell routing, PR14 event selector and participant hub, portal auth/context contracts, [CR25-shared-itinerary-derivation-helper.md](/Users/kusi/Documents/GitHub/pace-core2/packages/core/docs/requirements/CR25-shared-itinerary-derivation-helper.md), and the participant itinerary contract documented in `/Users/kusi/Documents/GitHub/pace-trac/rebuild/architecture.md`, `/Users/kusi/Documents/GitHub/pace-trac/rebuild/slices/SLICE-05_requirements.md`, `/Users/kusi/Documents/GitHub/pace-trac/rebuild/feature-list.md`, and `/Users/kusi/Documents/GitHub/pace-trac/rebuild/user-stories.md`.
+- Dependencies: PR01 app shell routing, PR14 event selector and participant hub, portal auth/context contracts, [CR26-shared-itinerary-derivation-helper.md](/Users/kusi/Documents/GitHub/pace-core2/packages/core/docs/requirements/CR26-shared-itinerary-derivation-helper.md), and the participant itinerary contract documented in `/Users/kusi/Documents/GitHub/pace-trac/rebuild/architecture.md`, `/Users/kusi/Documents/GitHub/pace-trac/rebuild/slices/SLICE-05-requirements.md`, `/Users/kusi/Documents/GitHub/pace-trac/rebuild/feature-list.md`, and `/Users/kusi/Documents/GitHub/pace-trac/rebuild/user-stories.md`.
 - Standards: 01 Project Structure, 02 Architecture, 03 Security/RBAC, 04 API/Tech Stack, 05 pace-core Compliance, 07 Visual, 08 Testing/Documentation.
 - Rebuild intent: add a simple authenticated member route at `/:eventSlug/itinerary`, entered from the participant event hub or event details surface, without turning portal into a second TRAC planner app.
 
@@ -19,8 +19,8 @@ This file is **`PR21-participant-itinerary.md`** — portal requirement slice **
 - [ ] The primary entry point for the route is the participant event hub or event details surface owned by PR14.
 - [ ] The page is for participants already scoped in portal for the event and does not require TRAC RBAC.
 - [ ] The page shows only that participant's assigned logistics and remains read-only in v1.
-- [ ] The route consumes the same TRAC SLICE-05 participant rules: Option A logistics `SELECT` RLS assumption, participant-only assignment filter, same day-entry rules, same timezone precedence rules, and same in-day ordering rules.
-- [ ] The route consumes the shared pure itinerary derivation helper from pace-core2 for day-entry expansion, timezone precedence, visible date range/day grouping, and in-day ordering rather than re-implementing those rules locally.
+- [ ] The route consumes the same TRAC SLICE-05 participant rules: Option A logistics `SELECT` RLS assumption, participant-only assignment filter, same status filter (`trac_status IN ('booked', 'confirmed')`), same day-entry rules, same timezone precedence rules, and same in-day ordering rules.
+- [ ] The route consumes the shared pure itinerary derivation helper (CR26) from pace-core2 for day-entry expansion, timezone precedence, visible date range/day grouping, and in-day ordering rather than re-implementing those rules locally.
 - [ ] v1 remains list-first and simple; map support is not required.
 - [ ] Users without scoped participant itinerary data for the event receive a clear explanatory state rather than planner-oriented or empty-screen behavior.
 
@@ -45,6 +45,8 @@ This file is **`PR21-participant-itinerary.md`** — portal requirement slice **
 
 - **RLS assumption:** reads rely on the TRAC Option A post-change state where logistics `SELECT` is allowed when the viewer has a matching itinerary assignment for their `base_application`; portal must not document an alternate bypass path.
 - **Participant filter:** assignment scope is participant-only. The route must not expose unassigned logistics or other participants' assignments.
+- **Status filter:** only logistics rows with `trac_status IN ('booked', 'confirmed')` are shown. Rows with status `idea`, `planned`, `dropped`, or `cancelled` must not appear on the participant itinerary. This filter is applied at the Supabase query layer before rows are passed to CR26. (Confirmed TRAC SLICE-05 Q-01, Kusi 2026-05-19.)
+- **`eventDefaultTimezone`:** the CR26 `eventDefaultTimezone` parameter must be passed as `null`. There is no `event_timezone` column on `core_events`; the timestamp fields on each logistics row carry timezone information and CR26 falls back to UTC where timezone data is absent. Do not attempt to derive an event-level timezone from `core_events` or pass a hardcoded value. (Confirmed TRAC SLICE-05 Q-02, Kusi 2026-05-19.)
 - **Day-entry rules:**
   - Transport appears on the departure local day and on the arrival local day when those days differ.
   - Activity appears on the start local day and on the finish local day when those days differ.
@@ -88,7 +90,7 @@ This file is **`PR21-participant-itinerary.md`** — portal requirement slice **
 ## Slice boundaries
 
 - `PR14` owns dashboard event-card state, participant event-hub composition, and the `View itinerary` hub link.
-- `PR21` owns the `/:eventSlug/itinerary` route, participant itinerary page contract, and portal wording for the TRAC SLICE-05 participant rules while consuming the shared pace-core2 helper from CR25.
+- `PR21` owns the `/:eventSlug/itinerary` route, participant itinerary page contract, and portal wording for the TRAC SLICE-05 participant rules while consuming the shared pace-core2 helper from CR26.
 - PR15–PR17 continue to own authenticated event-form and submit behavior; PR21 must not absorb form-journey responsibilities.
 
 ## Do not
@@ -100,7 +102,7 @@ This file is **`PR21-participant-itinerary.md`** — portal requirement slice **
 - Do not invent a TRAC token, public URL, or `SECURITY DEFINER` bypass.
 - Do not add a dedicated participant-only TRAC route in portal docs.
 - Do not document rules that drift from the TRAC SLICE-05 participant contract.
-- Do not fork the shared itinerary derivation logic in portal-local helpers when CR25 exists to own that contract.
+- Do not fork the shared itinerary derivation logic in portal-local helpers when CR26 exists to own that contract.
 
 ## References
 
@@ -108,9 +110,9 @@ This file is **`PR21-participant-itinerary.md`** — portal requirement slice **
 - [pace-portal architecture](./PR00-portal-architecture.md)
 - [PR01-app-shell-routing.md](./PR01-app-shell-routing.md)
 - [PR14-event-selector-and-hub.md](./PR14-event-selector-and-hub.md)
-- [CR25-shared-itinerary-derivation-helper.md](/Users/kusi/Documents/GitHub/pace-core2/packages/core/docs/requirements/CR25-shared-itinerary-derivation-helper.md)
+- [CR26-shared-itinerary-derivation-helper.md](/Users/kusi/Documents/GitHub/pace-core2/packages/core/docs/requirements/CR26-shared-itinerary-derivation-helper.md)
 - `/Users/kusi/Documents/GitHub/pace-trac/rebuild/architecture.md`
-- `/Users/kusi/Documents/GitHub/pace-trac/rebuild/slices/SLICE-05_requirements.md`
+- `/Users/kusi/Documents/GitHub/pace-trac/rebuild/slices/SLICE-05-requirements.md`
 - `/Users/kusi/Documents/GitHub/pace-trac/rebuild/feature-list.md`
 - `/Users/kusi/Documents/GitHub/pace-trac/rebuild/user-stories.md`
 
