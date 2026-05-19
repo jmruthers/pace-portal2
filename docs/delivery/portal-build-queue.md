@@ -36,7 +36,7 @@
 | PR15 — Authenticated form rendering | PR01, PR02, PR14 | Built | — |
 | PR16 — Event application submission | PR15 | Built | — |
 | PR17 — Shared form journey shell | PR01, PR02, PR14, PR15, PR16 | Built | — |
-| PR18 — Participant application progress | PR14, PR17 |  |  |
+| PR18 — Participant application progress | PR14, PR17 | Built | — |
 | PR19 — Participant activity booking | PR14, PR17 |  |  |
 | PR21 — My Memberships | PR01, PR02, PR05, PR06, PR07, PR15, PR17 |  |  |
 
@@ -164,9 +164,14 @@
 
 ### PR18 — Participant application progress
 
+- acceptance: all four acceptance criteria in authority doc marked complete
 - authority: [`docs/requirements/PR18-application-progress.md`](../requirements/PR18-application-progress.md)
 - backend freeze: None — BA05b `app_base_application_progress_get` PASS (portal-backend-ready-report)
-- contract (Evidence only): BASE BA05b per PR18 overview
+- depends_on rationale: PR14 + PR17 per requirement Dependencies
+- implementation: page `src/pages/events/ApplicationProgressPage.tsx`; view `src/components/events/ApplicationProgressView.tsx` (checks sorted by `sort_order`); hook `src/hooks/events/useApplicationProgress.ts`; fetch `src/lib/fetchApplicationProgress.ts`; contracts `src/lib/applicationProgressContracts.ts`; path helper `src/routing/eventFormPaths.ts` (`eventApplicationProgressPath`); route shell `src/pages/events/EventFormRoutes.tsx` (`EventApplicationProgressRoute`); `src/App.tsx` registers `/:eventSlug/applications/:applicationId` before `/:eventSlug/:formSlug`; form-journey deep link via `src/components/form-journey/FormJourneyShell.tsx` → `src/components/events/FormRenderer.tsx` (`participantProgressAction`, hidden under proxy)
+- tests: `src/lib/applicationProgressContracts.test.ts`, `src/lib/fetchApplicationProgress.test.ts`, `src/hooks/events/useApplicationProgress.test.tsx`, `src/pages/events/ApplicationProgressPage.test.tsx` (status/checks, sort_order ordering, empty checks, failed/waived, sensitive-key non-exposure, access denied), `src/routing/eventFormPaths.test.ts`, `src/pages/events/FormFillPage.test.tsx` (submitted progress deep link + proxy negative)
+- validate: `npm run validate` — PASS (`audit/202605191802-*` step reports + `audit/202605191803-pace-core-audit.md`)
+- contract (Evidence only): BASE BA05b — authority file lives in pace-core2 (`BA05b-participant-application-progress_requirements.md`), not vendored in this repo
 
 ### PR19 — Participant activity booking
 

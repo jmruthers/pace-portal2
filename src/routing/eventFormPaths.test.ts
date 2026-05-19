@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isReservedEventSlug, RESERVED_EVENT_SLUGS } from '@/routing/eventFormPaths';
+import { eventApplicationProgressPath, isReservedEventSlug, RESERVED_EVENT_SLUGS } from '@/routing/eventFormPaths';
 
 describe('eventFormPaths', () => {
   it('marks known app routes as reserved first segments', () => {
@@ -22,6 +22,12 @@ describe('eventFormPaths', () => {
 
   it('is case-insensitive', () => {
     expect(isReservedEventSlug('LOGIN')).toBe(true);
+  });
+
+  it('builds participant application progress path', () => {
+    expect(eventApplicationProgressPath('summer-gala', '11111111-1111-4111-a111-111111111111')).toBe(
+      '/summer-gala/applications/11111111-1111-4111-a111-111111111111'
+    );
   });
 
   it('documents reserved keys for route ordering reviews', () => {

@@ -36,6 +36,7 @@ import type { FormEntrypoint } from '@/lib/formEntrypointResolution';
 import { useFormEntrypoint, type FormJourneyReady } from '@/hooks/forms/useFormEntrypoint';
 import { useFormJourney, type FormJourneyPhase } from '@/hooks/forms/useFormJourney';
 import { resolveSubmitMode } from '@/lib/formSubmitAdapters';
+import { ParticipantProgressActionSlot } from '@/components/form-journey/ParticipantProgressNav';
 import type { SubmittedRegistrationSnapshot } from '@/lib/fetchSubmittedRegistrationSnapshot';
 import type { CoreFormFieldRow } from '@/shared/lib/formFieldMeta';
 import type { Database } from '@/types/pace-database';
@@ -255,6 +256,15 @@ function FormJourneyFillReady({
         isSubmitting={readOnly ? false : submission.isSubmitting}
         submitError={readOnly ? null : submitError}
         readOnly={readOnly}
+        participantProgressAction={
+          <ParticipantProgressActionSlot
+            entrypoint={entrypoint}
+            phase={phase}
+            submittedSnapshot={submittedSnapshot}
+            proxyActive={proxyActive}
+            onNavigate={navigate}
+          />
+        }
       />
     </>
   );

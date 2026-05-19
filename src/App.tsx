@@ -9,7 +9,11 @@ import { LoginHistoryRecorder } from '@/shared/components/LoginHistoryRecorder';
 import { OrganisationLoadingGate } from '@/shared/components/OrganisationLoadingGate';
 import { PortalAuthenticatedLayout } from '@/shared/components/PortalAuthenticatedLayout';
 import { ProfileCompleteLayout } from '@/shared/components/ProfileCompleteLayout';
-import { EventApplicationRoute, EventFormRoute } from '@/pages/events/EventFormRoutes';
+import {
+  EventApplicationProgressRoute,
+  EventApplicationRoute,
+  EventFormRoute,
+} from '@/pages/events/EventFormRoutes';
 import { OrgFormRoute } from '@/pages/forms/OrgFormRoutes';
 
 const LoginPage = lazy(async () => {
@@ -149,6 +153,7 @@ export default function App() {
               </Route>
               <Route path="forms/:formSlug" element={<OrgFormRoute />} />
               <Route path=":eventSlug/application" element={<EventApplicationRoute />} />
+              <Route path=":eventSlug/applications/:applicationId" element={<EventApplicationProgressRoute />} />
               <Route path=":eventSlug/:formSlug" element={<EventFormRoute />} />
               <Route path=":eventSlug" element={<EventHubPage />} />
             </Route>

@@ -16,3 +16,10 @@ export const RESERVED_EVENT_SLUGS = new Set([
 export function isReservedEventSlug(slug: string): boolean {
   return RESERVED_EVENT_SLUGS.has(slug.toLowerCase());
 }
+
+/** PR18 authenticated participant route `/:eventSlug/applications/:applicationId`. */
+export function eventApplicationProgressPath(eventSlug: string, applicationId: string): string {
+  const s = eventSlug.trim();
+  const id = applicationId.trim();
+  return `/${encodeURIComponent(s)}/applications/${encodeURIComponent(id)}`;
+}

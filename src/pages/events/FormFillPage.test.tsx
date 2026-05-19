@@ -324,18 +324,45 @@ describe('FormFillPage', () => {
     expect(await screen.findByText(/resuming your application/i)).toBeInTheDocument();
   });
 
-  it('shows read-only submitted journey without Start or Submit when a snapshot exists', async () => {
+  it('shows read-only submitted journey with progress deep link when a snapshot exists', async () => {
+    const applicationId = '11111111-1111-4111-a111-111111111111';
     fetchSubmittedMock.mockResolvedValue(
       ok({
-        applicationId: 'app-submitted',
+        applicationId,
         responseId: 'resp-submitted',
         valueByFieldId: { 'field-1': 'prior answer' },
       })
     );
+    const user = userEvent.setup();
     renderPage();
     expect(await screen.findByText(/this application was submitted/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^start$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^submit$/i })).not.toBeInTheDocument();
+    const progressBtn = screen.getByRole('button', { name: /view application progress/i });
+    expect(progressBtn).toBeInTheDocument();
+    await user.click(progressBtn);
+    expect(mockNavigate).toHaveBeenCalledWith(`/camp/applications/${applicationId}`);
+  });
+
+  it('hides progress deep link when proxy assist is active on a submitted snapshot', async () => {
+    const applicationId = '11111111-1111-4111-a111-111111111111';
+    proxyState.isProxyActive = true;
+    proxyState.targetPersonId = 'p-proxy';
+    proxyState.targetMemberId = 'm-proxy';
+    fetchSubmittedMock.mockResolvedValue(
+      ok({
+        applicationId,
+        responseId: 'resp-submitted',
+        valueByFieldId: { 'field-1': 'prior answer' },
+      })
+    );
+    useFormFillTargetPersonMock.mockReturnValue({
+      data: { first_name: 'Proxy', last_name: 'User', email: 'p@example.com' },
+      isLoading: false,
+      isError: false,
+    });
+    renderPage();
+    expect(await screen.findByText(/this application was submitted/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /view application progress/i })).not.toBeInTheDocument();
   });
 

@@ -9,6 +9,33 @@ const FormFillPage = lazy(async () => {
   return { default: m.FormFillPage };
 });
 
+const ApplicationProgressPage = lazy(async () => {
+  const m = await import('@/pages/events/ApplicationProgressPage');
+  return { default: m.ApplicationProgressPage };
+});
+
+/** Authenticated participant progress (`/:eventSlug/applications/:applicationId`, PR18). */
+export function EventApplicationProgressRoute() {
+  const { eventSlug = '', applicationId = '' } = useParams();
+  if (eventSlug === '' || applicationId === '') {
+    return <NotFoundPage />;
+  }
+  if (isReservedEventSlug(eventSlug)) {
+    return <NotFoundPage />;
+  }
+  return (
+    <Suspense
+      fallback={
+        <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
+          <LoadingSpinner label="Loading application progress…" />
+        </main>
+      }
+    >
+      <ApplicationProgressPage />
+    </Suspense>
+  );
+}
+
 function FormFillSuspense({ eventSlug, formSlug }: { eventSlug: string; formSlug: string | null }) {
   return (
     <Suspense

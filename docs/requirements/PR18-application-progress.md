@@ -7,10 +7,10 @@
 
 ## Acceptance criteria
 
-- [ ] Route exists under portal event workflows at `/:eventSlug/applications/:applicationId`.
-- [ ] The page shows application status and participant-visible approval-check progress context.
-- [ ] Organiser-only controls and token internals are never exposed.
-- [ ] Non-draft submitted applications from form journey can deep-link to this page.
+- [x] Route exists under portal event workflows at `/:eventSlug/applications/:applicationId`.
+- [x] The page shows application status and participant-visible approval-check progress context.
+- [x] Organiser-only controls and token internals are never exposed.
+- [x] Non-draft submitted applications from form journey can deep-link to this page.
 
 ## API / Contract
 

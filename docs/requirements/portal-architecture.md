@@ -110,9 +110,10 @@ These rules apply across slices; PR requirement docs reference this section inst
 - `/profile/edit/:memberId`
 - `/:eventSlug` (participant event hub)
 - `/:eventSlug/application` (canonical event application entrypoint)
+- `/:eventSlug/applications/:applicationId` (participant application progress; PR18 — register **before** `/:eventSlug/:formSlug` in the router)
 - `/:eventSlug/:formSlug` (event-scoped form route)
 
-**Matching rule:** Reserved paths such as `/login`, `/register`, `/dashboard`, `/profile-complete`, and delegated profile routes must **not** be captured by the generic `/:eventSlug/:formSlug` matcher.
+**Matching rule:** Reserved paths such as `/login`, `/register`, `/dashboard`, `/profile-complete`, and delegated profile routes must **not** be captured by the generic `/:eventSlug/:formSlug` matcher. The `applications` segment must not be captured as a form slug.
 
 **Integrations (summary):** Supabase auth, tables, RPCs, storage; Google Maps Places loader; repo edge functions as present.
 
@@ -124,6 +125,7 @@ These rules apply across slices; PR requirement docs reference this section inst
 | Session present; route = `/:eventSlug` | Show participant event hub page (event summary + forms/checklist/links). |
 | Session present; route = `/:eventSlug/application` | Resolve the event's `base_registration` primary entrypoint form (`is_primary_entrypoint = true`) and run the shared form journey. |
 | Session present; route = `/:eventSlug/:formSlug` | Resolve explicit event form slug and run the shared form journey. |
+| Session present; route = `/:eventSlug/applications/:applicationId` | Show participant application status and approval-check progress (PR18 / BA05b); deep link from submitted form journey when not in proxy mode. |
 | Session present; submit | Final persistence follows workflow-specific adapters/contracts (registration now; additional workflows in follow-up slices). |
 
 The implementation must branch on auth and routing state, not assume a single page for all cases.

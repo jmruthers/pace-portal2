@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef } from 'react';
+import { Fragment, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import type { UseFormReturn } from '@solvera/pace-core/forms';
 import {
   Alert,
@@ -52,6 +52,8 @@ export type FormRendererProps = {
   submitError: string | null;
   /** When true, suppresses autosave, disables fields, and hides submit (PR17 view-submitted). */
   readOnly?: boolean;
+  /** Placed immediately after the read-only submitted banner when `readOnly` (PR18 application progress deep link). */
+  participantProgressAction?: ReactNode;
 };
 
 type FormRendererBodyProps = FormRendererProps & {
@@ -121,6 +123,7 @@ function FormRendererBody({
   isSubmitting,
   submitError,
   readOnly = false,
+  participantProgressAction,
   form,
   registry,
 }: FormRendererBodyProps) {
@@ -193,6 +196,8 @@ function FormRendererBody({
           <AlertDescription>This application was submitted. You can review your answers below.</AlertDescription>
         </Alert>
       ) : null}
+
+      {readOnly && participantProgressAction ? participantProgressAction : null}
 
       {formDescription ? (
         <Card>
