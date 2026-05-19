@@ -21,7 +21,7 @@ describe('resolveRbacAppIdForSetup', () => {
     });
     const client = { auth: { getSession }, rpc } as never;
     const { resolveRbacAppIdForSetup } = await import('@/lib/rbacResolveAppId');
-    await expect(resolveRbacAppIdForSetup(client, 'pace')).resolves.toBe('rid-1');
-    expect(rpc).toHaveBeenCalledWith('data_app_resolve', { p_app_name: 'pace', p_user_id: 'user-1' });
+    await expect(resolveRbacAppIdForSetup(client, 'PACE')).resolves.toBe('rid-1');
+    expect(rpc).toHaveBeenCalledWith('data_app_resolve', { p_app_name: 'PACE', p_user_id: 'user-1' });
   });
 });

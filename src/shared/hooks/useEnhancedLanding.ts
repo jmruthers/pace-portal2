@@ -17,12 +17,9 @@ import {
   ok,
   type ApiResult,
 } from '@solvera/pace-core/types';
-import { toTypedSupabase, toSupabaseClientLike } from '@/lib/supabase-typed';
+import { toTypedSupabase } from '@/lib/supabase-typed';
 import { distinctEligibleEventIds } from '@/shared/lib/dashboardEventVisibility';
-import {
-  resolveDashboardEventLogoUrls,
-  type EventLogoRefRow,
-} from '@/shared/lib/eventDashboardLogos';
+import { fetchApplicationStatusByEventIds } from '@/shared/lib/fetchApplicationStatusByEventIds';
 /** Re-export for modules that imported this constant from `useEnhancedLanding`. */
 export { NO_PERSON_PROFILE_ERROR_CODE } from '@/shared/lib/utils/userUtils';
 
@@ -30,12 +27,8 @@ type MediRow = Database['public']['Tables']['medi_profile']['Row'] | null;
 type PhoneRow = Database['public']['Tables']['core_phone']['Row'];
 type EventRow = Database['public']['Tables']['core_events']['Row'];
 
-/**
- * Event row plus optional resolved logo URL for the dashboard card (`core_file_references` for
- * `core_events` + storage public/signed URL). pace-core `data_user_events_get.event_logo` also
- * returns a storage path for RPC consumers.
- */
-export type DashboardEvent = EventRow & { event_logo?: string | null };
+/** Dashboard event row (`core_events`); logos resolved via PR14 {@link useFileReferences}. */
+export type DashboardEvent = EventRow;
 
 /** Groups organisation events by `registration_scope` for dashboard sections (testable). */
 export function groupEventsByRegistrationScope(
@@ -105,6 +98,8 @@ export type EnhancedLandingModel = {
   additionalContacts: AdditionalContactRow[];
   /** Events grouped by `registration_scope` as category buckets. */
   eventsByCategory: Record<string, DashboardEvent[]>;
+  /** `base_application.status` keyed by `event_id` for the signed-in person's applications. */
+  applicationStatusByEventId: Record<string, string>;
   profileProgress: ProfileProgressResult;
   /** True when no `core_person` row exists for the user in org context (dashboard setup prompt). */
   needsProfileSetup: boolean;
@@ -118,6 +113,7 @@ export function createEmptyEnhancedLandingModel(needsProfileSetup: boolean): Enh
     phones: [],
     additionalContacts: [],
     eventsByCategory: {},
+    applicationStatusByEventId: {},
     profileProgress: computeProfileProgress({ person: null, member: null }),
     needsProfileSetup,
   };
@@ -201,34 +197,19 @@ export async function fetchEnhancedLanding(
     const eventList = (events.data ?? []) as EventRow[];
     const eventIds = eventList.map((e) => e.event_id);
 
-    let logoUrlByEventId = new Map<string, string>();
+    let applicationStatusByEventId: Record<string, string> = {};
     if (eventIds.length > 0) {
-      const refsRes = await client
-        .from('core_file_references')
-        .select('record_id, file_path, is_public, file_metadata, created_at')
-        .eq('table_name', 'core_events')
-        .in('record_id', eventIds);
-
-      if (refsRes.error) {
-        return err({
-          code: 'ENHANCED_LANDING_QUERY',
-          message: refsRes.error.message || 'Could not load dashboard data.',
-        });
+      const appStatusRes = await fetchApplicationStatusByEventIds(client, personId, eventIds, {
+        code: 'ENHANCED_LANDING_QUERY',
+        fallbackMessage: 'Could not load dashboard data.',
+      });
+      if (!isOk(appStatusRes)) {
+        return err(appStatusRes.error);
       }
-
-      const storageClient = toSupabaseClientLike(secure) as Parameters<
-        typeof resolveDashboardEventLogoUrls
-      >[0];
-      logoUrlByEventId = await resolveDashboardEventLogoUrls(
-        storageClient,
-        (refsRes.data ?? []) as EventLogoRefRow[]
-      );
+      applicationStatusByEventId = appStatusRes.data;
     }
 
-    const eventRows: DashboardEvent[] = eventList.map((e) => ({
-      ...e,
-      event_logo: logoUrlByEventId.get(e.event_id) ?? null,
-    }));
+    const eventRows: DashboardEvent[] = eventList.map((e) => ({ ...e }));
     const eventsByCategory = groupEventsByRegistrationScope(eventRows);
 
     const progress = computeProfileProgress({
@@ -256,6 +237,7 @@ export async function fetchEnhancedLanding(
       phones: phones.data ?? [],
       additionalContacts: contactRows,
       eventsByCategory,
+      applicationStatusByEventId,
       profileProgress: progress,
       needsProfileSetup: false,
     });
@@ -283,7 +265,7 @@ export function useEnhancedLanding() {
   );
 
   const query = useQuery({
-    queryKey: ['enhancedLanding', 'v3', userId, organisationId, accessibleOrganisationIds.join(',')],
+    queryKey: ['enhancedLanding', 'v4', userId, organisationId, accessibleOrganisationIds.join(',')],
     enabled: Boolean(client && userId && organisationId),
     staleTime: 60_000,
     queryFn: async (): Promise<ApiResult<EnhancedLandingModel>> => {

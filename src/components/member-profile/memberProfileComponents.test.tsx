@@ -25,7 +25,7 @@ describe('member profile composition (PR03)', () => {
     }
   });
 
-  it('ProfilePrompts delegated context routes member profile to profile edit', async () => {
+  it('ProfilePrompts delegated context routes member profile to member-profile with target query', async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter initialEntries={['/']}>
@@ -39,8 +39,14 @@ describe('member profile composition (PR03)', () => {
               />
             }
           />
-          <Route path="/profile/edit/:memberId" element={<p>Edit delegated target</p>} />
-          <Route path="/member-profile" element={<p>Self service</p>} />
+          <Route
+            path="/member-profile"
+            element={
+              <output>
+                Delegated member profile route
+              </output>
+            }
+          />
           <Route path="/medical-profile" element={<p>Medical</p>} />
           <Route path="/additional-contacts" element={<p>Contacts</p>} />
         </Routes>
@@ -48,7 +54,7 @@ describe('member profile composition (PR03)', () => {
     );
     const opens = screen.getAllByRole('button', { name: /^open$/i });
     await user.click(opens[0]!);
-    expect(screen.getByText(/edit delegated target/i)).toBeInTheDocument();
+    expect(screen.getByText(/delegated member profile route/i)).toBeInTheDocument();
   });
 
   it('ProfileSetupPrompt offers setup navigation', async () => {

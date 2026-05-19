@@ -1,10 +1,15 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MedicalConditionsSection } from '@/components/medical-profile/MedicalConditionsSection';
+
+const medicalMocks = vi.hoisted(() => ({
+  deleteMutateAsync: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock('@/hooks/medical-profile/useMedicalConditions', () => ({
   useMedicalConditions: () => ({
-    deleteCondition: { mutateAsync: vi.fn(), isPending: false },
+    deleteCondition: { mutateAsync: medicalMocks.deleteMutateAsync, isPending: false },
   }),
 }));
 
@@ -85,6 +90,8 @@ const sampleCondition = {
 describe('MedicalConditionsSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    medicalMocks.deleteMutateAsync.mockReset();
+    medicalMocks.deleteMutateAsync.mockResolvedValue(undefined);
   });
 
   it('renders simplified card content with type/severity/alert badges', async () => {
@@ -115,5 +122,26 @@ describe('MedicalConditionsSection', () => {
     );
 
     expect(screen.getByText('Attachment')).toBeInTheDocument();
+  });
+
+  it('shows delete error when removal fails', async () => {
+    const user = userEvent.setup();
+    medicalMocks.deleteMutateAsync.mockRejectedValueOnce(new Error('Permission denied'));
+
+    render(
+      <MedicalConditionsSection
+        conditions={[{ ...sampleCondition, action_plan_file_id: 'file-1' }] as never}
+        profileId="mp1"
+        organisationId="org-1"
+        appId="app-1"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /^delete$/i }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: /^delete$/i }));
+
+    expect(await screen.findByText(/permission denied/i)).toBeInTheDocument();
+    expect(dialog).toBeInTheDocument();
   });
 });

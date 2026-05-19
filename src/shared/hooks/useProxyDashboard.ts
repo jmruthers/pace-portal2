@@ -15,6 +15,7 @@ import {
 import { toTypedSupabase } from '@/lib/supabase-typed';
 import type { AdditionalContactRow, EnhancedLandingModel } from '@/shared/hooks/useEnhancedLanding';
 import { groupEventsByRegistrationScope } from '@/shared/hooks/useEnhancedLanding';
+import { fetchApplicationStatusByEventIds } from '@/shared/lib/fetchApplicationStatusByEventIds';
 
 type MediRow = Database['public']['Tables']['medi_profile']['Row'] | null;
 type PhoneRow = Database['public']['Tables']['core_phone']['Row'];
@@ -126,6 +127,20 @@ export async function fetchDelegatedWorkspace(
       (memberContacts.data ?? []) as Array<Record<string, unknown>>
     );
     const eventRows = (events.data ?? []) as EventRow[];
+    const eventIds = eventRows.map((e) => e.event_id);
+
+    let applicationStatusByEventId: Record<string, string> = {};
+    if (eventIds.length > 0) {
+      const appStatusRes = await fetchApplicationStatusByEventIds(client, personId, eventIds, {
+        code: 'PROXY_DASHBOARD_QUERY',
+        fallbackMessage: 'Could not load delegated workspace data.',
+      });
+      if (!isOk(appStatusRes)) {
+        return err(appStatusRes.error);
+      }
+      applicationStatusByEventId = appStatusRes.data;
+    }
+
     const eventsByCategory = groupEventsByRegistrationScope(eventRows);
 
     const progress = computeProfileProgress({
@@ -151,6 +166,7 @@ export async function fetchDelegatedWorkspace(
       phones: (phones.data ?? []) as PhoneRow[],
       additionalContacts: contactRows,
       eventsByCategory,
+      applicationStatusByEventId,
       profileProgress: progress as ProfileProgressResult,
       needsProfileSetup: false,
     });

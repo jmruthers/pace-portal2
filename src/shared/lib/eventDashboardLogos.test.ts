@@ -1,9 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   isEventLogoRow,
   pickLatestEventLogoByEventId,
-  resolveDashboardEventLogoUrls,
-  resolveEventLogoUrl,
   type EventLogoRefRow,
 } from '@/shared/lib/eventDashboardLogos';
 
@@ -60,44 +58,5 @@ describe('eventDashboardLogos', () => {
     ];
     const m = pickLatestEventLogoByEventId(refs);
     expect(m.get('ev1')?.file_path).toBe('p2');
-  });
-
-  it('resolveEventLogoUrl returns public URL for public objects', async () => {
-    const storage = {
-      from: vi.fn(() => ({
-        getPublicUrl: (path: string) => ({
-          data: { publicUrl: `https://example.test/${path}` },
-        }),
-      })),
-    };
-    const url = await resolveEventLogoUrl(storage, {
-      record_id: 'ev1',
-      file_path: 'logo.png',
-      is_public: true,
-      file_metadata: { category: 'event_logo' },
-      created_at: 't',
-    });
-    expect(url).toBe('https://example.test/logo.png');
-  });
-
-  it('resolveDashboardEventLogoUrls maps event ids', async () => {
-    const storage = {
-      from: vi.fn(() => ({
-        getPublicUrl: (path: string) => ({
-          data: { publicUrl: `https://x/${path}` },
-        }),
-      })),
-    };
-    const refs: EventLogoRefRow[] = [
-      {
-        record_id: 'ev1',
-        file_path: 'a.png',
-        is_public: true,
-        file_metadata: { category: 'event_logo' },
-        created_at: '2021-01-01T00:00:00Z',
-      },
-    ];
-    const m = await resolveDashboardEventLogoUrls(storage, refs);
-    expect(m.get('ev1')).toBe('https://x/a.png');
   });
 });

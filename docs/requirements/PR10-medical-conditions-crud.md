@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR10-medical-conditions-crud.md`** — portal requirement slice **PR10** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR10-medical-conditions-crud.md`** — portal requirement slice **PR10** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -80,7 +80,7 @@ This file is **`PR10-medical-conditions-crud.md`** — portal requirement slice 
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
 - `src/pages/medical-profile/MedicalProfilePage.tsx`
 - `src/components/medical-profile/MedicalConditionsSection.tsx`
 - `src/components/medical-profile/MedicalConditionForm.tsx`
@@ -88,9 +88,9 @@ This file is **`PR10-medical-conditions-crud.md`** — portal requirement slice 
 - `src/hooks/medical-profile/useMediConditionTypes.ts`
 - `src/hooks/medical-profile/useActionPlans.ts`
 - `src/utils/medical-profile/medicalConditionValidation.ts`
-- [Project brief: pace-portal](./PR00-portal-project-brief.md)
-- [Portal architecture](./PR00-portal-architecture.md)
-- Legacy ID mapping: [PR00-portal-architecture.md](./PR00-portal-architecture.md#appendix-a-legacy-slice-id-mapping-por-to-pr)
+- [Project brief: pace-portal](./portal-project-brief.md)
+- [Portal architecture](./portal-architecture.md)
+- Legacy ID mapping: [portal-architecture.md](./portal-architecture.md#appendix-a-legacy-slice-id-mapping-por-to-pr)
 
 ---
 
@@ -100,4 +100,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

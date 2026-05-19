@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR16-event-application-submission.md`** — portal requirement slice **PR16** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR16-event-application-submission.md`** — portal requirement slice **PR16** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -12,29 +12,34 @@ This file is **`PR16-event-application-submission.md`** — portal requirement s
 - Purpose and scope: rebuild the final application save and submit path so event forms write the expected application and response records, transition draft workflows to submitted state, and return the user to the dashboard after success.
 - Dependencies: `pace-core` feedback and navigation patterns where they fit; draft-application support; proxy-mode person resolution; response and response-value persistence; application create/update helpers.
 - Standards: 01 Project Structure, 02 Architecture, 03 Security/RBAC, 04 API/Tech Stack, 05 pace-core Compliance, 08 Testing/Documentation, 09 Operations (user-safe messages; avoid logging PII on client failure paths).
-- Current baseline behavior: the page groups submitted values by table, upserts or inserts the backing records, ensures a `base_application` row exists or is updated for event forms, creates `core_form_responses` and `core_form_response_values` rows, shows toast feedback, navigates back to `/`, and sanitizes errors for development logging.
-- Rebuild delta: keep submission as the final authenticated form step, preserve the current persistence contract, make draft-to-submitted transition rules explicit, keep proxy-mode handling and organisation-context checks explicit, and hide the persistence orchestration behind a narrow service/helper boundary so the page stays thin and testable.
+- Current baseline behavior (historical): some stacks grouped submitted values by table and upserted backing rows before creating applications; pace-portal aligns final submit with BASE BA05a (`app_base_application_create` plus linked form response) instead.
+- Rebuild delta: keep submission as the final authenticated form step, persist answers through `core_form_response_values` and finalize `core_form_responses`, make draft-to-submitted transition rules explicit, keep proxy-mode handling and organisation-context checks explicit, and hide the persistence orchestration behind a narrow service/helper boundary so the page stays thin and testable.
 
 ## Acceptance criteria
 
-- [ ] Submitting an event form creates or updates the application record.
-- [ ] Form response and response-value rows are written successfully.
-- [ ] A draft workflow transitions to submitted state without leaving duplicate applications behind.
-- [ ] Proxy-mode submission uses the target person correctly.
-- [ ] The user gets a clear error when organisation context is missing.
-- [ ] Partial-failure cases do not report success or leave orphaned rows presented as a completed submit.
-- [ ] Successful submission redirects the user back to the dashboard.
+- [ ] Submitting an event form creates or updates the application record. **— Partial:** creation via `app_base_application_create` after response persistence is implemented; **legacy** rows where `base_application.status` is already `draft` return `APPLICATION_RPC_FAILED` with a support message until backend migration or RPC supports transitioning that row (see Implementation notes).
+- [x] Form response and response-value rows are written successfully.
+- [ ] A draft workflow transitions to submitted state without leaving duplicate applications behind. **— Partial:** response-first drafts (no `base_application` until submit) reuse draft responses and avoid duplicate applications; non-draft duplicates surface `DUPLICATE_SUBMIT_PREVENTED`; legacy draft `base_application` rows remain blocked as above.
+- [x] Proxy-mode submission uses the target person correctly.
+- [x] The user gets a clear error when organisation context is missing.
+- [ ] Partial-failure cases do not report success or leave orphaned rows presented as a completed submit. **— Partial (UX):** `PARTIAL_PERSISTENCE` returns a destructive toast and no redirect; **data:** if RPC succeeds and response finalisation fails, an orphan `base_application` row may exist — documented in implementation notes (no automated rollback in client).
+- [x] Successful submission redirects the user back to the dashboard.
+
+## Implementation notes (pace-portal)
+
+- **Persistence contract:** Submit writes dynamic answers to `core_form_response_values`, calls `app_base_application_create` with `p_form_response_id` (and related keys), then updates `core_form_responses` to `submitted` and links `workflow_subject_*` to the new application. The portal does **not** perform separate client-side upserts into domain tables (`core_person`, `core_member`, etc.) on submit; field domains remain for PR15 prefill and cataloguing unless BASE/backend projects values elsewhere.
+- **Legacy draft `base_application`:** Supported path is draft **`core_form_responses`** without a submitted application. Rows that already have `base_application` in `draft` require migration or a future RPC path — out of scope for the current slice unless product expands BA05a consumption.
 
 ## API / Contract
 
 - Public exports: `src/pages/events/FormFillPage.tsx`, `src/hooks/events/useApplicationSubmission.ts`, `src/hooks/events/useDraftApplication.ts`, and the submit branch inside `src/components/events/FormRenderer.tsx`.
 - Public service contracts: application create/update, response persistence, draft-to-submitted transition, and duplicate-safe submission semantics must be exposed through a narrow event-application helper or service boundary.
 - File paths under the app: `src/pages/events/FormFillPage.tsx`, `src/hooks/events/useApplicationSubmission.ts`, `src/hooks/events/useDraftApplication.ts`, `src/components/events/FormRenderer.tsx`.
-- Data contracts: `base_application`, `core_form_responses`, `core_form_response_values`, form-backed tables targeted by `FormData`, `app_base_application_create`, proxy-mode person resolution, and the idempotency / duplicate-prevention strategy used by the submit path.
+- Data contracts: `base_application`, `core_form_responses`, `core_form_response_values`, `app_base_application_create`, proxy-mode person resolution, and the idempotency / duplicate-prevention strategy used by the submit path. Form-key domains (`person.*`, `member.*`, etc.) inform PR15 prefill; **final submit persistence for pace-portal is response rows + BA05a RPC** unless a later slice adds client-side domain writes.
 - ID contract: submission boundaries in this slice should use `UserId`, `OrganisationId`, `EventId`, `AppId`, and `PageId` from `@solvera/pace-core/types` where acting user, target member, organisation, event, application, and guarded-page identifiers are passed through submission services.
 - Result contract: submission helpers in this slice should return `ApiResult<T>` from `@solvera/pace-core/types` and use `ok`, `err`, `isOk`, and `isErr` for submit success, duplicate-prevention, and failure branches instead of ad hoc result shapes.
 - **Idempotency and duplicate-safe submit (normative):**
-  - **Draft reuse:** Before creating a new `base_application` row for an event form, load existing rows for the same **acting context** (self or proxy target person per hooks), event, and form scope; **reuse** the draft row when status is `draft` instead of inserting duplicates.
+  - **Draft reuse:** Before creating a new `base_application` row for an event form, load existing rows for the same **acting context** (self or proxy target person per hooks), event, and form scope; **reuse** the draft row when status is `draft` instead of inserting duplicates. **pace-portal caveat:** response-first drafts defer `base_application` creation until submit; an existing legacy `base_application` in `draft` is **not** auto-transitioned (returns `APPLICATION_RPC_FAILED` until migration/RPC support — see Implementation notes).
   - **Submit / double-click / retry:** Final submit must be safe under **repeated calls** (second click, network retry). Rely on **database uniqueness / RPC semantics** documented for the target Supabase project (e.g. one non-draft application per member/event/form combination) plus application code that treats “already submitted” as **`DUPLICATE_SUBMIT_PREVENTED`** (success or controlled `err` per table below), not as a silent second insert.
   - **Partial failure:** If any persistence step fails after another succeeded, return `err` with code **`PARTIAL_PERSISTENCE`**; **do not** show success toast or navigate home. Roll back or compensate per schema capabilities; document any unavoidable orphan-row handling in implementation notes for the target repo.
 - **`ApiResult` error taxonomy (stable `error` string identifiers for automation/tests):**
@@ -69,7 +74,7 @@ Use these exact identifiers in `err(...)` payloads (or attach as `error.code` if
 ## Testing requirements
 
 - Required automated coverage: unit coverage for the submit helper, integration coverage for the form page submit branch, and regression coverage for duplicate-prevention behavior.
-- Required scenarios: happy-path submit, proxy submit, existing-application update, missing-organisation failure, application RPC failure, partial response-write failure, and duplicate-safe retry behavior.
+- Required scenarios: happy-path submit, proxy submit (including applicant person wiring), missing-organisation failure, application RPC failure, partial response-write failure, duplicate-safe RPC messaging, and submit UX on `PARTIAL_PERSISTENCE` / errors (no false redirect). **Deferred:** automated “existing-application update” for legacy draft `base_application` until that path is implemented or removed from scope.
 - Required assertions: submission tests should exercise both `ApiResult` success and failure branches so form-level error handling stays consistent with the shared service contract.
 
 ## Slice boundaries
@@ -87,9 +92,10 @@ Use these exact identifiers in `err(...)` payloads (or attach as `error.code` if
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
-- [Project brief: pace-portal](./PR00-portal-project-brief.md)
-- [pace-portal architecture](./PR00-portal-architecture.md)
+- BASE BA05a requirements (sibling repo): [`../../../pace-core2/docs/requirements/base/BA05a-registration-entry-and-application-submission_requirements.md`](../../../pace-core2/docs/requirements/base/BA05a-registration-entry-and-application-submission_requirements.md) — authoritative RPC semantics for `app_base_application_create`.
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [Project brief: pace-portal](./portal-project-brief.md)
+- [pace-portal architecture](./portal-architecture.md)
 - `src/pages/events/FormFillPage.tsx`
 - `src/hooks/events/useApplicationSubmission.ts`
 - `src/hooks/events/useDraftApplication.ts`
@@ -103,4 +109,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

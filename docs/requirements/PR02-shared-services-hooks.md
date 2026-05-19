@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR02-shared-services-hooks.md`** — portal requirement slice **PR02** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR02-shared-services-hooks.md`** — portal requirement slice **PR02** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -64,7 +64,7 @@ Not applicable.
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
 - `src/lib/supabase.ts`
 - `src/shared/hooks/useReferenceData.ts`
 - `src/shared/hooks/useEnhancedLanding.ts`
@@ -73,8 +73,8 @@ Not applicable.
 - `src/shared/lib/utils/userUtils.ts`
 - `src/shared/lib/utils/userDataCache.ts`
 - `src/shared/lib/utils/inputValidation.ts`
-- `./PR00-portal-project-brief.md`
-- `./PR00-portal-architecture.md`
+- `./portal-project-brief.md`
+- `./portal-architecture.md`
 
 ---
 
@@ -84,4 +84,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

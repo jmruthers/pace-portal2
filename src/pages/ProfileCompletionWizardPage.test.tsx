@@ -1,13 +1,17 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useZodForm } from '@solvera/pace-core/hooks';
+
+const { toastMock } = vi.hoisted(() => ({
+  toastMock: vi.fn(),
+}));
 
 vi.mock('@solvera/pace-core/hooks', async (importOriginal) => {
   const mod = await importOriginal<typeof import('@solvera/pace-core/hooks')>();
   return {
     ...mod,
-    useToast: () => ({ toast: vi.fn() }),
+    useToast: () => ({ toast: toastMock }),
   };
 });
 import {
@@ -104,6 +108,10 @@ function baseWizardState(overrides: Record<string, unknown> = {}) {
 }
 
 describe('ProfileCompletionWizardPage', () => {
+  beforeEach(() => {
+    toastMock.mockClear();
+  });
+
   describe('loading and main chrome', () => {
     it('shows loading when the shell is resolving data', () => {
       render(<LoadingWizardPage />);
@@ -150,6 +158,30 @@ describe('ProfileCompletionWizardPage', () => {
       render(<SaveErrorPage />);
       expect(screen.getByText(/save failed/i)).toBeInTheDocument();
       expect(screen.getByText(/could not save a phone number/i)).toBeInTheDocument();
+    });
+
+    it('shows success toast when saveStatus transitions to success', () => {
+      function PageWithSaveStatus({ saveStatus }: { saveStatus: 'idle' | 'success' }) {
+        const form = useZodForm({
+          schema: memberProfileWizardSchema,
+          defaultValues: emptyMemberProfileFormValues(),
+        });
+        mockWizard.mockReturnValue({
+          ...baseWizardState(),
+          saveStatus,
+          form,
+        });
+        return <ProfileCompletionWizardPage />;
+      }
+
+      const { rerender } = render(<PageWithSaveStatus saveStatus="idle" />);
+      expect(toastMock).not.toHaveBeenCalled();
+      rerender(<PageWithSaveStatus saveStatus="success" />);
+      expect(toastMock).toHaveBeenCalledTimes(1);
+      expect(toastMock).toHaveBeenCalledWith({
+        title: 'Profile saved',
+        description: 'Taking you to the next screen…',
+      });
     });
 
     it('renders final-step actions on the last step', async () => {

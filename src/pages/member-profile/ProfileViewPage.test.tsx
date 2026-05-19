@@ -35,10 +35,11 @@ vi.mock('@solvera/pace-core/rbac', () => ({
     return <>{children}</>;
   },
   AccessDenied: () => <p>Access denied</p>,
+  useSecureSupabase: () => null,
 }));
 
 vi.mock('@solvera/pace-core', () => ({
-  useUnifiedAuthContext: () => ({ appId: 'app-1' }),
+  useUnifiedAuthContext: () => ({ user: { id: 'u1' } }),
 }));
 
 const orgState = vi.hoisted(() => ({

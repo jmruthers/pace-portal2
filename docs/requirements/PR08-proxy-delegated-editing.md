@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR08-proxy-delegated-editing.md`** — portal requirement slice **PR08** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR08-proxy-delegated-editing.md`** — portal requirement slice **PR08** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -33,7 +33,7 @@ This file is **`PR08-proxy-delegated-editing.md`** — portal requirement slice 
 - File paths: `src/pages/member-profile/ProfileViewPage.tsx`, `src/pages/member-profile/ProfileEditProxyPage.tsx`, `src/shared/hooks/useProxyMode.ts`, `src/shared/hooks/useProxyDashboard.ts`, `src/components/contacts/LinkedProfileCard.tsx`, `src/shared/components/ProxyModeBanner.tsx`, `src/hooks/contacts/useLinkedProfiles.ts`.
 - Data contracts: `editProxyMode` localStorage payload, `data_pace_member_access_get`, `data_pace_member_profile_get`, `data_pace_member_contacts_list`, `core_person`, `core_member`, and `core_phone`.
 - ID contract: proxy-session payloads, delegated member lookups, and permission boundaries in this slice should use `UserId`, `OrganisationId`, and `PageId` from `@solvera/pace-core/types` instead of treating delegated targets and page permissions as untyped strings.
-- Permission and context contracts: authenticated only; access must be confirmed through both RBAC and contact/member permissions; owner access wins; edit access enables delegated editing; view access remains read-only; delegated profile access must follow the layered page-permission and resource-permission contract in `./PR00-portal-architecture.md#rbac-and-route-permission-model`; invalid or self-targeting proxy sessions must be cleared; downstream reads and writes must still revalidate server-side.
+- Permission and context contracts: authenticated only; access must be confirmed through both RBAC and contact/member permissions; owner access wins; edit access enables delegated editing; view access remains read-only; delegated profile access must follow the layered page-permission and resource-permission contract in `./portal-architecture.md#rbac-and-route-permission-model`; invalid or self-targeting proxy sessions must be cleared; downstream reads and writes must still revalidate server-side.
 
 ### Delegated module reach (normative matrix)
 
@@ -80,8 +80,8 @@ If a future slice adds a new protected route, extend this matrix in the same tab
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
-- [Portal RBAC constraint](./PR00-portal-architecture.md#rbac-and-route-permission-model)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [Portal RBAC constraint](./portal-architecture.md#rbac-and-route-permission-model)
 - Self-service profile: [PR07-member-profile-self-service.md](./PR07-member-profile-self-service.md)
 - `src/pages/member-profile/ProfileViewPage.tsx`
 - `src/pages/member-profile/ProfileEditProxyPage.tsx`
@@ -100,4 +100,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

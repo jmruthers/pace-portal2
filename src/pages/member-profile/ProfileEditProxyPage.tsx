@@ -4,7 +4,7 @@ import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
 import { Alert, AlertDescription, AlertTitle, Button, LoadingSpinner } from '@solvera/pace-core/components';
 import { AccessDenied, PagePermissionGuard } from '@solvera/pace-core/rbac';
 import { ContactSummaryCard } from '@/components/contacts/ContactSummaryCard';
-import { EventList } from '@/components/events/EventList';
+import { DashboardEventSelector } from '@/components/events/DashboardEventSelector';
 import { ProfilePrompts } from '@/components/member-profile/ProfilePrompts';
 import { useProxyDashboard } from '@/shared/hooks/useProxyDashboard';
 import { useProxyMode } from '@/shared/hooks/useProxyMode';
@@ -139,7 +139,10 @@ function ProfileEditProxyContent() {
         profileProgress={data.profileProgress}
         navContext={{ kind: 'delegated', memberId }}
       />
-      <EventList eventsByCategory={data.eventsByCategory} />
+      <DashboardEventSelector
+        eventsByCategory={data.eventsByCategory}
+        applicationStatusByEventId={data.applicationStatusByEventId}
+      />
       <Button type="button" variant="secondary" onClick={() => navigate('/')}>
         Back to dashboard
       </Button>

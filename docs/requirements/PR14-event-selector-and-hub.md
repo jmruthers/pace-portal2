@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice **PR14** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice **PR14** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -16,28 +16,17 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 
 ## Acceptance criteria
 
-- [ ] The slice replaces the placeholder `EventList` interaction from PR03 with the resolved dashboard-side `Apply` / `Resume` / `Manage` flow.
-- [ ] The dashboard event selector shows `Apply` when no application exists, `Resume` when a draft application exists, and `Manage` when an application exists with any non-`draft` status.
-- [ ] `Resume` routes to the same authenticated application path as `Apply`.
-- [ ] `Manage`/open routes to `/:eventSlug` (participant event hub) and not a modal-only dead-end.
-- [ ] The participant event hub page shows event name, logo, dates, participant blurb, admin email, website (when present), application status, and active forms/workflow links without `context_id` grouping.
-- [ ] When the viewer is already scoped as a participant for the event, the participant event hub includes a `View itinerary` link or action to `/:eventSlug/itinerary`.
-- [ ] Missing event, inactive-window, and logo-fallback states are visible and testable on selector/hub surfaces.
-- [ ] The dashboard event list shows **only** events that have at least one **published** form that is active (not deactivated) and within its open window, scoped to organisations the user can access (see **Dashboard event list visibility** below).
-- [ ] When no event qualifies, the dashboard events section is empty while other landing sections still load.
+- [x] The slice replaces the placeholder `EventList` interaction from PR03 with the resolved dashboard-side `Apply` / `Resume` / `Manage` flow.
+- [x] The dashboard event selector shows `Apply` when no application exists, `Resume` when a draft application exists, and `Manage` when an application exists with any non-`draft` status.
+- [x] `Resume` routes to the same authenticated application path as `Apply`.
+- [x] `Manage`/open routes to `/:eventSlug` (participant event hub) and not a modal-only dead-end.
+- [x] The participant event hub page shows event name, logo, dates, participant blurb, admin email, website (when present), application status, and active forms/workflow links without `context_id` grouping.
+- [x] When the viewer is already scoped as a participant for the event, the participant event hub includes a `View itinerary` link or action to `/:eventSlug/itinerary`.
+- [x] Missing event, inactive-window, and logo-fallback states are visible and testable on selector/hub surfaces.
+- [x] The dashboard event list shows **only** events that have at least one **published** form that is active (not deactivated) and within its open window, scoped to organisations the user can access (see **Dashboard event list visibility** below).
+- [x] When no event qualifies, the dashboard events section is empty while other landing sections still load.
 
 ## API / Contract
-
-### Dashboard event list visibility (normative)
-
-- **Eligibility:** Show a dashboard event card **only if** the event has at least one qualifying form row in `core_forms`.
-- **Organisation scope:** Consider only forms whose `organisation_id` is in the same set of organisations the user may access for enhanced landing (membership / RBAC-derived list used by `useEnhancedLanding`).
-- **Qualifying form (“open” for members):**
-  - **`status = 'published'`** — product meaning of “open”; `draft` and `closed` do not count.
-  - **`event_id` is non-null** and identifies the event row in `core_events`.
-  - **`is_active` is not `false`** (both `true` and `null` are allowed).
-  - **Time window** evaluated at request time: if `opens_at` is set, it must be **≤ now**; if `closes_at` is set, it must be **≥ now**; if either bound is `null`, that side imposes no restriction (both null ⇒ not time-gated).
-- **Implementation note:** If authenticated `core_forms` reads are blocked by RLS, resolve via a pace-core2 RPC or policy change; do not silently show all org events.
 
 - Public exports: `src/pages/events/EventHubPage.tsx`, `src/hooks/events/useEventHub.ts`, `src/hooks/events/useFileReferences.ts`, `src/components/events/EventList.tsx`, and the dashboard event composition in `src/pages/DashboardPage.tsx` / `src/shared/hooks/useEnhancedLanding.ts` where applicable.
 - Public service contracts: event lookup, application-status action mapping (`Apply`/`Resume`/`Manage`), event-hub data assembly, and authenticated handoff routes must remain typed and explicit.
@@ -46,7 +35,7 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 - ID contract: event-hub and dashboard action boundaries in this slice should use `EventId`, `OrganisationId`, `AppId`, and `PageId` from `@solvera/pace-core/types` where slug resolution, application lookup, organisation context, and page-permission identifiers cross service seams.
 - File-display contract: event selector and event hub are authenticated surfaces and should resolve logos with authenticated file display helpers (`FileDisplay` / `useFileDisplay`) rather than bespoke URL assembly.
 - Theming contract: do not apply `applyPalette`, `getPaletteFromEvent`, `getPaletteFromOrganisation`, or `clearPalette` in this slice during the rebuild; event and organisation palette theming is explicitly out of scope for the current wave.
-- Permission and context contracts: dashboard and event-hub actions require authenticated user context and any RBAC context supplied by `UnifiedAuth`; authenticated `PaceAppLayout` usage in this slice must follow `./PR00-portal-architecture.md#paceapplayout-and-appswitcher`.
+- Permission and context contracts: dashboard and event-hub actions require authenticated user context and any RBAC context supplied by `UnifiedAuth`; authenticated `PaceAppLayout` usage in this slice must follow `./portal-architecture.md#paceapplayout-and-appswitcher`.
 - Ownership rule: `PR14` owns the `useFileReferences` hook as the event-logo file-reference resolver for dashboard event-entry and participant event-hub surfaces. Later event slices may depend on that contract, but they do not own the hook definition.
 - Workflow-link ownership rule: `PR14` owns the participant event-hub workflow-link surface, including the presence and placement of `View itinerary` on `/:eventSlug`; `PR21` owns the `/:eventSlug/itinerary` route, participant read rules consumed from TRAC, and the itinerary page itself.
 
@@ -81,15 +70,15 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
-- [Project brief: pace-portal](./PR00-portal-project-brief.md)
-- [pace-portal architecture](./PR00-portal-architecture.md)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [Project brief: pace-portal](./portal-project-brief.md)
+- [pace-portal architecture](./portal-architecture.md)
 - [PR01 app shell routing](./PR01-app-shell-routing.md) (redirect-after-sign-in)
 - [PR21 participant itinerary](./PR21-participant-itinerary.md)
-- [PaceAppLayout constraint](./PR00-portal-architecture.md#paceapplayout-and-appswitcher)
-- [Portal app manifest](./PR00-portal-architecture.md#route-ownership-and-matching-model)
-- [Portal domain map](./PR00-portal-architecture.md)
-- [Portal slice index / legacy mapping](./PR00-portal-architecture.md#appendix-a-legacy-slice-id-mapping-por-to-pr)
+- [PaceAppLayout constraint](./portal-architecture.md#paceapplayout-and-appswitcher)
+- [Portal app manifest](./portal-architecture.md#route-ownership-and-matching-model)
+- [Portal domain map](./portal-architecture.md)
+- [Portal slice index / legacy mapping](./portal-architecture.md#appendix-a-legacy-slice-id-mapping-por-to-pr)
 - `src/pages/events/EventHubPage.tsx`
 - `src/hooks/events/useEventHub.ts`
 - `src/hooks/events/useFileReferences.ts`
@@ -105,4 +94,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

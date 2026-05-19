@@ -21,6 +21,7 @@ import {
 import { normalizeMembershipStatus, usePersonOperations } from '@/hooks/member-profile/usePersonOperations';
 import { bustCurrentPersonMemberCache } from '@/shared/lib/utils/userUtils';
 import { ProxyModeBanner } from '@/shared/components/ProxyModeBanner';
+import { useProxyMode } from '@/shared/hooks/useProxyMode';
 
 const PROFILE_DEBUG_LOGS =
   import.meta.env.DEV || String(import.meta.env.VITE_PROFILE_DEBUG_LOGS ?? '') === 'true';
@@ -34,6 +35,64 @@ function profileDebugLog(step: string, data?: Record<string, unknown>): void {
   console.info(`[member-profile][page] ${step}`);
 }
 
+type MemberProfileLoadModel = import('@/hooks/member-profile/useMemberProfileData').MemberProfileLoadModel;
+
+async function saveMemberProfileTransaction(input: {
+  values: MemberProfileFormValues;
+  load: MemberProfileLoadModel;
+  organisationId: string;
+  saveAddressesAndPhones: ReturnType<typeof useAddressOperations>['saveAddressesAndPhones'];
+  savePersonMember: ReturnType<typeof usePersonOperations>['savePersonMember'];
+}): Promise<void> {
+  const { values, load, organisationId, saveAddressesAndPhones, savePersonMember } = input;
+  const person = load.person;
+  const member = load.member;
+  const splittingSharedPostalAddress =
+    !values.postal_same_as_residential &&
+    person.postal_address_id != null &&
+    person.postal_address_id === person.residential_address_id;
+  const { residentialAddressId, postalAddressId } = await saveAddressesAndPhones({
+    organisationId,
+    residential: values.residential,
+    postal: values.postal_same_as_residential ? null : values.postal ?? null,
+    postalSameAsResidential: values.postal_same_as_residential,
+    residentialId: person.residential_address_id,
+    postalId: values.postal_same_as_residential
+      ? person.residential_address_id
+      : splittingSharedPostalAddress
+        ? null
+        : person.postal_address_id,
+    personId: person.id,
+    phones: values.phones,
+    existingPhoneIds: load.phones.map((p) => p.id),
+  });
+
+  const postalFinalId = values.postal_same_as_residential ? residentialAddressId : postalAddressId;
+
+  await savePersonMember({
+    personId: person.id,
+    memberId: member?.id ?? null,
+    organisationId,
+    person: {
+      first_name: values.first_name,
+      last_name: values.last_name,
+      middle_name: values.middle_name ?? null,
+      preferred_name: values.preferred_name ?? null,
+      email: values.email,
+      date_of_birth: values.date_of_birth,
+      gender_id: values.gender_id,
+      pronoun_id: values.pronoun_id,
+      residential_address_id: residentialAddressId,
+      postal_address_id: postalFinalId,
+    },
+    member: {
+      membership_type_id: values.membership_type_id,
+      membership_number: values.membership_number ?? null,
+      membership_status: normalizeMembershipStatus(member?.membership_status ?? null, values.membership_status),
+    },
+  });
+}
+
 function MemberProfileContent() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -42,6 +101,14 @@ function MemberProfileContent() {
   const org = useOrganisationsContextOptional();
   const organisationId = org?.selectedOrganisation?.id ?? null;
   const medicalSummaryRedirect = searchParams.get('completeMemberFirst') === '1';
+  const targetMemberId = searchParams.get('targetMemberId');
+  const { setProxyTargetMemberId, validationError, isValidating, targetMemberId: proxyMemberId } = useProxyMode();
+
+  useEffect(() => {
+    if (targetMemberId) {
+      setProxyTargetMemberId(targetMemberId);
+    }
+  }, [targetMemberId, setProxyTargetMemberId]);
 
   const { data, isLoading, isError, error, dataUpdatedAt } = useMemberProfileData();
   const { data: referenceData, isLoading: refLoading } = useMemberAdditionalFields();
@@ -103,65 +170,29 @@ function MemberProfileContent() {
 
     setIsSaving(true);
     try {
-      const person = data.person;
-      const member = data.member;
-      const splittingSharedPostalAddress =
-        !values.postal_same_as_residential &&
-        person.postal_address_id != null &&
-        person.postal_address_id === person.residential_address_id;
-      const { residentialAddressId, postalAddressId } = await saveAddressesAndPhones({
+      await saveMemberProfileTransaction({
+        values,
+        load: data,
         organisationId,
-        residential: values.residential,
-        postal: values.postal_same_as_residential ? null : values.postal ?? null,
-        postalSameAsResidential: values.postal_same_as_residential,
-        residentialId: person.residential_address_id,
-        postalId: values.postal_same_as_residential
-          ? person.residential_address_id
-          : splittingSharedPostalAddress
-            ? null
-            : person.postal_address_id,
-        personId: person.id,
-        phones: values.phones,
-        existingPhoneIds: data.phones.map((p) => p.id),
+        saveAddressesAndPhones,
+        savePersonMember,
       });
 
-      const postalFinalId = values.postal_same_as_residential ? residentialAddressId : postalAddressId;
-
-      await savePersonMember({
-        personId: person.id,
-        memberId: member?.id ?? null,
-        organisationId,
-        person: {
-          first_name: values.first_name,
-          last_name: values.last_name,
-          middle_name: values.middle_name ?? null,
-          preferred_name: values.preferred_name ?? null,
-          email: values.email,
-          date_of_birth: values.date_of_birth,
-          gender_id: values.gender_id,
-          pronoun_id: values.pronoun_id,
-          residential_address_id: residentialAddressId,
-          postal_address_id: postalFinalId,
-        },
-        member: {
-          membership_type_id: values.membership_type_id,
-          membership_number: values.membership_number ?? null,
-          membership_status: normalizeMembershipStatus(member?.membership_status ?? null, values.membership_status),
-        },
-      });
-
-      if (person.user_id) {
-        bustCurrentPersonMemberCache(person.user_id, organisationId);
+      if (data.person.user_id) {
+        bustCurrentPersonMemberCache(data.person.user_id, organisationId);
       }
       await queryClient.invalidateQueries({ queryKey: ['memberProfile'] });
       await queryClient.invalidateQueries({ queryKey: ['enhancedLanding'] });
       profileDebugLog('submit:done', {
-        personId: person.id,
-        memberId: member?.id ?? null,
+        personId: data.person.id,
+        memberId: data.member?.id ?? null,
         organisationId,
       });
-      toast({ title: 'Profile saved', description: 'Your changes were saved.' });
-      navigate('/');
+      toast({
+        title: 'Profile saved',
+        description: proxyMemberId ? 'Changes were saved for the member you are assisting.' : 'Your changes were saved.',
+      });
+      navigate(proxyMemberId ? `/profile/edit/${proxyMemberId}` : '/');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Could not save profile.';
       profileDebugLog('submit:error', {
@@ -185,7 +216,21 @@ function MemberProfileContent() {
     );
   }
 
-  if (isLoading || refLoading) {
+  const proxyHandoffPending = Boolean(targetMemberId && isValidating);
+  const proxyHandoffDenied = Boolean(targetMemberId && validationError);
+
+  if (proxyHandoffDenied) {
+    return (
+      <main className="grid gap-4 px-4">
+        <Alert variant="destructive">
+          <AlertTitle>Delegated access</AlertTitle>
+          <AlertDescription>{validationError}</AlertDescription>
+        </Alert>
+      </main>
+    );
+  }
+
+  if (isLoading || refLoading || proxyHandoffPending) {
     return (
       <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
         <LoadingSpinner label="Loading profile…" />

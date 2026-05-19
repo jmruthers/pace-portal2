@@ -333,4 +333,22 @@ describe('ProfileEditProxyPage', () => {
     expect(await screen.findByRole('heading', { name: /delegated workspace/i })).toBeInTheDocument();
     expect(screen.getByText('Contact summary')).toBeInTheDocument();
   });
+
+  it('delegated workspace omits billing and payment UI', async () => {
+    proxy.targetMemberId = 'm1';
+    proxy.isProxyActive = true;
+    proxy.targetPersonId = 'p1';
+    dash.data = {
+      person: { id: 'p1' },
+      member: { organisation_id: 'org-1' },
+      profileProgress: {},
+      eventsByCategory: {},
+    };
+
+    renderPage('/profile/edit/m1');
+
+    await screen.findByRole('heading', { name: /delegated workspace/i });
+    expect(screen.queryByText(/billing/i)).toBeNull();
+    expect(screen.queryByText(/payment/i)).toBeNull();
+  });
 });

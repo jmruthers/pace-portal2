@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { isReservedEventSlug, RESERVED_EVENT_SLUGS } from '@/routing/eventFormPaths';
+import {
+  eventActivityBookingPath,
+  eventApplicationProgressPath,
+  isReservedEventSlug,
+  RESERVED_EVENT_SLUGS,
+} from '@/routing/eventFormPaths';
 
 describe('eventFormPaths', () => {
   it('marks known app routes as reserved first segments', () => {
@@ -7,6 +12,17 @@ describe('eventFormPaths', () => {
     expect(isReservedEventSlug('dashboard')).toBe(true);
     expect(isReservedEventSlug('profile-complete')).toBe(true);
     expect(isReservedEventSlug('profile')).toBe(true);
+    expect(isReservedEventSlug('approvals')).toBe(true);
+  });
+
+  it('marks forms as a reserved first segment for hub routing', () => {
+    expect(isReservedEventSlug('forms')).toBe(true);
+    expect(isReservedEventSlug('FORMS')).toBe(true);
+  });
+
+  it('marks activities as a reserved first segment for hub routing', () => {
+    expect(isReservedEventSlug('activities')).toBe(true);
+    expect(isReservedEventSlug('ACTIVITIES')).toBe(true);
   });
 
   it('does not reserve typical event slugs', () => {
@@ -16,6 +32,16 @@ describe('eventFormPaths', () => {
 
   it('is case-insensitive', () => {
     expect(isReservedEventSlug('LOGIN')).toBe(true);
+  });
+
+  it('builds participant application progress path', () => {
+    expect(eventApplicationProgressPath('summer-gala', '11111111-1111-4111-a111-111111111111')).toBe(
+      '/summer-gala/applications/11111111-1111-4111-a111-111111111111'
+    );
+  });
+
+  it('builds participant activity booking path', () => {
+    expect(eventActivityBookingPath('summer-gala')).toBe('/summer-gala/activities');
   });
 
   it('documents reserved keys for route ordering reviews', () => {

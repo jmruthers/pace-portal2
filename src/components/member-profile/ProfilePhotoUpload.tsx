@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { Button } from '@solvera/pace-core/components';
 import { useUnifiedAuthContext } from '@solvera/pace-core';
 import { useFileDisplay } from '@solvera/pace-core/hooks';
-import type { FileMetadata, FileReference } from '@solvera/pace-core/types';
+import type { FileReference } from '@solvera/pace-core/types';
+import { toFileMetadata } from '@/lib/fileMetadata';
 import type { Database } from '@/types/pace-database';
 import { toSupabaseClientLike } from '@/lib/supabase-typed';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
@@ -31,15 +32,10 @@ function mapToFileReference(
   organisationId: string | null,
   appId: string
 ): FileReference {
-  const meta = row.file_metadata;
-  const file_metadata: FileMetadata =
-    meta !== null && typeof meta === 'object' && !Array.isArray(meta)
-      ? ({
-          fileName: 'profile',
-          fileType: 'image/jpeg',
-          ...(meta as Record<string, unknown>),
-        } as FileMetadata)
-      : { fileName: 'profile', fileType: 'image/jpeg' };
+  const file_metadata = toFileMetadata(row.file_metadata, {
+    fileName: 'profile',
+    fileType: 'image/jpeg',
+  });
 
   return {
     id: row.id,
@@ -111,7 +107,6 @@ export function ProfilePhotoUpload({ person, organisationId, appId }: ProfilePho
           personId={person.id}
           organisationId={organisationId}
           appId={effectiveAppId}
-          userId={user.id}
         />
       ) : null}
     </>

@@ -139,10 +139,10 @@ const loadedProfile = {
   postalAddress: null,
 };
 
-function renderPage() {
+function renderPage(path = '/member-profile') {
   const client = new QueryClient();
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[path]}>
       <QueryClientProvider client={client}>
         <MemberProfilePage />
       </QueryClientProvider>
@@ -163,6 +163,20 @@ describe('MemberProfilePage', () => {
     hooks.proxy.isValidating = false;
     hooks.proxy.validationError = null;
     hooks.proxy.targetMemberId = null;
+  });
+
+  it('shows delegated access error when target handoff URL is denied', () => {
+    hooks.memberProfile.data = loadedProfile;
+    hooks.memberProfile.dataUpdatedAt = 1;
+    hooks.reference.data = referenceBundle;
+    hooks.proxy.validationError = 'Proxy access was denied.';
+    hooks.proxy.isValidating = false;
+    hooks.proxy.targetMemberId = 'm-bad';
+
+    renderPage('/member-profile?targetMemberId=m-bad');
+
+    expect(screen.getByRole('heading', { name: /^delegated access$/i })).toBeInTheDocument();
+    expect(screen.getByText(/proxy access was denied/i)).toBeInTheDocument();
   });
 
   it('shows profile setup prompt when no person record exists', () => {

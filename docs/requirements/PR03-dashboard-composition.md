@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR03-dashboard-composition.md`** — portal requirement slice **PR03** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR03-dashboard-composition.md`** — portal requirement slice **PR03** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -33,7 +33,7 @@ This file is **`PR03-dashboard-composition.md`** — portal requirement slice **
 - File paths: `src/pages/DashboardPage.tsx`, `src/shared/hooks/useEnhancedLanding.ts`, `src/components/contacts/ContactSummaryCard.tsx`, `src/components/member-profile/ProfilePhotoUpload.tsx`, `src/components/member-profile/PhotoUploadDialog.tsx`, `src/components/member-profile/PhotoGuidelines.tsx`, and supporting dashboard-facing components in `src/components/*`.
 - Data contracts: `useEnhancedLanding` is the dashboard's source of truth for the current user profile and categorized events; **event rows in `EventList` must satisfy the dashboard event list visibility rules in [PR14-event-selector-and-hub.md](./PR14-event-selector-and-hub.md#dashboard-event-list-visibility-normative)** (published form, active flag, time window, accessible orgs). The dashboard consumes composed data from profile, contacts, linked-profile, and event contracts rather than owning the underlying fetches or mutations; profile photo display and replacement run against `core_person` file references using pace-core `FileDisplay` and `FileUpload`, `FileCategory.PROFILE_PHOTOS`, folder `profile_photos`, optional organisation scoping when an active membership exists, accepted MIME types `image/jpeg,image/png,image/webp`, and a 5 MB maximum upload size.
 - File-scope contract: profile photo display and replacement are authenticated dashboard interactions, so they should stay on pace-core `FileDisplay` and `FileUpload` or the authenticated `useFileDisplay` and `useFileUpload` helpers, not `usePublicFileDisplay` and not bespoke storage URL generation.
-- Permission and context contracts: the dashboard remains a protected surface; the page guard must stay in place before the composed content renders; proxy mode should continue to clear when the user lands on their own dashboard; the dashboard remains inside the authenticated `PaceAppLayout` shell contract and must follow `./PR00-portal-architecture.md#paceapplayout-and-appswitcher`.
+- Permission and context contracts: the dashboard remains a protected surface; the page guard must stay in place before the composed content renders; proxy mode should continue to clear when the user lands on their own dashboard; the dashboard remains inside the authenticated `PaceAppLayout` shell contract and must follow `./portal-architecture.md#paceapplayout-and-appswitcher`.
 
 ## Visual specification
 
@@ -64,20 +64,20 @@ This file is **`PR03-dashboard-composition.md`** — portal requirement slice **
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
 - `src/pages/DashboardPage.tsx`
 - `src/shared/hooks/useEnhancedLanding.ts`
 - `src/components/contacts/ContactSummaryCard.tsx`
 - `src/components/member-profile/ProfilePhotoUpload.tsx`
 - `src/components/member-profile/PhotoUploadDialog.tsx`
 - `src/components/member-profile/PhotoGuidelines.tsx`
-- `./PR00-portal-architecture.md#paceapplayout-and-appswitcher`
+- `./portal-architecture.md#paceapplayout-and-appswitcher`
 - `src/components/member-profile/ProfilePrompts.tsx`
 - `src/components/events/EventList.tsx`
 - `src/components/contacts/LinkedProfilesSection.tsx`
 - `src/components/member-profile/ProfileSetupPrompt.tsx`
-- `./PR00-portal-project-brief.md` (event selector decisions)
-- `./PR00-portal-architecture.md` (domain seams and route model)
+- `./portal-project-brief.md` (event selector decisions)
+- `./portal-architecture.md` (domain seams and route model)
 
 ---
 
@@ -87,4 +87,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

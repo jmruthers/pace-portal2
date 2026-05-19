@@ -41,6 +41,8 @@ type FormRow = {
 function buildLandingMockClient(options?: {
   eventsQueryFails?: boolean;
   formsQueryFails?: boolean;
+  applicationQueryFails?: boolean;
+  applicationRows?: Array<{ event_id: string; status: string }>;
   formRows?: FormRow[];
   eventRows?: unknown[];
 }) {
@@ -92,7 +94,7 @@ function buildLandingMockClient(options?: {
       };
       return chain;
     }
-    if (table === 'core_file_references') {
+    if (table === 'base_application') {
       const chain = {
         select: vi.fn(function selectFn() {
           return chain;
@@ -100,7 +102,11 @@ function buildLandingMockClient(options?: {
         eq: vi.fn(function eqFn() {
           return chain;
         }),
-        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+        in: vi.fn().mockResolvedValue(
+          options?.applicationQueryFails
+            ? { data: null, error: { message: 'application query failed' } }
+            : { data: options?.applicationRows ?? [], error: null }
+        ),
       };
       return chain;
     }
@@ -166,6 +172,7 @@ describe('fetchEnhancedLanding', () => {
       expect(r.data.needsProfileSetup).toBe(false);
       expect(r.data.additionalContacts).toEqual([]);
       expect(r.data.eventsByCategory).toEqual({});
+      expect(r.data.applicationStatusByEventId).toEqual({});
     }
     expect(client.from).toHaveBeenCalledWith('core_forms');
     expect(client.from).not.toHaveBeenCalledWith('core_events');
@@ -271,6 +278,119 @@ describe('fetchEnhancedLanding', () => {
     expect(isOk(r)).toBe(true);
     if (isOk(r)) {
       expect(r.data.eventsByCategory.camp?.map((e) => e.event_id)).toEqual(['ev1']);
+      expect(r.data.applicationStatusByEventId).toEqual({});
+    }
+  });
+
+  it('returns err when base_application query fails', async () => {
+    vi.spyOn(userUtils, 'fetchCurrentPersonMember').mockResolvedValue(
+      ok({
+        person: samplePerson,
+        member: null,
+        usedReducedFieldFallback: false,
+      })
+    );
+    const sampleEvent = {
+      event_id: 'ev1',
+      event_name: 'Camp',
+      organisation_id: 'o1',
+      registration_scope: 'camp',
+      created_at: null,
+      created_by: null,
+      description: null,
+      event_code: 'c',
+      event_colours: null,
+      event_date: null,
+      event_days: null,
+      event_email: null,
+      event_venue: null,
+      expected_participants: null,
+      is_visible: true,
+      public_readable: true,
+      participant_admin_email: null,
+      participant_blurb: null,
+      participant_website_url: null,
+      typical_unit_size: null,
+      updated_at: null,
+      updated_by: null,
+      logo_id: null,
+    };
+    vi.spyOn(supabaseTyped, 'toTypedSupabase').mockReturnValue(
+      buildLandingMockClient({
+        applicationQueryFails: true,
+        formRows: [
+          {
+            event_id: 'ev1',
+            status: 'published',
+            is_active: true,
+            opens_at: null,
+            closes_at: null,
+          },
+        ],
+        eventRows: [sampleEvent],
+      }) as unknown as SupabaseClient<Database>
+    );
+
+    const r = await fetchEnhancedLanding({} as RBACSupabaseClient, 'u1', 'o1', ['o1']);
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) {
+      expect(r.error.code).toBe('ENHANCED_LANDING_QUERY');
+    }
+  });
+
+  it('maps application statuses by event id', async () => {
+    vi.spyOn(userUtils, 'fetchCurrentPersonMember').mockResolvedValue(
+      ok({
+        person: samplePerson,
+        member: null,
+        usedReducedFieldFallback: false,
+      })
+    );
+    const sampleEvent = {
+      event_id: 'ev1',
+      event_name: 'Camp',
+      organisation_id: 'o1',
+      registration_scope: 'camp',
+      created_at: null,
+      created_by: null,
+      description: null,
+      event_code: 'c',
+      event_colours: null,
+      event_date: null,
+      event_days: null,
+      event_email: null,
+      event_venue: null,
+      expected_participants: null,
+      is_visible: true,
+      public_readable: true,
+      participant_admin_email: null,
+      participant_blurb: null,
+      participant_website_url: null,
+      typical_unit_size: null,
+      updated_at: null,
+      updated_by: null,
+      logo_id: null,
+    };
+    vi.spyOn(supabaseTyped, 'toTypedSupabase').mockReturnValue(
+      buildLandingMockClient({
+        formRows: [
+          {
+            event_id: 'ev1',
+            status: 'published',
+            is_active: true,
+            opens_at: null,
+            closes_at: null,
+          },
+        ],
+        eventRows: [sampleEvent],
+        applicationRows: [{ event_id: 'ev1', status: 'draft' }],
+      }) as unknown as SupabaseClient<Database>
+    );
+
+    const r = await fetchEnhancedLanding({} as RBACSupabaseClient, 'u1', 'o1', ['o1']);
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) {
+      expect(r.data.applicationStatusByEventId).toEqual({ ev1: 'draft' });
     }
   });
 });

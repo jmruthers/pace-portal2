@@ -2,15 +2,15 @@
 
 ## Overview
 
-- Purpose and scope: implement the participant-facing application progress experience in portal for BASE S05b contract coverage.
-- Dependencies: PR14, PR17, BASE S05b.
+- Purpose and scope: implement the participant-facing application progress experience in portal for BASE BA05b contract coverage.
+- Dependencies: PR14, PR17, BASE BA05b.
 
 ## Acceptance criteria
 
-- [ ] Route exists under portal event workflows at `/:eventSlug/applications/:applicationId`.
-- [ ] The page shows application status and participant-visible approval-check progress context.
-- [ ] Organiser-only controls and token internals are never exposed.
-- [ ] Non-draft submitted applications from form journey can deep-link to this page.
+- [x] Route exists under portal event workflows at `/:eventSlug/applications/:applicationId`.
+- [x] The page shows application status and participant-visible approval-check progress context.
+- [x] Organiser-only controls and token internals are never exposed.
+- [x] Non-draft submitted applications from form journey can deep-link to this page.
 
 ## API / Contract
 
@@ -29,5 +29,5 @@
 
 ## References
 
-- [../base/slices/S05b-participant-application-progress_requirements.md](../base/slices/S05b-participant-application-progress_requirements.md)
+- [../base/BA05b-participant-application-progress_requirements.md](../base/BA05b-participant-application-progress_requirements.md)
 - [PR14-event-selector-and-hub.md](./PR14-event-selector-and-hub.md)

@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR11-action-plan-files.md`** — portal requirement slice **PR11** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR11-action-plan-files.md`** — portal requirement slice **PR11** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -12,8 +12,8 @@ This file is **`PR11-action-plan-files.md`** — portal requirement slice **PR11
 - Purpose and scope: rebuild the file lifecycle for medical-condition action plans so users can attach, view, replace, and clean up supporting documents.
 - Dependencies: this slice depends on the condition record and linkage established by `PR10`; it remains coupled to condition save and delete flows, but it does not own condition CRUD.
 - Standards: 01 Project Structure, 02 Architecture, 03 Security/RBAC, 04 API/Tech Stack, 05 pace-core Compliance, 06 Code Quality, 07 Visual, 08 Testing/Documentation.
-- Current baseline behavior: files are uploaded to Supabase storage (`files` bucket) with `pace-core` `FileUpload`; successful uploads create `core_file_references` rows and then link directly to `medi_condition.action_plan_file_id`; existing attachments are displayed inline in the edit modal via `FileDisplay` open-in-new-tab behavior; card-level attachment links also open in a new tab; delete flow in `useMedicalConditions` unlinks `action_plan_file_id`, deletes the referenced file metadata/storage object, then deletes the condition.
-- Rebuild delta: keep file lifecycle explicit around `medi_condition.action_plan_file_id` + `core_file_references` (no `medi_action_plan` table dependency); keep upload validation and link/update sequencing explicit so permission or row-count failures surface clearly; keep inline open/download behavior and avoid dedicated viewer routes.
+- Current baseline behavior: files are uploaded to Supabase storage (canonical bucket in `src/constants/fileStorage.ts`) via pace-core `uploadFile` from `useActionPlanFileAttachment`; the condition modal uses a hidden file input plus pace-core `Button` to open the picker so **MIME and size can be validated before any network upload** (pace-core `FileUpload` does not expose a pre-upload hook today). Successful uploads create `core_file_references` rows and then link directly to `medi_condition.action_plan_file_id`; existing attachments are displayed inline in the edit modal via `FileDisplay` open-in-new-tab behavior; card-level attachment links also open in a new tab; delete flow in `useMedicalConditions` unlinks `action_plan_file_id`, deletes the referenced file metadata/storage object, then deletes the condition.
+- Rebuild delta: keep file lifecycle explicit around `medi_condition.action_plan_file_id` + `core_file_references` (no `medi_action_plan` table dependency); keep upload validation and link/update sequencing explicit so permission or row-count failures surface clearly; keep inline open/download behavior and avoid dedicated viewer routes; if `uploadFile` succeeds but linking the new reference to the condition fails, best-effort cleanup of the orphan reference should run so users are not left with unreachable rows (implementation in `useActionPlanFileAttachment`).
 
 ## Acceptance criteria
 
@@ -30,9 +30,9 @@ This file is **`PR11-action-plan-files.md`** — portal requirement slice **PR11
 
 ## API / Contract
 
-- Public exports: `useActionPlans`, modal + card attachment display contracts, and delete/link orchestration inside `useMedicalConditions`.
-- File paths: `src/components/medical-profile/MedicalConditionForm.tsx`, `src/components/medical-profile/MedicalConditionsSection.tsx`, `src/hooks/medical-profile/useActionPlans.ts`, `src/hooks/medical-profile/useMedicalConditions.ts`, `src/constants/fileUpload.ts`.
-- Data contracts: `medi_condition.action_plan_file_id`, `core_file_references`, `FileUpload`, `FileDisplay`, organisation-aware storage policies, and attachment deletion via `deleteAttachment`.
+- Public exports: `useActionPlans`, `useActionPlanFileAttachment`, modal + card attachment display contracts, and delete/link orchestration inside `useMedicalConditions`.
+- File paths: `src/components/medical-profile/MedicalConditionForm.tsx`, `src/components/medical-profile/MedicalConditionsSection.tsx`, `src/hooks/medical-profile/useActionPlans.ts`, `src/hooks/medical-profile/useActionPlanFileAttachment.ts`, `src/hooks/medical-profile/useMedicalConditions.ts`, `src/constants/fileUpload.ts`, `src/constants/fileStorage.ts`, `src/lib/fileMetadata.ts`.
+- Data contracts: `medi_condition.action_plan_file_id`, `core_file_references`, pace-core `uploadFile` and `deleteAttachment`, `FileDisplay`, organisation-aware storage policies.
 - ID contract: action-plan file boundaries in this slice should use `UserId`, `OrganisationId`, and `PageId` from `@solvera/pace-core/types` where acting-user attribution, organisation-scoped file access, and guarded-page identifiers cross typed service boundaries.
 - Permission and context contracts: authenticated member or proxy editor only; file access must respect the same organisation and proxy context as the parent medical profile; deletion must still respect current RLS and organisation constraints.
 - **Upload validation (normative):** Reject client-side before persisting references: **max size 10 MB** per file; **allowed MIME types** `application/pdf`, `image/jpeg`, `image/png`, `image/webp`. If the target Supabase bucket policy enforces different limits, the app must match the **stricter** of policy vs this spec and document any override in the consuming repo’s implementation notes.
@@ -46,7 +46,7 @@ This file is **`PR11-action-plan-files.md`** — portal requirement slice **PR11
 
 - Component layout and composition: file upload control inside the condition-management experience, current-file display or download state, replacement flow, delete or cleanup state, and loading or empty states for conditions with no file yet.
 - States: loading, empty, upload success, upload failure, replacement in progress, cleanup, and permission-denied states must remain explicit.
-- Authoritative visual recipe: keep inline file workflow in the shared add/edit modal; use `FileUpload` for selection and `FileDisplay` for open-in-new-tab links; keep single-file-per-condition linkage via `action_plan_file_id`; show card-level attachment links when linked file references exist.
+- Authoritative visual recipe: keep inline file workflow in the shared add/edit modal; use a hidden file input with a pace-core `Button` trigger for selection (validation-before-upload) and `FileDisplay` for open-in-new-tab links; keep single-file-per-condition linkage via `action_plan_file_id`; show card-level attachment links when linked file references exist. Prefer pace-core `FileUpload` for this slot once it supports a pre-upload validation hook; until then the native input + `Button` pattern is the approved portal implementation.
 - Globals: cite pace-core Standard 07 Part A and Part C rather than restating shared global rules.
 
 ## Verification
@@ -59,7 +59,7 @@ This file is **`PR11-action-plan-files.md`** — portal requirement slice **PR11
 
 ## Testing requirements
 
-- Cover attach, replace, delete, invalid file type, oversize upload, and recoverable storage or Supabase failure states.
+- Cover attach, replace, delete, invalid file type, oversize upload, recoverable storage or Supabase failure states, and link failure after upload (orphan reference cleanup where implemented).
 - Cover no-row-updated link failures and no-row-deleted delete failures so silent no-op behavior is prevented.
 - Cover missing-reference cases: no linked file ID, missing reference row for linked ID, and stale storage path errors.
 - Cover the proxy-mode path where files are accessed through delegated context.
@@ -77,16 +77,16 @@ This file is **`PR11-action-plan-files.md`** — portal requirement slice **PR11
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
 - `src/pages/medical-profile/MedicalProfilePage.tsx`
 - `src/components/medical-profile/MedicalConditionForm.tsx`
 - `src/components/medical-profile/MedicalConditionsSection.tsx`
 - `src/hooks/medical-profile/useActionPlans.ts`
 - `src/hooks/medical-profile/useMedicalConditions.ts`
 - `src/constants/fileUpload.ts`
-- [Project brief: pace-portal](./PR00-portal-project-brief.md)
-- [Portal architecture](./PR00-portal-architecture.md)
-- Legacy ID mapping: [PR00-portal-architecture.md](./PR00-portal-architecture.md#appendix-a-legacy-slice-id-mapping-por-to-pr)
+- [Project brief: pace-portal](./portal-project-brief.md)
+- [Portal architecture](./portal-architecture.md)
+- Legacy ID mapping: [portal-architecture.md](./portal-architecture.md#appendix-a-legacy-slice-id-mapping-por-to-pr)
 
 ---
 
@@ -96,4 +96,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

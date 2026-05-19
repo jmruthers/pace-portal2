@@ -6,7 +6,7 @@ import { useEnhancedLanding } from '@/shared/hooks/useEnhancedLanding';
 import { useProxyMode } from '@/shared/hooks/useProxyMode';
 import { ContactSummaryCard } from '@/components/contacts/ContactSummaryCard';
 import { LinkedProfilesSection } from '@/components/contacts/LinkedProfilesSection';
-import { EventList } from '@/components/events/EventList';
+import { DashboardEventSelector } from '@/components/events/DashboardEventSelector';
 import { ProfilePrompts } from '@/components/member-profile/ProfilePrompts';
 import { ProfileSetupPrompt } from '@/components/member-profile/ProfileSetupPrompt';
 
@@ -64,7 +64,10 @@ function DashboardContent() {
       <h1>Dashboard</h1>
       <ContactSummaryCard person={data.person} phones={data.phones} organisationId={organisationId} />
       <ProfilePrompts profileProgress={data.profileProgress} />
-      <EventList eventsByCategory={data.eventsByCategory} />
+      <DashboardEventSelector
+        eventsByCategory={data.eventsByCategory}
+        applicationStatusByEventId={data.applicationStatusByEventId}
+      />
       <LinkedProfilesSection />
     </main>
   );

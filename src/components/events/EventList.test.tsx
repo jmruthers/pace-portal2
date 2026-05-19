@@ -1,10 +1,32 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import type { EventId, FileReference } from '@solvera/pace-core/types';
+import * as unified from '@solvera/pace-core/providers';
 import { EventList } from '@/components/events/EventList';
+import type { DashboardEvent } from '@/shared/hooks/useEnhancedLanding';
 
-const sampleEvent = {
+vi.mock('@solvera/pace-core/rbac', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@solvera/pace-core/rbac')>();
+  return {
+    ...actual,
+    useSecureSupabase: () => null,
+  };
+});
+
+vi.mock('@/hooks/events/useFileReferences', () => ({
+  useFileReferences: vi.fn(),
+}));
+
+vi.mock('@solvera/pace-core/hooks', () => ({
+  useFileDisplay: () => ({ url: 'https://signed.example/logo.png', isLoading: false }),
+}));
+
+import { useFileReferences } from '@/hooks/events/useFileReferences';
+import * as paceTypes from '@solvera/pace-core/types';
+
+const baseEvent = {
   event_id: 'e1',
   event_name: 'Summer camp',
   organisation_id: 'o1',
@@ -27,28 +49,141 @@ const sampleEvent = {
   typical_unit_size: null,
   updated_at: null,
   updated_by: null,
-  event_logo: 'https://example.com/logo.png',
-} as const;
+  logo_id: null,
+} as unknown as DashboardEvent;
+
+const dummyRef = {
+  id: 'fr1',
+  table_name: 'core_events',
+  record_id: 'e1',
+  file_path: 'x/event_logo/logo.png',
+  file_metadata: { fileName: 'logo', fileType: 'image/png', bucket: 'public-files', category: 'event_logo' },
+  app_id: 'app-test',
+  is_public: true,
+  created_at: '2020-01-01',
+  updated_at: '2020-01-01',
+} satisfies FileReference;
+
+function mockLogoRefs(map: Map<EventId, FileReference | null>, opts?: { isError?: boolean }) {
+  vi.mocked(useFileReferences).mockReturnValue({
+    refByEventId: map,
+    isLoading: false,
+    isError: opts?.isError ?? false,
+    error: opts?.isError ? new Error('fail') : null,
+  });
+}
 
 describe('EventList', () => {
-  it('shows placeholder panel when an event is selected', async () => {
+  beforeEach(() => {
+    vi.spyOn(unified, 'useOrganisationsContextOptional').mockReturnValue({
+      selectedOrganisation: { id: 'o1', name: 'Org', display_name: 'Org' },
+      organisations: [{ id: 'o1', name: 'Org', display_name: 'Org' }],
+    } as ReturnType<(typeof unified)['useOrganisationsContextOptional']>);
+    const m = new Map();
+    m.set(paceTypes.createEventId('e1'), dummyRef);
+    mockLogoRefs(m);
+  });
+
+  it('shows Apply navigation when no application and renders authenticated logo affordance', async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter>
-        <EventList
-          eventsByCategory={{
-            camp: [sampleEvent],
-          }}
-        />
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <Routes>
+          <Route path="/dashboard" element={<EventList eventsByCategory={{ camp: [baseEvent] }} applicationStatusByEventId={{}} />} />
+          <Route path=":eventSlug/application" element={<p data-testid="app-route">application</p>} />
+          <Route path=":eventSlug" element={<p data-testid="hub-route">hub</p>} />
+        </Routes>
       </MemoryRouter>
     );
 
-    await user.click(screen.getByRole('button', { name: /Summer camp/i }));
-    expect(screen.getByLabelText('Selected event details')).toBeTruthy();
-    expect(screen.getByText(/placeholder for PR14/i)).toBeTruthy();
-    expect(screen.getByRole('img', { name: /Summer camp logo/i })).toHaveAttribute(
-      'src',
-      'https://example.com/logo.png'
+    expect(screen.getByRole('heading', { name: /Summer camp/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Summer camp logo/i })).toHaveAttribute(
+      'href',
+      'https://signed.example/logo.png'
     );
+
+    await user.click(screen.getByRole('button', { name: /^Apply$/i }));
+    expect(screen.getByTestId('app-route')).toBeInTheDocument();
+  });
+
+  it('shows Resume navigation for draft applications', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/dash']}>
+        <Routes>
+          <Route
+            path="/dash"
+            element={<EventList eventsByCategory={{ camp: [baseEvent] }} applicationStatusByEventId={{ e1: 'draft' }} />}
+          />
+          <Route path=":eventSlug/application" element={<p data-testid="app-route">application</p>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await user.click(screen.getByRole('button', { name: /^Resume$/i }));
+    expect(screen.getByTestId('app-route')).toBeInTheDocument();
+  });
+
+  it('shows Manage navigation for non-draft application', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/dash']}>
+        <Routes>
+          <Route
+            path="/dash"
+            element={
+              <EventList eventsByCategory={{ camp: [baseEvent] }} applicationStatusByEventId={{ e1: 'approved' }} />
+            }
+          />
+          <Route path=":eventSlug" element={<p data-testid="hub-route">hub</p>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await user.click(screen.getByRole('button', { name: /^Manage$/i }));
+    expect(screen.getByTestId('hub-route')).toBeInTheDocument();
+  });
+
+  it('shows empty state when no events are visible', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<EventList eventsByCategory={{}} applicationStatusByEventId={{}} />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/No visible events yet/i)).toBeInTheDocument();
+  });
+
+  it('disables the action button when event_code is missing', async () => {
+    const user = userEvent.setup();
+    const noCode = { ...baseEvent, event_code: '' } as DashboardEvent;
+    render(
+      <MemoryRouter initialEntries={['/dash']}>
+        <Routes>
+          <Route
+            path="/dash"
+            element={<EventList eventsByCategory={{ camp: [noCode] }} applicationStatusByEventId={{}} />}
+          />
+          <Route path=":eventSlug/application" element={<p data-testid="app-route">application</p>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const apply = screen.getByRole('button', { name: /^Apply$/i });
+    expect(apply).toBeDisabled();
+    await user.click(apply);
+    expect(screen.queryByTestId('app-route')).not.toBeInTheDocument();
+  });
+
+  it('shows logo load failure affordance when file references query fails', () => {
+    mockLogoRefs(new Map(), { isError: true });
+    render(
+      <MemoryRouter initialEntries={['/dash']}>
+        <Routes>
+          <Route path="/dash" element={<EventList eventsByCategory={{ camp: [baseEvent] }} applicationStatusByEventId={{}} />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByText('SC')).toBeInTheDocument();
+    expect(screen.getByText(/Event logo could not be loaded/i)).toBeInTheDocument();
   });
 });

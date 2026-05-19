@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useActionPlanForCondition } from '@/hooks/medical-profile/useActionPlans';
+import { useActionPlanForCondition, useActionPlans } from '@/hooks/medical-profile/useActionPlans';
 
 const mockFrom = vi.fn((table: string) => {
   if (table === 'medi_condition') {
@@ -107,5 +107,11 @@ describe('useActionPlanForCondition', () => {
     expect(result.current.data?.actionPlanDate).toBeNull();
     expect(result.current.data?.fileReference).toBeNull();
     expect(mockFrom).not.toHaveBeenCalledWith('core_file_references');
+  });
+});
+
+describe('useActionPlans alias (PR11)', () => {
+  it('matches useActionPlanForCondition', () => {
+    expect(useActionPlans).toBe(useActionPlanForCondition);
   });
 });

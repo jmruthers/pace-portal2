@@ -7,23 +7,23 @@ import {
   CardHeader,
   CardTitle,
 } from '@solvera/pace-core/components';
-import type { MedicalConditionSummaryRow } from '@/hooks/medical-profile/useMedicalProfileData';
+import type { MediConditionDetail } from '@/hooks/medical-profile/useMedicalProfileData';
 
 export type MedicalProfileDisplayProps = {
-  conditions: MedicalConditionSummaryRow[];
+  conditions: MediConditionDetail[];
 };
 
 /**
- * PR09 read-only handoff: condition summary list and boundary notice (no CRUD; PR10/PR11 own editing and files).
+ * PR09 read-only condition overview before the PR10/PR11 management block on the same page.
  */
 export function MedicalProfileDisplay({ conditions }: MedicalProfileDisplayProps) {
   return (
     <>
       <Alert>
-        <AlertTitle>Conditions and supporting documents</AlertTitle>
+        <AlertTitle>Recorded conditions (summary)</AlertTitle>
         <AlertDescription>
-          This page is your medical summary. Recorded conditions are listed for reference only. Detailed
-          condition editing and action-plan documents are handled outside this summary screen.
+          Quick reference for conditions on file. Use add, edit, or delete below for full details and action-plan
+          documents.
         </AlertDescription>
       </Alert>
 

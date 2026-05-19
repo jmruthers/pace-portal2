@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR13-contact-create-edit-flow.md`** — portal requirement slice **PR13** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR13-contact-create-edit-flow.md`** — portal requirement slice **PR13** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -53,7 +53,7 @@ Duplicate-link decision table:
 
 - Component layout and composition: `/additional-contacts`, the proxy-mode banner, the inline contact form, the contact list, the empty state, edit/delete actions, and the loading, validation-error, and save-failure states.
 - States: email lookup, match confirmation, full-form and no-email manual entry, duplicate-contact blocking, validation, save, and proxy-mode states must remain explicit. The blocked duplicate state may remain simple, but it must direct the user toward editing the existing contact rather than attempting an override.
-- Authoritative visual recipe: preserve the current inline editor and branching flow; keep the email-first matching experience, the existing-person confirmation step, the relationship step, the full form step, and the current phone-table editing pattern; use pace-core `Button`, `Card`, `Form`, `Select`, `Input`, `Alert`, `Checkbox`, `DataTable`, and `LoadingSpinner` where available.
+- Authoritative visual recipe: preserve the current inline editor and branching flow; keep the email-first matching experience, the existing-person confirmation step, the relationship step, and the full form step with pace-core `Form`, `Select`, `Input`, and `FormField` for phone number and phone type (create accepts one phone row; edit appends one new phone when it does not duplicate an existing number); use pace-core `Button`, `Card`, `Alert`, `Checkbox`, and `LoadingSpinner` where available (multi-row phone editing via `DataTable` is reserved for a future UX pass if needed).
 - Globals: cite pace-core Standard 07 Part A and Part C rather than restating shared global rules.
 
 ## Verification
@@ -83,7 +83,7 @@ Duplicate-link decision table:
 
 ## References
 
-- [pace-core import policy](./PR00-portal-architecture.md#pace-core-import-policy-verified-entrypoints)
+- [pace-core import policy](./portal-architecture.md#pace-core-import-policy-verified-entrypoints)
 - `src/pages/AdditionalContactsPage.tsx`
 - `src/components/contacts/ContactForm.tsx`
 - `src/components/contacts/ContactForm/EmailFormStep.tsx`
@@ -95,10 +95,10 @@ Duplicate-link decision table:
 - `src/hooks/contacts/useContactOperations.ts`
 - `src/components/contacts/AdditionalContacts/AdditionalContactsList.tsx`
 - `src/components/contacts/AdditionalContacts/AdditionalContactsDisplay.tsx`
-- [Project brief: pace-portal](./PR00-portal-project-brief.md)
-- [Portal architecture](./PR00-portal-architecture.md)
+- [Project brief: pace-portal](./portal-project-brief.md)
+- [Portal architecture](./portal-architecture.md)
 - List shell: [PR12-contacts-listing.md](./PR12-contacts-listing.md)
-- Legacy ID mapping: [PR00-portal-architecture.md](./PR00-portal-architecture.md#appendix-a-legacy-slice-id-mapping-por-to-pr)
+- Legacy ID mapping: [portal-architecture.md](./portal-architecture.md#appendix-a-legacy-slice-id-mapping-por-to-pr)
 
 ---
 
@@ -108,4 +108,4 @@ Implement the feature described in this document. Follow the standards and guard
 
 ---
 
-**Checklist before running Cursor:** [PR00-portal-project-brief.md](./PR00-portal-project-brief.md) · [PR00-portal-architecture.md](./PR00-portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.
+**Checklist before running Cursor:** [portal-project-brief.md](./portal-project-brief.md) · [portal-architecture.md](./portal-architecture.md) · Cursor rules · ESLint config · this requirements doc.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ChangeEvent } from 'react';
 import { Controller, useFormContext } from '@solvera/pace-core/forms';
 import {
   Alert,
@@ -12,7 +12,6 @@ import {
   DialogFooter,
   DialogPortal,
   FileDisplay,
-  FileUpload,
   Form,
   FormField,
   Label,
@@ -25,18 +24,14 @@ import {
   Textarea,
 } from '@solvera/pace-core/components';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
-import { useQueryClient } from '@tanstack/react-query';
-import { toSupabaseClientLike, toTypedSupabase } from '@/lib/supabase-typed';
+import { toSupabaseClientLike } from '@/lib/supabase-typed';
 import { useActionPlanForCondition } from '@/hooks/medical-profile/useActionPlans';
+import { useActionPlanFileAttachment } from '@/hooks/medical-profile/useActionPlanFileAttachment';
 import { useMedicalConditions } from '@/hooks/medical-profile/useMedicalConditions';
 import { useMediConditionTypes } from '@/hooks/medical-profile/useMediConditionTypes';
 import type { MediConditionDetail } from '@/hooks/medical-profile/useMedicalProfileData';
-import {
-  ACTION_PLAN_ACCEPT,
-  ACTION_PLAN_CATEGORY,
-  ACTION_PLAN_FOLDER,
-  ACTION_PLAN_MAX_BYTES,
-} from '@/constants/fileUpload';
+import { ACTION_PLAN_ACCEPT } from '@/constants/fileUpload';
+import { FILE_STORAGE_BUCKET } from '@/constants/fileStorage';
 import {
   defaultMedicalConditionFormValues,
   mapMediConditionToFormValues,
@@ -44,6 +39,7 @@ import {
   type MedicalConditionFormValues,
 } from '@/utils/medical-profile/medicalConditionValidation';
 import { buildConditionTypePathLabel } from '@/utils/medical-profile/conditionTypeLabel';
+import { validateActionPlanFile } from '@/utils/medical-profile/actionPlanFileValidation';
 
 const SEVERITY_NONE = '__severity_none__';
 
@@ -77,8 +73,10 @@ function MedicalConditionFormFields({
   const { control } = ctx;
   const secure = useSecureSupabase();
   const storageClient = toSupabaseClientLike(secure);
-  const typedClient = toTypedSupabase(secure);
-  const queryClient = useQueryClient();
+  const actionPlanInputId = useId();
+  const actionPlanFileInputRef = useRef<HTMLInputElement>(null);
+  const { persistActionPlanFile, isReady: persistReady } = useActionPlanFileAttachment();
+  const [isUploadingPlan, setIsUploadingPlan] = useState(false);
 
   const existingRef =
     actionPlanQuery.data?.fileReference != null ? actionPlanQuery.data.fileReference : null;
@@ -101,7 +99,7 @@ function MedicalConditionFormFields({
       }
 
       try {
-        const bucketApi = storageClient.storage.from('files');
+        const bucketApi = storageClient.storage.from(FILE_STORAGE_BUCKET);
         if (existingRef.is_public) {
           const publicUrl = bucketApi.getPublicUrl(existingRef.file_path).data.publicUrl;
           if (!cancelled) {
@@ -142,6 +140,41 @@ function MedicalConditionFormFields({
       cancelled = true;
     };
   }, [existingRef, storageClient]);
+
+  const handleActionPlanFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const list = event.target.files;
+    event.target.value = '';
+    const file = list?.[0];
+    if (!file || !conditionId || !appId) {
+      return;
+    }
+
+    const validated = validateActionPlanFile(file);
+    if (!validated.ok) {
+      setUploadError(validated.message);
+      return;
+    }
+
+    setUploadError(null);
+    if (!persistReady) {
+      setUploadError('Application context is not ready. Try again.');
+      return;
+    }
+
+    setIsUploadingPlan(true);
+    try {
+      await persistActionPlanFile({
+        pendingFile: file,
+        conditionId,
+        appId,
+        organisationId,
+      });
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Could not upload action plan file.');
+    } finally {
+      setIsUploadingPlan(false);
+    }
+  };
 
   return (
     <article className="grid gap-4">
@@ -276,58 +309,32 @@ function MedicalConditionFormFields({
         <article className="grid gap-4 md:grid-cols-2">
           <section aria-label="Action plan upload">
             {conditionId && appId ? (
-              <FileUpload
-                supabase={storageClient}
-                table_name="medi_condition"
-                record_id={conditionId}
-                organisation_id={organisationId}
-                app_id={appId}
-                category={ACTION_PLAN_CATEGORY}
-                folder={ACTION_PLAN_FOLDER}
-                pageContext={organisationId}
-                accept={ACTION_PLAN_ACCEPT}
-                maxSize={ACTION_PLAN_MAX_BYTES}
-                multiple={false}
-                label={existingRef ? 'Replace file' : 'Choose file'}
-                onUploadError={(error) => {
-                  setUploadError(error.message ?? 'Could not upload action plan file.');
-                }}
-                onUploadSuccess={async (result) => {
-                  setUploadError(null);
-                  if (!typedClient) {
-                    setUploadError('Could not link uploaded file: secure client is unavailable.');
-                    return;
-                  }
-                  if (!conditionId) {
-                    setUploadError('Could not link uploaded file: condition ID is missing.');
-                    return;
-                  }
-                  const fileReferenceId = result.file_reference?.id;
-                  if (!fileReferenceId) {
-                    setUploadError('Could not link uploaded file: missing file reference ID.');
-                    return;
-                  }
-                  const upd = await typedClient
-                    .from('medi_condition')
-                    .update({
-                      action_plan_file_id: fileReferenceId,
-                      action_plan_date: new Date().toISOString().slice(0, 10),
-                    })
-                    .eq('id', conditionId)
-                    .select('id');
-                  if (upd.error) {
-                    setUploadError(upd.error.message ?? 'Could not link uploaded action plan file.');
-                    return;
-                  }
-                  const updatedRows = Array.isArray(upd.data) ? upd.data.length : 0;
-                  if (updatedRows !== 1) {
-                    setUploadError('Could not link uploaded action plan file. You may not have permission to update this condition.');
-                    return;
-                  }
-                  await queryClient.invalidateQueries({ queryKey: ['mediActionPlan'] });
-                  await queryClient.invalidateQueries({ queryKey: ['medicalProfile'] });
-                }}
-              />
+              <>
+                <Label htmlFor={actionPlanInputId} className="grid gap-2">
+                  {existingRef ? 'Replace action plan file' : 'Add action plan file'}
+                  {/* eslint-disable-next-line pace-core-compliance/prefer-pace-core-components -- hidden file input; validateActionPlanFile must run before upload (FileUpload exposes no pre-upload hook). */}
+                  <input
+                    id={actionPlanInputId}
+                    ref={actionPlanFileInputRef}
+                    type="file"
+                    accept={ACTION_PLAN_ACCEPT}
+                    className="sr-only"
+                    aria-hidden
+                    tabIndex={-1}
+                    disabled={isUploadingPlan || !persistReady}
+                    onChange={(e) => void handleActionPlanFileChange(e)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isUploadingPlan || !persistReady}
+                    onClick={() => actionPlanFileInputRef.current?.click()}
+                  >
+                    {existingRef ? 'Replace file' : 'Choose file'}
+                  </Button>
+                </Label>
+                {isUploadingPlan ? <LoadingSpinner label="Uploading file…" /> : null}
+              </>
             ) : (
               <p role="status">Save this condition first, then upload an action plan file.</p>
             )}

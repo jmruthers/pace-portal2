@@ -2,12 +2,16 @@ import { useQuery } from '@tanstack/react-query';
 import { useUnifiedAuthContext } from '@solvera/pace-core';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
-import { isOk } from '@solvera/pace-core/types';
+import { err, isOk, ok, type ApiResult } from '@solvera/pace-core/types';
 import type { Database } from '@/types/pace-database';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 import { fetchCurrentPersonMember, NO_PERSON_PROFILE_ERROR_CODE } from '@/shared/lib/utils/userUtils';
 import { addressRowToAddressValue } from '@/hooks/member-profile/addressMappers';
 import type { MemberProfileFormValues } from '@/utils/member-profile/validation';
+import { useProxyMode } from '@/shared/hooks/useProxyMode';
+
+type SecureSupabase = ReturnType<typeof useSecureSupabase>;
+type TypedPaceClient = ReturnType<typeof toTypedSupabase>;
 
 type PersonRow = Database['public']['Tables']['core_person']['Row'];
 type MemberRow = Database['public']['Tables']['core_member']['Row'];
@@ -83,6 +87,103 @@ export function mapLoadModelToFormValues(model: MemberProfileLoadModel): MemberP
 }
 
 /**
+ * Loads person, member, phones, and addresses for a delegated target after access RPC (PR08 / PR07 proxy path).
+ */
+export async function fetchDelegatedMemberProfileLoadModel(
+  secure: SecureSupabase,
+  client: TypedPaceClient,
+  memberId: string
+): Promise<ApiResult<MemberProfileLoadModel>> {
+  if (!secure || !client) {
+    return err({
+      code: 'DELEGATED_NO_CLIENT',
+      message: 'Member profile requires a secure client.',
+    });
+  }
+
+  const rpcResult = (await secure.rpc(
+    // eslint-disable-next-line pace-core-compliance/rpc-naming-pattern -- shared schema RPC name
+    'check_user_pace_member_access_via_member_id',
+    { p_member_id: memberId }
+  )) as { data: boolean | null; error: Error | null };
+
+  if (rpcResult.error) {
+    return err({
+      code: 'DELEGATED_ACCESS_VERIFY',
+      message: 'Could not verify delegated access.',
+    });
+  }
+  if (rpcResult.data !== true) {
+    return err({
+      code: 'DELEGATED_ACCESS_DENIED',
+      message: 'Delegated access was denied.',
+    });
+  }
+
+  const { data: member, error: memberError } = await client
+    .from('core_member')
+    .select('*')
+    .eq('id', memberId)
+    .maybeSingle();
+
+  if (memberError || !member?.person_id) {
+    return err({
+      code: 'DELEGATED_MEMBER_LOAD',
+      message: 'Could not load member record.',
+    });
+  }
+
+  const [personRes, phonesRes] = await Promise.all([
+    client.from('core_person').select('*').eq('id', member.person_id).maybeSingle(),
+    client
+      .from('core_phone')
+      .select('*')
+      .eq('person_id', member.person_id)
+      .is('deleted_at', null),
+  ]);
+
+  const batchErr = personRes.error ?? phonesRes.error;
+  if (batchErr) {
+    return err({
+      code: 'DELEGATED_PROFILE_LOAD',
+      message: batchErr.message || 'Could not load profile.',
+    });
+  }
+  if (!personRes.data) {
+    return err({
+      code: 'DELEGATED_PERSON_LOAD',
+      message: 'Could not load person record.',
+    });
+  }
+
+  const person = personRes.data;
+  const [resAddrRes, postAddrRes] = await Promise.all([
+    person.residential_address_id
+      ? client.from('core_address').select('*').eq('id', person.residential_address_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    person.postal_address_id && person.postal_address_id !== person.residential_address_id
+      ? client.from('core_address').select('*').eq('id', person.postal_address_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  const addrErr = resAddrRes.error ?? postAddrRes.error;
+  if (addrErr) {
+    return err({
+      code: 'DELEGATED_ADDRESS_LOAD',
+      message: addrErr.message || 'Could not load address details.',
+    });
+  }
+
+  return ok({
+    person,
+    member,
+    phones: phonesRes.data ?? [],
+    residentialAddress: resAddrRes.data,
+    postalAddress: postAddrRes.data,
+  });
+}
+
+/**
  * Loads person, member, phones, and addresses for the member profile editor.
  */
 export function useMemberProfileData() {
@@ -90,17 +191,39 @@ export function useMemberProfileData() {
   const org = useOrganisationsContextOptional();
   const secure = useSecureSupabase();
   const client = toTypedSupabase(secure);
+  const proxy = useProxyMode();
 
   const userId = user?.id ?? null;
   const organisationId = org?.selectedOrganisation?.id ?? null;
 
+  const awaitingProxyValidation = Boolean(proxy.targetMemberId && proxy.isValidating);
+  const loadDelegated = proxy.isProxyActive && Boolean(proxy.targetMemberId);
+
   return useQuery({
-    queryKey: ['memberProfile', 'v1', userId, organisationId],
-    enabled: Boolean(client && userId && organisationId),
+    queryKey: [
+      'memberProfile',
+      'v2',
+      userId,
+      organisationId,
+      loadDelegated ? proxy.targetMemberId : 'self',
+    ],
+    enabled: Boolean(client && userId && organisationId) && !awaitingProxyValidation,
     staleTime: 30_000,
     queryFn: async (): Promise<MemberProfileLoadModel | 'needs_setup'> => {
       if (!client || !userId || !organisationId) {
         throw new Error('Member profile requires organisation context.');
+      }
+
+      if (proxy.isProxyActive && proxy.targetMemberId) {
+        const delegated = await fetchDelegatedMemberProfileLoadModel(
+          secure,
+          client,
+          proxy.targetMemberId
+        );
+        if (!isOk(delegated)) {
+          throw new Error(delegated.error.message);
+        }
+        return delegated.data;
       }
 
       const pm = await fetchCurrentPersonMember(secure, userId, organisationId);

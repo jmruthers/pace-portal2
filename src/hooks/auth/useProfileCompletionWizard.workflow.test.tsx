@@ -345,6 +345,35 @@ describe('useProfileCompletionWizard workflow', () => {
     expect(persistMocks.s0).not.toHaveBeenCalled();
   });
 
+  it('preserves edited form values after advancing and going back', async () => {
+    const { result } = renderHook(() => useProfileCompletionWizard(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isShellLoading).toBe(false);
+    });
+    await waitFor(() => {
+      expect(result.current.form.getValues().first_name).toBe('Ada');
+    });
+
+    act(() => {
+      result.current.form.setValue('first_name', 'Zara');
+    });
+    expect(result.current.form.getValues().first_name).toBe('Zara');
+
+    await act(async () => {
+      await result.current.saveAndContinue();
+    });
+    await waitFor(() => {
+      expect(result.current.currentStep).toBe(1);
+    });
+
+    act(() => {
+      result.current.goToPrevious();
+    });
+    expect(result.current.currentStep).toBe(0);
+    expect(result.current.form.getValues().first_name).toBe('Zara');
+  });
+
   it('handles NO_PERSON profile as empty shell', async () => {
     vi.mocked(userUtils.fetchCurrentPersonMember).mockResolvedValue(
       err({ code: NO_PERSON_PROFILE_ERROR_CODE, message: 'none' })

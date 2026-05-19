@@ -30,6 +30,7 @@ import {
   type MedicalProfileFormValues,
 } from '@/utils/medical-profile/validation';
 import { MedicalConditionsSection } from '@/components/medical-profile/MedicalConditionsSection';
+import { MedicalProfileDisplay } from '@/components/medical-profile/MedicalProfile/MedicalProfileDisplay';
 import type { MediConditionDetail } from '@/hooks/medical-profile/useMedicalProfileData';
 
 const MENU_SELECT_NONE = '__menu_none__';
@@ -280,6 +281,8 @@ function MedicalProfileFormInner({
           </Button>
         </CardFooter>
       </Card>
+
+      <MedicalProfileDisplay conditions={conditions} />
 
       <MedicalConditionsSection
         conditions={conditions}

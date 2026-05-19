@@ -1,13 +1,21 @@
 import { lazy, Suspense, useEffect, useMemo } from 'react';
-import { Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useSessionRestoration } from '@solvera/pace-core/hooks';
 import { ProtectedRoute, LoadingSpinner, SessionRestorationLoader } from '@solvera/pace-core/components';
 import { supabaseClient } from '@/lib/supabase';
+import { applyShellSignedOutRedirect } from '@/lib/sessionAuthRedirect';
 import { AppErrorBoundary } from '@/shared/components/AppErrorBoundary';
+import { LoginHistoryRecorder } from '@/shared/components/LoginHistoryRecorder';
 import { OrganisationLoadingGate } from '@/shared/components/OrganisationLoadingGate';
 import { PortalAuthenticatedLayout } from '@/shared/components/PortalAuthenticatedLayout';
 import { ProfileCompleteLayout } from '@/shared/components/ProfileCompleteLayout';
-import { isReservedEventSlug } from '@/routing/eventFormPaths';
+import {
+  EventActivityBookingRoute,
+  EventApplicationProgressRoute,
+  EventApplicationRoute,
+  EventFormRoute,
+} from '@/pages/events/EventFormRoutes';
+import { OrgFormRoute } from '@/pages/forms/OrgFormRoutes';
 
 const LoginPage = lazy(async () => {
   const m = await import('@/pages/auth/LoginPage');
@@ -16,6 +24,10 @@ const LoginPage = lazy(async () => {
 const RegistrationPage = lazy(async () => {
   const m = await import('@/pages/auth/public/RegistrationPage');
   return { default: m.RegistrationPage };
+});
+const TokenApprovalPage = lazy(async () => {
+  const m = await import('@/pages/public/TokenApprovalPage');
+  return { default: m.TokenApprovalPage };
 });
 const DashboardPage = lazy(async () => {
   const m = await import('@/pages/DashboardPage');
@@ -45,21 +57,13 @@ const ProfileEditProxyPage = lazy(async () => {
   const m = await import('@/pages/member-profile/ProfileEditProxyPage');
   return { default: m.ProfileEditProxyPage };
 });
-const FormFillPage = lazy(async () => {
-  const m = await import('@/pages/public/FormFillPage');
-  return { default: m.FormFillPage };
+const EventHubPage = lazy(async () => {
+  const m = await import('@/pages/events/EventHubPage');
+  return { default: m.EventHubPage };
 });
 const NotFoundPage = lazy(async () => {
   const m = await import('@/pages/NotFoundPage');
   return { default: m.NotFoundPage };
-});
-const EventHubPlaceholderPage = lazy(async () => {
-  const m = await import('@/pages/public/EventWorkflowPlaceholders');
-  return { default: m.EventHubPlaceholderPage };
-});
-const EventApplicationPlaceholderPage = lazy(async () => {
-  const m = await import('@/pages/public/EventWorkflowPlaceholders');
-  return { default: m.EventApplicationPlaceholderPage };
 });
 
 function RouteLoadingFallback() {
@@ -99,9 +103,6 @@ function SessionRestorationHookProbe() {
   return null;
 }
 
-/**
- * Shell-level redirect for auth teardown events (idle timeout, explicit sign-out, session expiry).
- */
 function useSessionAuthRedirector() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -111,27 +112,12 @@ function useSessionAuthRedirector() {
       if (event !== 'SIGNED_OUT') {
         return;
       }
-      if (location.pathname === '/login' || location.pathname === '/register') {
-        return;
-      }
-      navigate('/login', { replace: true });
+      applyShellSignedOutRedirect(location.pathname, navigate);
     });
     return () => {
       data.subscription.unsubscribe();
     };
   }, [location.pathname, navigate]);
-
-}
-
-function EventFormRoute() {
-  const { eventSlug = '', formSlug = '' } = useParams();
-  if (eventSlug === '' || formSlug === '') {
-    return <NotFoundPage />;
-  }
-  if (isReservedEventSlug(eventSlug)) {
-    return <NotFoundPage />;
-  }
-  return <FormFillPage eventSlug={eventSlug} formSlug={formSlug} />;
 }
 
 function ProfileCompleteRoute() {
@@ -147,11 +133,13 @@ export default function App() {
 
   return (
     <AppErrorBoundary>
+      <LoginHistoryRecorder />
       <SessionRestorationHookProbe />
       <Suspense fallback={<RouteLoadingFallback />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegistrationPage />} />
+          <Route path="/approvals/:token" element={<TokenApprovalPage />} />
           <Route path="/" element={<ProtectedRouteWithRedirect />}>
             <Route element={<OrganisationLoadingGate />}>
               <Route path="profile-complete" element={<ProfileCompleteRoute />} />
@@ -164,11 +152,14 @@ export default function App() {
                 <Route path="profile/view/:memberId" element={<ProfileViewPage />} />
                 <Route path="profile/edit/:memberId" element={<ProfileEditProxyPage />} />
               </Route>
+              <Route path="forms/:formSlug" element={<OrgFormRoute />} />
+              <Route path=":eventSlug/application" element={<EventApplicationRoute />} />
+              <Route path=":eventSlug/applications/:applicationId" element={<EventApplicationProgressRoute />} />
+              <Route path=":eventSlug/activities" element={<EventActivityBookingRoute />} />
+              <Route path=":eventSlug/:formSlug" element={<EventFormRoute />} />
+              <Route path=":eventSlug" element={<EventHubPage />} />
             </Route>
           </Route>
-          <Route path="/:eventSlug/application" element={<EventApplicationPlaceholderPage />} />
-          <Route path="/:eventSlug/:formSlug" element={<EventFormRoute />} />
-          <Route path="/:eventSlug" element={<EventHubPlaceholderPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>

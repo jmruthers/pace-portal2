@@ -1,6 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ConfirmationDialog } from '@solvera/pace-core/components';
-import { FileDisplay } from '@solvera/pace-core/components';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogPortal,
+  FileDisplay,
+} from '@solvera/pace-core/components';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
 import type { MediConditionDetail } from '@/hooks/medical-profile/useMedicalProfileData';
 import { toSupabaseClientLike } from '@/lib/supabase-typed';
@@ -9,6 +23,7 @@ import { useMediConditionTypes } from '@/hooks/medical-profile/useMediConditionT
 import { useMedicalConditions } from '@/hooks/medical-profile/useMedicalConditions';
 import { MedicalConditionForm } from '@/components/medical-profile/MedicalConditionForm';
 import { buildConditionTypePathLabel } from '@/utils/medical-profile/conditionTypeLabel';
+import { FILE_STORAGE_BUCKET } from '@/constants/fileStorage';
 
 function ConditionAttachmentLink({ conditionId }: { conditionId: string }) {
   const secure = useSecureSupabase();
@@ -26,7 +41,7 @@ function ConditionAttachmentLink({ conditionId }: { conditionId: string }) {
         return;
       }
 
-      const bucketApi = storageClient.storage.from('files');
+      const bucketApi = storageClient.storage.from(FILE_STORAGE_BUCKET);
       if (fileReference.is_public) {
         const publicUrl = bucketApi.getPublicUrl(fileReference.file_path).data.publicUrl;
         if (!cancelled) setAttachmentUrl(publicUrl);
@@ -73,6 +88,7 @@ export function MedicalConditionsSection({
   }>({ open: false, condition: null });
 
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const { deleteCondition } = useMedicalConditions({ profileId, organisationId });
   const typesQuery = useMediConditionTypes();
@@ -153,7 +169,10 @@ export function MedicalConditionsSection({
                         type="button"
                         variant="destructive"
                         disabled={!canEdit}
-                        onClick={() => setDeleteTargetId(c.id)}
+                        onClick={() => {
+                          setDeleteError(null);
+                          setDeleteTargetId(c.id);
+                        }}
                       >
                         Delete
                       </Button>
@@ -179,22 +198,62 @@ export function MedicalConditionsSection({
         />
       ) : null}
 
-      <ConfirmationDialog
-        open={deleteTargetId != null}
-        onOpenChange={(o) => {
-          if (!o) setDeleteTargetId(null);
-        }}
-        title="Delete this condition?"
-        description="This condition and any linked action-plan file will be removed."
-        variant="destructive"
-        confirmLabel="Delete"
-        onConfirm={async () => {
-          if (deleteTargetId) {
-            await deleteCondition.mutateAsync(deleteTargetId);
+      <Dialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTargetId(null);
+            setDeleteError(null);
           }
         }}
-        isPending={deleteCondition.isPending}
-      />
+      >
+        <DialogPortal>
+          <DialogContent aria-labelledby="delete-condition-title">
+            <DialogBody className="grid gap-4">
+              <h2 id="delete-condition-title">Delete this condition?</h2>
+              <p>This condition and any linked action-plan file will be removed.</p>
+              {deleteError ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Delete failed</AlertTitle>
+                  <AlertDescription>{deleteError}</AlertDescription>
+                </Alert>
+              ) : null}
+              <section className="grid gap-2 md:grid-cols-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setDeleteTargetId(null);
+                    setDeleteError(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={deleteCondition.isPending || deleteTargetId === null}
+                  onClick={() => {
+                    const id = deleteTargetId;
+                    if (!id) return;
+                    void deleteCondition.mutateAsync(id).then(
+                      () => {
+                        setDeleteTargetId(null);
+                        setDeleteError(null);
+                      },
+                      (e) => {
+                        setDeleteError(e instanceof Error ? e.message : 'Could not delete condition.');
+                      }
+                    );
+                  }}
+                >
+                  Delete
+                </Button>
+              </section>
+            </DialogBody>
+          </DialogContent>
+        </DialogPortal>
+      </Dialog>
     </>
   );
 }

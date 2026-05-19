@@ -350,7 +350,10 @@ export function ContactForm({
     return (
       <RelationshipFormStep
         email={formState.draft.email}
-        contactTypes={referenceData.contactTypes.map((row) => ({ id: row.id, name: row.name }))}
+        contactTypes={referenceData.contactTypes.map((row) => ({
+          id: String(row.id),
+          name: row.name,
+        }))}
         permissionOptions={permissionOptions}
         defaultValues={{
           contact_type_id: formState.draft.contact_type_id,
@@ -368,7 +371,10 @@ export function ContactForm({
   return (
     <FullFormStep
       mode={mode}
-      contactTypes={referenceData.contactTypes.map((row) => ({ id: row.id, name: row.name }))}
+      contactTypes={referenceData.contactTypes.map((row) => ({
+        id: String(row.id),
+        name: row.name,
+      }))}
       phoneTypes={referenceData.phoneTypes.map((row) => ({ id: row.id, name: row.name }))}
       permissionOptions={permissionOptions}
       defaultValues={{

@@ -2,16 +2,17 @@
 
 ## Filename convention
 
-Portal foundation docs in this folder follow:
+Portal foundation docs in this folder use stable names (no `PR##` prefix):
 
-**`PR00-portal-{project-brief|architecture}.md`**
+- **`portal-project-brief.md`** — this document
+- **`portal-architecture.md`** — bounded-context architecture
+
+Numbered slice requirements keep the **`PR##-…`** prefix (for example `PR01-app-shell-routing.md`).
 
 | Segment | Meaning |
 |--------|---------|
-| **`PR`** | Requirements program prefix for this rebuild documentation set. |
-| **`00`** | Foundation slot (shared with architecture and numbered requirement slices). |
 | **`portal`** | Product identifier. |
-| **`project-brief`** | Fixed suffix for this document type. |
+| **`project-brief` / `architecture`** | Fixed suffix for each foundation document type. |
 
 ---
 
@@ -33,20 +34,20 @@ The app consumes `@solvera/pace-core` for app layout, auth, RBAC, common UI prim
 - **Delegated access and proxy mode** – Linked-profile and proxy-aware routes for viewing or editing a member’s in-scope portal data on their behalf.
 - **Medical profile** – Medical summary data, medical-condition CRUD, and action-plan file lifecycle management.
 - **Additional contacts** – Listing, creation, matching, linking, editing, and deletion of additional contacts, including proxy-aware flows.
-- **Events and forms** – Authenticated event participant workflows including event hub, dynamic form rendering, draft/resume behavior, and final application submission (member-facing side of BASE registration workflows per cross-app alignment in [PR00-portal-architecture.md](./PR00-portal-architecture.md)).
+- **Events and forms** – Authenticated event participant workflows including event hub, dynamic form rendering, draft/resume behavior, and final application submission (member-facing side of BASE registration workflows per cross-app alignment in [portal-architecture.md](./portal-architecture.md)).
 - **Cross-module participant workflows** – Additional member journeys driven by BASE configuration (application progress, activity booking, token approvals) are in scope for pace-portal as the single member-facing app and are specified in PR18–PR20. The member-facing participant itinerary route that consumes the TRAC SLICE-05 contract is specified separately in PR21. Organiser/operator UI stays in BASE.
 - **MVP scope guardrails** – Event lead/EOI and org lead/EOI participant journeys are out of MVP in this wave.
 
-The current rebuild wave **intentionally excludes** billing profile, payment gateway integration, stored payment methods, and public invoice payment. Placeholder deferred slices for a future payments wave are documented in [PR00-portal-architecture.md](./PR00-portal-architecture.md) (deferred payment placeholders).
+The current rebuild wave **intentionally excludes** billing profile, payment gateway integration, stored payment methods, and public invoice payment. Placeholder deferred slices for a future payments wave are documented in [portal-architecture.md](./portal-architecture.md) (deferred payment placeholders).
 
 ### Initial scope and product decisions
 
-- **Canonical requirements:** [PR00-portal-architecture.md](./PR00-portal-architecture.md) and [PR01](./PR01-app-shell-routing.md)–[PR21](./PR21-participant-itinerary.md) define **what to build** (routes, flows, UI behavior, slice ownership). A reference implementation may exist elsewhere; where code and these PR docs disagree, **update the PR docs or the code deliberately**—do not treat undocumented code as overriding silent requirements.
-- **Consuming repository standards:** Environment variables, CI, test layout, full Supabase schema/RPC specifications, and repo-wide engineering policy are **not** duplicated under [`docs/requirements/portal/`](./); they are defined by the **target repository** that implements this app. **Canonical portal execution specs** for this program live in this folder (`PR00`–`PR21`).
+- **Canonical requirements:** [portal-architecture.md](./portal-architecture.md) and [PR01](./PR01-app-shell-routing.md)–[PR21](./PR21-participant-itinerary.md) define **what to build** (routes, flows, UI behavior, slice ownership). A reference implementation may exist elsewhere; where code and these PR docs disagree, **update the PR docs or the code deliberately**—do not treat undocumented code as overriding silent requirements.
+- **Consuming repository standards:** Environment variables, CI, test layout, full Supabase schema/RPC specifications, and repo-wide engineering policy are **not** duplicated under [`docs/requirements/portal/`](./); they are defined by the **target repository** that implements this app. **Canonical portal execution specs** for this program live in this folder (`PR01`–`PR21`) plus the two stable foundation docs.
 - **Information architecture:** Slight preference to preserve current IA and page set. Consolidation or splitting is allowed when it clearly improves UX or SOLID boundaries; record changes in the relevant PR slice doc.
-- **Visual direction:** No external design system beyond the current portal and `@solvera/pace-core`. Capture composition in slice requirements; cite **Standard 07: Visual** (see [PR00-portal-architecture.md](./PR00-portal-architecture.md) standards note) where UI is involved.
+- **Visual direction:** No external design system beyond the current portal and `@solvera/pace-core`. Capture composition in slice requirements; cite **Standard 07: Visual** (see [portal-architecture.md](./portal-architecture.md) standards note) where UI is involved.
 - **Event selector and participant event hub (required redesign):** Event workflow state must be explicit as **Apply**, **Resume**, or **Manage/Open**; **Resume** when `base_application.status = 'draft'` routes on the same path as **Apply**; when status is non-`draft`, route to the participant event hub page (`/:eventSlug`) where members see key event details and links to event workflows/forms. The hub should support name, logo, dates, participant blurb, admin email, website (where available), and workflow/checklist links, including a member-facing **View itinerary** route when the viewer is already scoped as a participant for that event. Detailed contracts start in [PR14-event-selector-and-hub.md](./PR14-event-selector-and-hub.md) and [PR03-dashboard-composition.md](./PR03-dashboard-composition.md), with follow-up slices for hub/detail workflows including [PR21-participant-itinerary.md](./PR21-participant-itinerary.md).
-- **pace-core imports:** Use verified entrypoints for `@solvera/pace-core` as summarized in [PR00-portal-architecture.md](./PR00-portal-architecture.md) (cross-cutting contracts). Prefer `useZodForm` from `@solvera/pace-core/hooks` for Zod-backed forms where slices require it.
+- **pace-core imports:** Use verified entrypoints for `@solvera/pace-core` as summarized in [portal-architecture.md](./portal-architecture.md) (cross-cutting contracts). Prefer `useZodForm` from `@solvera/pace-core/hooks` for Zod-backed forms where slices require it.
 
 ---
 
@@ -102,9 +103,9 @@ pace-portal is a **standalone consuming app** with application code at repo root
 **Rebuild documentation (canonical):**
 
 - This file – product-level brief.
-- [PR00-portal-architecture.md](./PR00-portal-architecture.md) – bounded-context architecture.
+- [portal-architecture.md](./portal-architecture.md) – bounded-context architecture.
 - [PR01](./PR01-app-shell-routing.md)–[PR21](./PR21-participant-itinerary.md) – numbered requirement slices (execution contracts).
-- [PR00-portal-pace-core-candidates.md](./PR00-portal-pace-core-candidates.md) – optional pace-core2 enhancements suggested by portal slices (non-normative).
+- Optional pace-core2 enhancement backlog from portal slices is non-normative and not split into a separate requirements file in this repo.
 
 ---
 
@@ -133,7 +134,7 @@ pace-portal is a **standalone consuming app** with application code at repo root
 
 ## Implementation program constraints
 
-- Implement **one approved slice at a time** following **dependency order** (see [PR00-portal-architecture.md](./PR00-portal-architecture.md), appendix: slice dependency and legacy ID mapping).
+- Implement **one approved slice at a time** following **dependency order** (see [portal-architecture.md](./portal-architecture.md), appendix: slice dependency and legacy ID mapping).
 - **PR slice specs win** over older discovery phrasing. If code and spec disagree, update the spec or the code deliberately—do not silently drift.
 - **Route ownership:** Each route entry surface should be owned by exactly one slice’s scope (see architecture doc). Shared hooks may be listed under multiple slices in References without duplicating route ownership.
 - **Review loop:** A completed slice should record what changed, which acceptance criteria passed, tests added/updated, residual risks, and any follow-on requirements.
@@ -157,5 +158,5 @@ pace-portal is a **standalone consuming app** with application code at repo root
 
 ## Related documents
 
-- [PR00-portal-architecture.md](./PR00-portal-architecture.md) – Bounded contexts, dependencies, cross-cutting contracts, route model, deferred domains.
+- [portal-architecture.md](./portal-architecture.md) – Bounded contexts, dependencies, cross-cutting contracts, route model, deferred domains.
 - [PR01-app-shell-routing.md](./PR01-app-shell-routing.md) – First implementation slice after reading the architecture doc.
