@@ -21,7 +21,7 @@ Portal foundation docs in this folder follow:
 
 **Review cadence:** Quarterly, or when RBAC, routing, shared schema contracts, or app shell behavior changes materially.
 
-**Last updated:** 2026-04-14
+**Last updated:** 2026-04-23
 
 **Change log:** Git history for this file; record major decisions in ADRs when the team adopts them.
 
@@ -111,10 +111,11 @@ These rules apply across slices; PR requirement docs reference this section inst
 - `/profile/view/:memberId`
 - `/profile/edit/:memberId`
 - `/:eventSlug` (participant event hub)
+- `/:eventSlug/itinerary` (participant itinerary)
 - `/:eventSlug/application` (canonical event application entrypoint)
 - `/:eventSlug/:formSlug` (event-scoped form route)
 
-**Matching rule:** Reserved paths such as `/login`, `/register`, `/dashboard`, `/profile-complete`, and delegated profile routes must **not** be captured by the generic `/:eventSlug/:formSlug` matcher.
+**Matching rule:** Reserved paths such as `/login`, `/register`, `/dashboard`, `/profile-complete`, delegated profile routes, `/:eventSlug/application`, and `/:eventSlug/itinerary` must **not** be captured by the generic `/:eventSlug/:formSlug` matcher.
 
 **Integrations (summary):** Supabase auth, tables, RPCs, storage; Google Maps Places loader; repo edge functions as present.
 
@@ -124,6 +125,7 @@ These rules apply across slices; PR requirement docs reference this section inst
 | --- | --- |
 | No session | Show auth-required handoff and route to sign-in with return URL preserved (no implicit public form rendering in MVP). |
 | Session present; route = `/:eventSlug` | Show participant event hub page (event summary + forms/checklist/links). |
+| Session present; route = `/:eventSlug/itinerary` | Show the authenticated member-facing participant itinerary page for a participant already scoped in portal for that event; the route is read-only and consumes the same participant contract as TRAC SLICE-05 (Option A RLS, participant-only assignment filter, day-entry/day-ordering/timezone rules). |
 | Session present; route = `/:eventSlug/application` | Resolve the event's `base_registration` primary entrypoint form (`is_primary_entrypoint = true`) and run the shared form journey. |
 | Session present; route = `/:eventSlug/:formSlug` | Resolve explicit event form slug and run the shared form journey. |
 | Session present; submit | Final persistence follows workflow-specific adapters/contracts (registration now; additional workflows in follow-up slices). |
@@ -140,7 +142,8 @@ The implementation must branch on auth and routing state, not assume a single pa
 
 - **pace-portal is the single member-facing PACE web app** for authenticated members and delegates: profile, medical, contacts, proxy workspace, and **participant workflows that are configured or orchestrated from other modules** (e.g. BASE registration/application, activity booking). Those modules **do not** ship parallel participant SPAs on their own origins.
 - **BASE** (and similar) own **organiser/operator** surfaces, **configuration**, and **backend/RPC contracts** documented in [`docs/requirements/base/architecture.md`](../base/architecture.md). Portal **consumes** the same Supabase contracts; BASE does **not** own portal routes.
-- **Aligned today (portal requirement slices):** PR14–PR16 cover event selector + registration-style form flow for BASE S05a semantics.
+- **Aligned today (portal requirement slices):** PR14 covers event selector + participant hub handoff, PR15–PR17 cover registration-style form flow for BASE S05a semantics, and PR21 covers the portal-hosted participant itinerary route that consumes the TRAC SLICE-05 participant contract.
+- **Participant itinerary contract authority:** The portal route `/:eventSlug/itinerary` is a **member-facing consumer** of the participant itinerary contract documented in `/Users/kusi/Documents/GitHub/pace-trac/rebuild/architecture.md`, `/Users/kusi/Documents/GitHub/pace-trac/rebuild/slices/SLICE-05_requirements.md`, `/Users/kusi/Documents/GitHub/pace-trac/rebuild/feature-list.md`, and `/Users/kusi/Documents/GitHub/pace-trac/rebuild/user-stories.md`. Portal owns the route, entry UX, and page composition; TRAC remains the authority for participant read rules and Option A RLS assumptions.
 - **Documented gaps (add portal slices / routes; BASE slices keep contract authority):**
   - **Application progress** (participant-visible status and checks; BASE **S05b** contract) — covered by [PR18-application-progress.md](./PR18-application-progress.md).
   - **Activity booking** (BASE **S10** contract) — covered by [PR19-activity-booking.md](./PR19-activity-booking.md).
@@ -180,7 +183,7 @@ Reserved legacy slice IDs for a future payments wave: **POR-014, POR-015, POR-01
 | § 4 Member / proxy | [PR07-member-profile-self-service.md](./PR07-member-profile-self-service.md), [PR08-proxy-delegated-editing.md](./PR08-proxy-delegated-editing.md) |
 | § 5 Medical | [PR09-medical-profile-summary.md](./PR09-medical-profile-summary.md), [PR10-medical-conditions-crud.md](./PR10-medical-conditions-crud.md), [PR11-action-plan-files.md](./PR11-action-plan-files.md) |
 | § 6 Contacts | [PR12-contacts-listing.md](./PR12-contacts-listing.md), [PR13-contact-create-edit-flow.md](./PR13-contact-create-edit-flow.md) |
-| § 7 Events / forms | [PR14-event-selector-and-hub.md](./PR14-event-selector-and-hub.md), [PR15-authenticated-form-rendering.md](./PR15-authenticated-form-rendering.md), [PR16-event-application-submission.md](./PR16-event-application-submission.md), [PR17-form-journey-shell.md](./PR17-form-journey-shell.md), [PR18-application-progress.md](./PR18-application-progress.md), [PR19-activity-booking.md](./PR19-activity-booking.md), [PR20-token-approval-host.md](./PR20-token-approval-host.md) |
+| § 7 Events / forms | [PR14-event-selector-and-hub.md](./PR14-event-selector-and-hub.md), [PR15-authenticated-form-rendering.md](./PR15-authenticated-form-rendering.md), [PR16-event-application-submission.md](./PR16-event-application-submission.md), [PR17-form-journey-shell.md](./PR17-form-journey-shell.md), [PR18-application-progress.md](./PR18-application-progress.md), [PR19-activity-booking.md](./PR19-activity-booking.md), [PR20-token-approval-host.md](./PR20-token-approval-host.md), [PR21-participant-itinerary.md](./PR21-participant-itinerary.md) |
 
 ---
 
@@ -208,15 +211,16 @@ Reserved legacy slice IDs for a future payments wave: **POR-014, POR-015, POR-01
 | POR-021 | [PR18-application-progress.md](./PR18-application-progress.md) | Application progress |
 | POR-022 | [PR19-activity-booking.md](./PR19-activity-booking.md) | Activity booking |
 | POR-023 | [PR20-token-approval-host.md](./PR20-token-approval-host.md) | Token approval host |
+| POR-024 | [PR21-participant-itinerary.md](./PR21-participant-itinerary.md) | Participant itinerary |
 | POR-099 | [PR99-slice-reconciliation.md](./PR99-slice-reconciliation.md) | Built-slice reconciliation log |
 
-**Suggested implementation order (dependency-first):** **PR01 → PR02 → PR03** (dashboard composition, including event selector slot) → **PR04 → PR05 → PR06 → PR07 → PR09 → PR12 → PR14** (selector + participant event hub handoff) → **PR15 → PR16 → PR17** (authenticated form rendering/submit + shared journey shell) → **PR18 → PR19 → PR20** (application progress, activity booking, token approval host) → org forms on `/forms/:formSlug` in follow-up TEAM-aligned slices.
+**Suggested implementation order (dependency-first):** **PR01 → PR02 → PR03** (dashboard composition, including event selector slot) → **PR04 → PR05 → PR06 → PR07 → PR09 → PR12 → PR14** (selector + participant event hub handoff) → **PR21** (member-facing participant itinerary route from the hub) → **PR15 → PR16 → PR17** (authenticated form rendering/submit + shared journey shell) → **PR18 → PR19 → PR20** (application progress, activity booking, token approval host) → org forms on `/forms/:formSlug` in follow-up TEAM-aligned slices.
 
 ---
 
 ## Appendix B: Consolidated QA review themes
 
-The following themes from the former independent doc QA pass are **addressed in this architecture doc and PR01–PR20** (no separate review file):
+The following themes from the former independent doc QA pass are **addressed in this architecture doc and PR01–PR21** (no separate review file):
 
 - **pace-core2 entrypoints and hooks:** Centralized under [Cross-cutting contracts](#cross-cutting-contracts-normative-summary); slices use `useZodForm`, `usePublicFileDisplay` / authenticated file hooks, `SessionRestorationLoader`, `recordLogin`, and branded IDs as specified per slice.
 - **PaceAppLayout and RBAC duplication:** Single normative copy in this document; slices link here instead of repeating full prop tables.
@@ -297,7 +301,7 @@ Contract-only: public exports, paths, data touchpoints, and layout obligations �
 
 ### Verification
 
-- **AC1:** App boot reaches `/login`, `/dashboard`, `/profile-complete`, `/:eventSlug`, `/:eventSlug/application`, and `/:eventSlug/:formSlug` with the expected shell behavior; public vs protected boundaries match the active rebuild route map.
+- **AC1:** App boot reaches `/login`, `/dashboard`, `/profile-complete`, `/:eventSlug`, `/:eventSlug/itinerary`, `/:eventSlug/application`, and `/:eventSlug/:formSlug` with the expected shell behavior; public vs protected boundaries match the active rebuild route map.
 - **AC2:** Sign-in, sign-out, idle-timeout, not-found, and loading/error fallbacks can be exercised without feature-level business logic; providers and error boundaries are not duplicated on feature routes.
 - **AC3:** Shared services used by multiple features are reachable without duplicating orchestration in pages (smoke: navigate across `/dashboard` and one feature route using shared hooks only at shell/shared layer).
 - **AC4:** Deferred payment routes and nav are absent from the active rebuild shell and route table.
@@ -605,13 +609,13 @@ Contract-only: public exports, paths, data touchpoints, and layout obligations �
 
 ### Overview
 
-- Purpose and scope: define participant event-hub routing, sign-in handoff, dashboard event selection, authenticated dynamic form rendering, draft/resume behavior, and final event application submission.
+- Purpose and scope: define participant event-hub routing, participant itinerary routing, sign-in handoff, dashboard event selection, authenticated dynamic form rendering, draft/resume behavior, and final event application submission.
 - Dependencies: § 1 App shell and shared infrastructure; § 2 Auth, onboarding, and route handoff for sign-in/profile-completion transitions.
 - Standards: 02, 03, 04, 05, 07, 08, 09.
 
 ### Acceptance criteria
 
-- [ ] **AC1** Auth-required handoff, participant event hub, authenticated form rendering, and final submission are documented as separate contracts.
+- [ ] **AC1** Auth-required handoff, participant event hub, participant itinerary, authenticated form rendering, and final submission are documented as separate contracts.
 - [ ] **AC2** Event workflow state is explicit as `Apply`, `Resume`, or `Manage` using the agreed `base_application` semantics.
 - [ ] **AC3** Draft/resume and final submission behavior are documented as separate contracts.
 - [ ] **AC4** Event metadata, form resolution, file/logo loading, and active-form management behavior are preserved without `context_id` grouping requirements.
@@ -620,22 +624,22 @@ Contract-only: public exports, paths, data touchpoints, and layout obligations �
 
 Contract-only: public exports, paths, data touchpoints, and layout obligations — no implementation detail.
 
-- Public exports: participant event-hub page, authenticated form page, form renderer, event list contracts, form-loading hooks, draft-application hooks, submission hooks, and file-reference hooks.
-- Public service contracts: event-entry contracts must preserve slug context and auth-required handoff; authenticated form contracts must load existing values and draft state; submission contracts must define duplicate-safe draft-to-submitted transitions across backend tables.
+- Public exports: participant event-hub page, participant itinerary page, authenticated form page, form renderer, event list contracts, form-loading hooks, participant-itinerary hooks, draft-application hooks, submission hooks, and file-reference hooks.
+- Public service contracts: event-entry contracts must preserve slug context and auth-required handoff; participant-itinerary contracts must remain read-only and consume the same participant-scoped rules documented by TRAC SLICE-05; authenticated form contracts must load existing values and draft state; submission contracts must define duplicate-safe draft-to-submitted transitions across backend tables.
 - File paths under the app (Standard 01): `src/pages/events/*`, `src/components/events/*`, `src/hooks/events/*`, relevant dashboard composition hooks in `src/shared/hooks/*`.
-- Proposed or existing tables: events, forms, file references, response and response-value tables, `base_application`, related RPCs, and file-display contracts. Participant event-hub metadata may require additional `core_events` fields (blurb, admin email, website) if not already present.
+- Proposed or existing tables: events, forms, file references, response and response-value tables, `base_application`, participant-itinerary read tables/contracts (`trac_itinerary_assignment`, `trac_transport`, `trac_accommodation`, `trac_activity` under Option A assumptions), related RPCs, and file-display contracts. Participant event-hub metadata may require additional `core_events` fields (blurb, admin email, website) if not already present.
 - `PaceAppLayout` contract: authenticated event management and form routes must satisfy `PaceAppLayout` authenticated-route requirements whenever they render inside protected app chrome.
 
 ### Verification
 
-- **AC1:** Auth-required handoff vs participant event hub vs authenticated form vs submit are exercisable as separate flows (routes and hooks).
+- **AC1:** Auth-required handoff vs participant event hub vs participant itinerary vs authenticated form vs submit are exercisable as separate flows (routes and hooks).
 - **AC2:** `Apply`, `Resume`, and `Manage` states and `base_application` usage match the agreed semantics in UI and data.
 - **AC3:** Draft persistence and resume differ from final submission in observable behavior and contracts.
 - **AC4:** Forms and events resolve without relying on `context_id` grouping for the management experience in the rebuild target.
 
 ### Testing requirements
 
-- **AC1:** Separate tests for auth-required handoff, event-hub load, authenticated form load, and submission orchestration.
+- **AC1:** Separate tests for auth-required handoff, event-hub load, participant-itinerary load, authenticated form load, and submission orchestration.
 - **AC2:** State transitions and routing behavior for `Apply` / `Resume` / `Manage`.
 - **AC3:** Draft persistence, resume, and submit idempotency or duplicate-safety as documented.
 - **AC4:** Metadata resolution, file/logo loading, active-form management; no `context_id` dependency for management UX.
@@ -643,6 +647,7 @@ Contract-only: public exports, paths, data touchpoints, and layout obligations �
 ### Do not
 
 - Do not collapse auth-required handoff, event-hub composition, authenticated rendering, and final submission into one oversized implementation unit.
+- Do not treat the portal itinerary page as a second TRAC planner surface or as a replacement for TRAC `/itinerary`.
 - Do not route event-entry users directly into `/register` in the rebuild target unless a requirement explicitly changes that contract.
 - Do not rely on `context_id` grouping for the management experience in the current rebuild target.
 

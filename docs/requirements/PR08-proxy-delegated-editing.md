@@ -46,7 +46,7 @@ Use this table to resolve “same in-scope modules” without open-ended interpr
 | Medical summary & conditions | `/medical-profile` | Same bounded context with hooks resolving **target member** in proxy mode | PR09, PR10 |
 | Action-plan files | Within medical / condition flows | Same as member for `T`; file lifecycle per PR11 | PR10, PR11 |
 | Additional contacts | `/additional-contacts` | Same flows; duplicate detection vs **`T`** in proxy mode | PR12, PR13 |
-| Event selector, hub, and form routes | `/:eventSlug`, `/:eventSlug/application`, `/:eventSlug/:formSlug`, dashboard cards | Same event/form behavior; handoff and CTAs per PR14; authenticated form and submit attribute to **`T`** when proxy requires it | PR14–PR16 |
+| Event selector, hub, itinerary, and form routes | `/:eventSlug`, `/:eventSlug/itinerary`, `/:eventSlug/application`, `/:eventSlug/:formSlug`, dashboard cards | Same event workflow behavior for the target member; hub/action ownership per PR14, itinerary route ownership per PR21, authenticated form and submit attribute to **`T`** when proxy requires it | PR14–PR16, PR21 |
 
 If a future slice adds a new protected route, extend this matrix in the same table format—do not rely on vague “parity with legacy” wording alone.
 

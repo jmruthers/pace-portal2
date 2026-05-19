@@ -12,7 +12,7 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 - Dependencies: **PR03** (dashboard must expose the event-selector slot that this slice replaces); `pace-core` layout, buttons, cards, badges, file display, and auth/context primitives; event and form resolution contracts; dashboard event surface used for application state transitions.
 - Standards: 01 Project Structure, 02 Architecture, 03 Security/RBAC, 05 pace-core Compliance, 07 Visual, 08 Testing/Documentation.
 - Current baseline behavior: the dashboard event cards already surface `Apply`, `Manage`, `Plan`, and `Setup` actions depending on state; management details are shown in a modal.
-- Rebuild delta: replace the placeholder `EventList` interaction built in PR03 with the resolved `Apply` / `Resume` / `Manage/Open` flow, keep `Resume` on the same authenticated application path as `Apply`, and move non-draft participants into a dedicated participant event-hub page (`/:eventSlug`) rather than a modal-only management surface.
+- Rebuild delta: replace the placeholder `EventList` interaction built in PR03 with the resolved `Apply` / `Resume` / `Manage/Open` flow, keep `Resume` on the same authenticated application path as `Apply`, and move non-draft participants into a dedicated participant event-hub page (`/:eventSlug`) rather than a modal-only management surface. The hub also acts as the member-facing entry surface for downstream event workflows, including a route action for the read-only participant itinerary page owned by PR21.
 
 ## Acceptance criteria
 
@@ -21,6 +21,7 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 - [ ] `Resume` routes to the same authenticated application path as `Apply`.
 - [ ] `Manage`/open routes to `/:eventSlug` (participant event hub) and not a modal-only dead-end.
 - [ ] The participant event hub page shows event name, logo, dates, participant blurb, admin email, website (when present), application status, and active forms/workflow links without `context_id` grouping.
+- [ ] When the viewer is already scoped as a participant for the event, the participant event hub includes a `View itinerary` link or action to `/:eventSlug/itinerary`.
 - [ ] Missing event, inactive-window, and logo-fallback states are visible and testable on selector/hub surfaces.
 - [ ] The dashboard event list shows **only** events that have at least one **published** form that is active (not deactivated) and within its open window, scoped to organisations the user can access (see **Dashboard event list visibility** below).
 - [ ] When no event qualifies, the dashboard events section is empty while other landing sections still load.
@@ -47,6 +48,7 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 - Theming contract: do not apply `applyPalette`, `getPaletteFromEvent`, `getPaletteFromOrganisation`, or `clearPalette` in this slice during the rebuild; event and organisation palette theming is explicitly out of scope for the current wave.
 - Permission and context contracts: dashboard and event-hub actions require authenticated user context and any RBAC context supplied by `UnifiedAuth`; authenticated `PaceAppLayout` usage in this slice must follow `./PR00-portal-architecture.md#paceapplayout-and-appswitcher`.
 - Ownership rule: `PR14` owns the `useFileReferences` hook as the event-logo file-reference resolver for dashboard event-entry and participant event-hub surfaces. Later event slices may depend on that contract, but they do not own the hook definition.
+- Workflow-link ownership rule: `PR14` owns the participant event-hub workflow-link surface, including the presence and placement of `View itinerary` on `/:eventSlug`; `PR21` owns the `/:eventSlug/itinerary` route, participant read rules consumed from TRAC, and the itinerary page itself.
 
 ## Visual specification
 
@@ -59,12 +61,13 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 
 - Verify the dashboard event selector renders the correct action state for no application, draft application, and submitted/non-draft application cases.
 - Verify `Manage` routes to `/:eventSlug` and hub content renders required event summary fields and active forms.
+- Verify the hub exposes `View itinerary` for an already-scoped participant and links to `/:eventSlug/itinerary`.
 - Verify authenticated event-logo rendering works on dashboard and hub surfaces via authenticated file-display primitives.
 
 ## Testing requirements
 
 - Required automated coverage: unit coverage for action-state mapping/file-reference resolution and integration coverage for dashboard selector + event-hub routing.
-- Required scenarios: `Apply` / `Resume` / `Manage` state derivation, logo fallback, missing event, inactive form window, RLS or RPC failure, and event-hub content rendering.
+- Required scenarios: `Apply` / `Resume` / `Manage` state derivation, logo fallback, missing event, inactive form window, RLS or RPC failure, event-hub content rendering, and `View itinerary` link visibility for an already-scoped participant.
 - Dashboard event list: unit tests for **published / draft / closed**, **`is_active` false vs null/true**, and **`opens_at` / `closes_at`** boundary and null semantics; integration or orchestration tests ensuring `fetchEnhancedLanding` (or equivalent) only returns events with a qualifying form across accessible organisations.
 
 ## Do not
@@ -72,6 +75,7 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 - Do not remove the dashboard-side event selector from this rebuild wave.
 - Do not group event-hub workflow links by `context_id`.
 - Do not keep `Manage` as modal-only UX; it must route to the participant event hub page.
+- Do not let PR14 absorb ownership of the itinerary route contract; `View itinerary` belongs on the hub, but the `/:eventSlug/itinerary` page belongs to PR21.
 - Do not add dynamic event or organisation palette theming in this slice unless a later requirement explicitly brings it into scope.
 - Do not drop the existing event metadata, logo, or open-form behavior unless a separate requirement explicitly replaces it.
 
@@ -81,6 +85,7 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 - [Project brief: pace-portal](./PR00-portal-project-brief.md)
 - [pace-portal architecture](./PR00-portal-architecture.md)
 - [PR01 app shell routing](./PR01-app-shell-routing.md) (redirect-after-sign-in)
+- [PR21 participant itinerary](./PR21-participant-itinerary.md)
 - [PaceAppLayout constraint](./PR00-portal-architecture.md#paceapplayout-and-appswitcher)
 - [Portal app manifest](./PR00-portal-architecture.md#route-ownership-and-matching-model)
 - [Portal domain map](./PR00-portal-architecture.md)
