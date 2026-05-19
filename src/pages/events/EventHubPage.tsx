@@ -17,6 +17,7 @@ import { type EventHubData, useEventHub } from '@/hooks/events/useEventHub';
 import { useFileReferences } from '@/hooks/events/useFileReferences';
 import { EventLogo } from '@/components/events/EventLogo';
 import { formatEventDateForDisplay } from '@/shared/lib/formatEventDateForDisplay';
+import { EventHubActivitiesSection } from '@/components/events/EventHubActivitiesSection';
 
 /** Absolute external URL participant website (no protocol heuristic). */
 function participantWebsiteHref(raw: string): string | null {
@@ -169,6 +170,13 @@ export function EventHubPage() {
             Event forms exist but none are accepting submissions during the current booking window.
           </AlertDescription>
         </Alert>
+      ) : null}
+
+      {!data.needsProfileSetup ? (
+        <EventHubActivitiesSection
+          eventSlug={eventSlug}
+          applicationStatus={data.applicationStatus}
+        />
       ) : null}
 
       <section aria-label="Event forms">

@@ -37,7 +37,7 @@
 | PR16 — Event application submission | PR15 | Built | — |
 | PR17 — Shared form journey shell | PR01, PR02, PR14, PR15, PR16 | Built | — |
 | PR18 — Participant application progress | PR14, PR17 | Built | — |
-| PR19 — Participant activity booking | PR14, PR17 |  |  |
+| PR19 — Participant activity booking | PR14, PR17 | Built | — |
 | PR21 — My Memberships | PR01, PR02, PR05, PR06, PR07, PR15, PR17 |  |  |
 
 ## Evidence
@@ -175,10 +175,14 @@
 
 ### PR19 — Participant activity booking
 
+- acceptance: all four acceptance criteria in [`PR19-activity-booking.md`](../requirements/PR19-activity-booking.md) marked complete; consent projected from non-empty `base_activity_offering.description` with `base_consent` (`activity_waiver`) persistence after booking create; cancel-only edit semantics (no session reschedule)
 - authority: [`docs/requirements/PR19-activity-booking.md`](../requirements/PR19-activity-booking.md)
-- backend freeze: None — BA10 booking RPC + offering/session/booking tables PASS (portal-backend-ready-report)
+- backend freeze: None — BA10 booking RPC + offering/session/booking/`base_consent` tables PASS (portal-backend-ready-report)
 - contract (Evidence only): BASE BA10/BA11 per PR19 overview
 - QA advisory (non-blocking): portal-backend-ready-report suggests consuming base-backend-ready-report for BA09–BA16 edge artefacts if PR19 cross-checks ingest boundaries
+- implementation: route `/:eventSlug/activities` in [`src/App.tsx`](../src/App.tsx) via [`EventActivityBookingRoute`](../src/pages/events/EventFormRoutes.tsx); page [`ActivityBookingPage.tsx`](../src/pages/events/ActivityBookingPage.tsx); view [`ActivityBookingView.tsx`](../src/components/events/ActivityBookingView.tsx); hook [`useActivityBooking.ts`](../src/hooks/events/useActivityBooking.ts); lib [`activityBookingTypes.ts`](../src/lib/activityBookingTypes.ts), [`activityBookingRules.ts`](../src/lib/activityBookingRules.ts), [`activityBookingConsent.ts`](../src/lib/activityBookingConsent.ts), [`fetchActivityBookingBrowse.ts`](../src/lib/fetchActivityBookingBrowse.ts), [`fetchActivityWaiverConsents.ts`](../src/lib/fetchActivityWaiverConsents.ts), [`fetchParticipantBookings.ts`](../src/lib/fetchParticipantBookings.ts), [`validateActivityBooking.ts`](../src/lib/validateActivityBooking.ts), [`persistActivityBookingConsent.ts`](../src/lib/persistActivityBookingConsent.ts), [`activityBookingRpc.ts`](../src/lib/activityBookingRpc.ts); hub handoff [`EventHubActivitiesSection.tsx`](../src/components/events/EventHubActivitiesSection.tsx); path helper `eventActivityBookingPath` in [`eventFormPaths.ts`](../src/routing/eventFormPaths.ts)
+- tests: [`activityBookingContracts.test.ts`](../src/lib/activityBookingContracts.test.ts), [`activityBookingConsent.test.ts`](../src/lib/activityBookingConsent.test.ts), [`activityBookingRpc.test.ts`](../src/lib/activityBookingRpc.test.ts), [`useActivityBooking.test.tsx`](../src/hooks/events/useActivityBooking.test.tsx), [`ActivityBookingPage.test.tsx`](../src/pages/events/ActivityBookingPage.test.tsx), [`EventHubActivitiesSection.test.tsx`](../src/components/events/EventHubActivitiesSection.test.tsx), [`eventFormPaths.test.ts`](../src/routing/eventFormPaths.test.ts)
+- validate: `npm run validate` — PASS (`audit/202605191916-*` step reports + `audit/202605191917-pace-core-audit.md`)
 
 ### PR21 — My Memberships
 
