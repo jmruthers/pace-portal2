@@ -14,6 +14,8 @@ export const RESERVED_EVENT_SLUGS = new Set([
   'forms',
   /** PR19 participant activity booking; must not resolve as `/:eventSlug` hub. */
   'activities',
+  /** PR21 participant itinerary; must not resolve as `/:eventSlug` hub. */
+  'itinerary',
 ]);
 
 export function isReservedEventSlug(slug: string): boolean {
@@ -31,4 +33,10 @@ export function eventApplicationProgressPath(eventSlug: string, applicationId: s
 export function eventActivityBookingPath(eventSlug: string): string {
   const s = eventSlug.trim();
   return `/${encodeURIComponent(s)}/activities`;
+}
+
+/** PR21 authenticated participant route `/:eventSlug/itinerary`. */
+export function eventItineraryPath(eventSlug: string): string {
+  const s = eventSlug.trim();
+  return `/${encodeURIComponent(s)}/itinerary`;
 }

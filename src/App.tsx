@@ -14,6 +14,7 @@ import {
   EventApplicationProgressRoute,
   EventApplicationRoute,
   EventFormRoute,
+  EventItineraryRoute,
 } from '@/pages/events/EventFormRoutes';
 import { OrgFormRoute } from '@/pages/forms/OrgFormRoutes';
 
@@ -161,6 +162,7 @@ export default function App() {
               <Route path=":eventSlug/application" element={<EventApplicationRoute />} />
               <Route path=":eventSlug/applications/:applicationId" element={<EventApplicationProgressRoute />} />
               <Route path=":eventSlug/activities" element={<EventActivityBookingRoute />} />
+              <Route path=":eventSlug/itinerary" element={<EventItineraryRoute />} />
               <Route path=":eventSlug/:formSlug" element={<EventFormRoute />} />
               <Route path=":eventSlug" element={<EventHubPage />} />
             </Route>

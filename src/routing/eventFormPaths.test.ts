@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   eventActivityBookingPath,
   eventApplicationProgressPath,
+  eventItineraryPath,
   isReservedEventSlug,
   RESERVED_EVENT_SLUGS,
 } from '@/routing/eventFormPaths';
@@ -23,6 +24,11 @@ describe('eventFormPaths', () => {
   it('marks activities as a reserved first segment for hub routing', () => {
     expect(isReservedEventSlug('activities')).toBe(true);
     expect(isReservedEventSlug('ACTIVITIES')).toBe(true);
+  });
+
+  it('marks itinerary as a reserved first segment for hub routing', () => {
+    expect(isReservedEventSlug('itinerary')).toBe(true);
+    expect(isReservedEventSlug('ITINERARY')).toBe(true);
   });
 
   it('marks my-memberships as a reserved first segment for hub routing', () => {
@@ -47,6 +53,10 @@ describe('eventFormPaths', () => {
 
   it('builds participant activity booking path', () => {
     expect(eventActivityBookingPath('summer-gala')).toBe('/summer-gala/activities');
+  });
+
+  it('builds participant itinerary path', () => {
+    expect(eventItineraryPath('summer-gala')).toBe('/summer-gala/itinerary');
   });
 
   it('documents reserved keys for route ordering reviews', () => {

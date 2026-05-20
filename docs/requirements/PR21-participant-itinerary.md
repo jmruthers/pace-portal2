@@ -15,14 +15,14 @@ This file is **`PR21-participant-itinerary.md`** — portal requirement slice **
 
 ## Acceptance criteria
 
-- [ ] The portal documents an authenticated member-facing route at `/:eventSlug/itinerary`.
-- [ ] The primary entry point for the route is the participant event hub or event details surface owned by PR14.
-- [ ] The page is for participants already scoped in portal for the event and does not require TRAC RBAC.
-- [ ] The page shows only that participant's assigned logistics and remains read-only in v1.
-- [ ] The route consumes the same TRAC SLICE-05 participant rules: Option A logistics `SELECT` RLS assumption, participant-only assignment filter, same status filter (`trac_status IN ('booked', 'confirmed')`), same day-entry rules, same timezone precedence rules, and same in-day ordering rules.
-- [ ] The route consumes the shared pure itinerary derivation helper (CR26) from pace-core2 for day-entry expansion, timezone precedence, visible date range/day grouping, and in-day ordering rather than re-implementing those rules locally.
-- [ ] v1 remains list-first and simple; map support is not required.
-- [ ] Users without scoped participant itinerary data for the event receive a clear explanatory state rather than planner-oriented or empty-screen behavior.
+- [x] The portal documents an authenticated member-facing route at `/:eventSlug/itinerary`.
+- [x] The primary entry point for the route is the participant event hub or event details surface owned by PR14.
+- [x] The page is for participants already scoped in portal for the event and does not require TRAC RBAC.
+- [x] The page shows only that participant's assigned logistics and remains read-only in v1.
+- [x] The route consumes the same TRAC SLICE-05 participant rules: Option A logistics `SELECT` RLS assumption, participant-only assignment filter, same status filter (`trac_status IN ('booked', 'confirmed')`), same day-entry rules, same timezone precedence rules, and same in-day ordering rules.
+- [x] The route consumes the shared pure itinerary derivation helper (CR26) from pace-core2 for day-entry expansion, timezone precedence, visible date range/day grouping, and in-day ordering rather than re-implementing those rules locally.
+- [x] v1 remains list-first and simple; map support is not required.
+- [x] Users without scoped participant itinerary data for the event receive a clear explanatory state rather than planner-oriented or empty-screen behavior.
 
 ## API / Contract
 

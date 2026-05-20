@@ -38,7 +38,7 @@
 | PR17 — Shared form journey shell | PR01, PR02, PR14, PR15, PR16 | Built | — |
 | PR18 — Participant application progress | PR14, PR17 | Built | — |
 | PR19 — Participant activity booking | PR14, PR17 | Built | — |
-| PR21 — Participant itinerary | PR14 | Not built | — |
+| PR21 — Participant itinerary | PR14 | Built | — |
 | PR22 — My Memberships | PR01, PR02, PR05, PR06, PR07, PR15, PR17 | Built | — |
 
 ## Evidence
@@ -187,11 +187,12 @@
 
 ### PR21 — Participant itinerary
 
-- acceptance: none — see [`PR21-participant-itinerary.md`](../requirements/PR21-participant-itinerary.md)
+- acceptance: all eight acceptance criteria in [`PR21-participant-itinerary.md`](../requirements/PR21-participant-itinerary.md) marked complete
 - authority: [`docs/requirements/PR21-participant-itinerary.md`](../requirements/PR21-participant-itinerary.md)
 - backend freeze: TRAC SLICE-05 participant read contract + CR26 derivation helper (portal-backend-ready-report cross-check)
-- implementation: not started — no `/:eventSlug/itinerary` route or `ParticipantItineraryPage` in `src/` yet
-- tests: none
+- implementation: route `/:eventSlug/itinerary` in [`src/App.tsx`](../src/App.tsx) via [`EventItineraryRoute`](../src/pages/events/EventFormRoutes.tsx); page [`ParticipantItineraryPage.tsx`](../src/pages/events/ParticipantItineraryPage.tsx); view [`ParticipantItineraryView.tsx`](../src/components/events/ParticipantItineraryView.tsx); list [`ParticipantItineraryDayList.tsx`](../src/components/events/ParticipantItineraryDayList.tsx); hook [`useParticipantItinerary.ts`](../src/hooks/events/useParticipantItinerary.ts); lib [`fetchParticipantItinerary.ts`](../src/lib/fetchParticipantItinerary.ts), [`mapParticipantItineraryToCr26.ts`](../src/lib/mapParticipantItineraryToCr26.ts), [`participantItineraryRows.ts`](../src/lib/participantItineraryRows.ts), [`participantItineraryDatabase.ts`](../src/lib/participantItineraryDatabase.ts), [`participantItineraryContracts.ts`](../src/lib/participantItineraryContracts.ts), [`participantItineraryLabels.ts`](../src/lib/participantItineraryLabels.ts); hub handoff [`EventHubItinerarySection.tsx`](../src/components/events/EventHubItinerarySection.tsx), [`EventHubWorkflowSections.tsx`](../src/components/events/EventHubWorkflowSections.tsx); path helper `eventItineraryPath` and reserved `itinerary` in [`eventFormPaths.ts`](../src/routing/eventFormPaths.ts)
+- tests: [`mapParticipantItineraryToCr26.test.ts`](../src/lib/mapParticipantItineraryToCr26.test.ts), [`fetchParticipantItinerary.test.ts`](../src/lib/fetchParticipantItinerary.test.ts), [`useParticipantItinerary.test.tsx`](../src/hooks/events/useParticipantItinerary.test.tsx), [`ParticipantItineraryView.test.tsx`](../src/components/events/ParticipantItineraryView.test.tsx), [`EventHubPage.test.tsx`](../src/pages/events/EventHubPage.test.tsx), [`eventFormPaths.test.ts`](../src/routing/eventFormPaths.test.ts), [`App.test.tsx`](../src/App.test.tsx) (itinerary route)
+- validate: `npm run validate` — PASS (`audit/202605202035-*` step reports + `audit/202605202036-pace-core-audit.md`)
 
 ### PR22 — My Memberships
 

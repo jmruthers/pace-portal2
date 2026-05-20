@@ -89,6 +89,10 @@ function renderUnderRoute(options: HubSpyState & { initialEntries?: string[] }) 
         element: <main data-testid="login-route">Login</main>,
       },
       {
+        path: '/:eventSlug/itinerary',
+        element: <article data-testid="itinerary-route">itinerary</article>,
+      },
+      {
         path: '/:eventSlug/:formSlug',
         element: <article data-testid="form-route">form</article>,
       },
@@ -113,6 +117,39 @@ describe('EventHubPage', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(auth, 'useUnifiedAuthContext').mockReturnValue({ isAuthenticated: true } as never);
+  });
+
+  it('shows View itinerary when participant is scoped and navigates to itinerary route', async () => {
+    const user = userEvent.setup();
+    const { router } = renderUnderRoute({
+      data: {
+        event: sampleRow,
+        applicationStatus: 'approved',
+        eligibleFormLinks: [],
+        inactiveFormWindow: false,
+        needsProfileSetup: false,
+      },
+      initialEntries: ['/camp'],
+    });
+
+    const itineraryButton = screen.getByRole('button', { name: /View itinerary/i });
+    expect(itineraryButton).toBeInTheDocument();
+
+    await user.click(itineraryButton);
+    expect(router.state.location.pathname).toBe('/camp/itinerary');
+  });
+
+  it('does not show View itinerary when profile setup is required', () => {
+    renderUnderRoute({
+      data: {
+        event: sampleRow,
+        applicationStatus: 'approved',
+        eligibleFormLinks: [],
+        inactiveFormWindow: false,
+        needsProfileSetup: true,
+      },
+    });
+    expect(screen.queryByRole('button', { name: /View itinerary/i })).not.toBeInTheDocument();
   });
 
   it('renders event summary, application badge, inactive warning, and form links', async () => {

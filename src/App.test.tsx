@@ -120,6 +120,14 @@ vi.mock('@/pages/public/TokenApprovalPage', () => ({
   TokenApprovalPage: () => <h1>Token approval surface</h1>,
 }));
 
+vi.mock('@/pages/events/ParticipantItineraryPage', () => ({
+  ParticipantItineraryPage: () => <h1>Itinerary surface</h1>,
+}));
+
+vi.mock('@/pages/events/EventHubPage', () => ({
+  EventHubPage: () => <h1>Event hub surface</h1>,
+}));
+
 function renderApp(initialEntry: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -201,5 +209,15 @@ describe('App shell routing (PR01)', () => {
       expect(screen.getByRole('heading', { name: 'Token approval surface' })).toBeInTheDocument();
     });
     expect(screen.queryByTestId('protected-redirect')).toBeNull();
+  });
+
+  it('renders participant itinerary route when authenticated (PR21)', async () => {
+    isAuthenticated = true;
+    renderApp('/camp/itinerary');
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Itinerary surface' })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('heading', { name: 'Not found surface' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Event hub surface' })).toBeNull();
   });
 });

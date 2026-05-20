@@ -19,6 +19,30 @@ const ActivityBookingPage = lazy(async () => {
   return { default: m.ActivityBookingPage };
 });
 
+const ParticipantItineraryPage = lazy(async () => {
+  const m = await import('@/pages/events/ParticipantItineraryPage');
+  return { default: m.ParticipantItineraryPage };
+});
+
+/** Authenticated participant itinerary (`/:eventSlug/itinerary`, PR21). */
+export function EventItineraryRoute() {
+  const { eventSlug = '' } = useParams();
+  if (eventSlug === '' || isReservedEventSlug(eventSlug)) {
+    return <NotFoundPage />;
+  }
+  return (
+    <Suspense
+      fallback={
+        <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
+          <LoadingSpinner label="Loading itinerary…" />
+        </main>
+      }
+    >
+      <ParticipantItineraryPage />
+    </Suspense>
+  );
+}
+
 /** Authenticated participant activity booking (`/:eventSlug/activities`, PR19). */
 export function EventActivityBookingRoute() {
   const { eventSlug = '' } = useParams();
