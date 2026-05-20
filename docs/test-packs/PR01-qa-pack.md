@@ -1,0 +1,34 @@
+# PR01 QA Pack
+
+## Slice metadata
+
+- slice_id: PR01
+- app: portal
+- requirement_path: docs/requirements/PR01-app-shell-routing.md
+
+## Manual frontend scenarios
+
+| scenario_id | requirement_ref | route_or_screen | steps | expected_result | result | notes |
+|---|---|---|---|---|---|---|
+| S-01 | AC-01 | /dashboard | 1) Sign out if needed. 2) Open the app and sign in. 3) Navigate to a protected route such as /dashboard before the session is established. | RBAC-dependent protected content does not render before auth and organisation context are ready; no permission errors from premature RBAC use. | - | - |
+| S-02 | AC-02 | /login | 1) Open /login and /register in a private or signed-out session. | Both routes render without requiring an authenticated session. | - | - |
+| S-03 | AC-03 | /dashboard | 1) Sign in. 2) Navigate to /dashboard while organisation context is still loading, then after it resolves. | Protected content stays behind auth and organisation loading checks; no flash of protected data before gates pass. | - | - |
+| S-04 | AC-04 | /, /dashboard, /member-profile, /medical-profile, /additional-contacts, /profile-complete, /profile/view/:memberId, /profile/edit/:memberId, /:eventSlug, /:eventSlug/itinerary, /:eventSlug/application, /:eventSlug/applications/:applicationId, /:eventSlug/:formSlug | 1) While signed in, open each documented non-payment route alias in turn. | Each route resolves with the expected shell (main authenticated chrome or profile-complete navigation-free shell) and does not 404 for documented aliases. | - | - |
+| S-05 | AC-05 | /login | 1) Open /login. 2) Locate the link for users without a PACE account. | A visible control navigates to /register. | - | - |
+| S-06 | AC-06 | /dashboard, /profile-complete | 1) Open /dashboard and observe chrome. 2) Open /profile-complete and observe chrome. | Dashboard uses the main authenticated shell; profile-complete uses the navigation-free authenticated shell aligned with PaceAppLayout behavior. | - | - |
+| S-07 | AC-07 | /dashboard | 1) Stay signed in on a protected page until the inactivity warning threshold. 2) Dismiss or allow the warning to proceed to logout per product timing. | Inactivity warning modal appears before forced logout; idle logout uses configured timeouts rather than disabled inactivity protection. | - | - |
+| S-08 | AC-08 | /dashboard | 1) Sign in and reload the app or open a protected route during session restoration. | Session restoration shows SessionRestorationLoader instead of a generic protected-route spinner until restore completes. | - | - |
+| S-09 | AC-09 | /dashboard | 1) Trigger a lazy-route load. 2) Observe global toast and error-boundary behavior on a recoverable failure if available in test data. | Suspense fallback, global ToastProvider toasts, and error-boundary fallback render without breaking the shell. | - | - |
+| S-10 | AC-10 | /:eventSlug/:formSlug | 1) While signed out, open an event form URL. 2) Sign in from the handoff. | After successful sign-in, the browser returns to the intended event form URL. | - | - |
+| S-11 | AC-11 | /login | 1) Use explicit sign-out, idle timeout, and session expiry paths in turn. | Each path returns the user to /login and clears protected context. | - | - |
+| S-12 | AC-12 | /dashboard | 1) Inspect main navigation and route list while signed in. | No payment or invoice routes or navigation entries appear in the active rebuild shell. | - | - |
+| S-13 | Verification | /, /dashboard | 1) Open / and /dashboard while signed in. | Both URLs show the same dashboard surface. | - | - |
+| S-14 | Verification | /dashboard, /profile-complete | 1) Open /dashboard. 2) Open /profile-complete. | AppSwitcher appears at the top left on the main authenticated shell and is populated for the signed-in user; it is absent on /profile-complete. | - | - |
+| S-15 | Verification | /:eventSlug/application | 1) While signed out, open /:eventSlug/application for a known event slug. | User is redirected to /login with a return URL that preserves the event workflow destination. | - | - |
+
+## Test run summary
+
+- overall result: -
+- failed scenarios: -
+- defect links: -
+- retest needed: -
