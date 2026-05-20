@@ -10,10 +10,10 @@ describe('buildCompletionPath', () => {
     expect(buildCompletionPath('a b', 'c/d')).toBe('/a%20b/c%2Fd?fromWizard=true');
   });
 
-  it('falls back to dashboard when handoff is incomplete', () => {
-    expect(buildCompletionPath('evt', null)).toBe('/dashboard');
-    expect(buildCompletionPath(null, 'frm')).toBe('/dashboard');
-    expect(buildCompletionPath(null, null)).toBe('/dashboard');
+  it('falls back to my-memberships when handoff is incomplete', () => {
+    expect(buildCompletionPath('evt', null)).toBe('/my-memberships');
+    expect(buildCompletionPath(null, 'frm')).toBe('/my-memberships');
+    expect(buildCompletionPath(null, null)).toBe('/my-memberships');
   });
 });
 

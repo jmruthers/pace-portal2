@@ -8,6 +8,7 @@ export const RESERVED_EVENT_SLUGS = new Set([
   'member-profile',
   'medical-profile',
   'additional-contacts',
+  'my-memberships',
   'profile',
   /** Top-level `/forms/*` journey; must not resolve as `/:eventSlug` hub. */
   'forms',

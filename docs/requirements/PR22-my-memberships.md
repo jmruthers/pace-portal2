@@ -1,8 +1,8 @@
-# PR21 — My Memberships
+# PR22 — My Memberships
 
 ## Filename convention
 
-This file is **`PR21-my-memberships.md`** — portal requirement slice **PR21** (see [portal-project-brief.md](./portal-project-brief.md)).
+This file is **`PR22-my-memberships.md`** — portal requirement slice **PR22** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 
@@ -16,20 +16,28 @@ This file is **`PR21-my-memberships.md`** — portal requirement slice **PR21** 
 
 ## Acceptance criteria
 
-- [ ] `/my-memberships` renders for authenticated users behind `PagePermissionGuard`.
-- [ ] The empty state renders when the member has no membership records, with an "Add Organisation" CTA.
-- [ ] Each membership renders a state card reflecting the current `core_member.membership_status` and associated `team_member_request.status` per the display rules in **Visual specification**.
-- [ ] The "Add Organisation" CTA launches the join/transfer flow inline on the same route.
-- [ ] The join/transfer flow collects: request type (Join / Transfer), org search/select, membership type (if org has >1 active type with age eligibility filtering), and the org's `org_signup` form (or a minimal no-fields view if none is configured).
-- [ ] Submitting the form calls `app_submit_member_request` and shows a confirmation screen on success.
-- [ ] Pre-submission check failures surface as inline errors without calling the RPC:
+- [x] `/my-memberships` renders for authenticated users behind `PagePermissionGuard`.
+- [x] The empty state renders when the member has no membership records, with an "Add Organisation" CTA.
+- [x] Each membership renders a state card reflecting the current `core_member.membership_status` and associated `team_member_request.status` per the display rules in **Visual specification**.
+- [x] The "Add Organisation" CTA launches the join/transfer flow inline on the same route.
+- [x] The join/transfer flow collects: request type (Join / Transfer), org search/select, membership type (if org has >1 active type with age eligibility filtering), and the org's `org_signup` form (or a minimal no-fields view if none is configured).
+- [x] Submitting the form calls `app_submit_member_request` and shows a confirmation screen on success.
+- [x] Pre-submission check failures surface as inline errors without calling the RPC:
   - Profile below completeness threshold → direct user to complete their profile.
   - Duplicate pending/on-hold request for the same org → explain and block.
   - Membership type age ineligibility → block with explanation.
-- [ ] Transfer requests require selecting a source org (the org the member is leaving); this is shown as a step only when request type is Transfer.
-- [ ] The page reflects real-time state after submission: the new card appears in the list at `Awaiting approval` without requiring a page reload.
-- [ ] Declined memberships show an "Apply again" CTA that re-enters the join flow for the same org.
-- [ ] No payment or billing behaviour is introduced.
+- [x] Transfer requests require selecting a source org (the org the member is leaving); this is shown as a step only when request type is Transfer.
+- [x] The page reflects real-time state after submission: the new card appears in the list at `Awaiting approval` without requiring a page reload.
+- [x] Declined memberships show an "Apply again" CTA that re-enters the join flow for the same org.
+- [x] No payment or billing behaviour is introduced.
+
+## Implementation notes (pace-portal)
+
+- **Org signup form step:** uses shared `FormRenderer` from PR15 (pace-core `Form` + Zod schema) — the portal equivalent of PR17 `WorkflowFormRenderer`.
+- **Person/member context for submit:** uses `OrganisationServiceProvider` selected org + `fetchCurrentPersonMember` fallback (per API contract “selected organisation context”).
+- **Membership list:** cards are built from `core_member` rows joined to the latest `team_member_request` per member; duplicate pre-submit guard also queries person-level pending/on-hold requests via `fetchPendingMemberRequests`.
+- **Post-submit list update:** optimistic `upsertListItem` + cache refetch after successful `app_submit_member_request`.
+- **Org search errors:** RPC failures surface inline in the org search step (`orgSearchError` in `useMemberRequestFlow`).
 
 ---
 
@@ -42,9 +50,9 @@ This file is **`PR21-my-memberships.md`** — portal requirement slice **PR21** 
   - Org search: type-ahead backed by **`data_pace_joinable_organisations_search`** (participant-safe directory of active tenants; avoids broad client `SELECT` on `core_organisations` under scoped RLS). Display name/id from RPC results.
   - Membership types: `core_membership_type` filtered by `organisation_id` and age eligibility against `core_person.dob`.
   - Org signup form: `core_forms` where `workflow_type = 'org_signup'` and `organisation_id` matches selected org and `status = 'published'` (DB **`form_status`** enum: `draft` / `published` / `closed`). If no matching published row exists, render no supplemental fields.
-  - Submit: `app_submit_member_request(p_org_id, p_membership_type_id, p_form_response_id, p_request_type, p_source_org_id)` — see TM01 §5.1 for full RPC contract.
+  - Submit: `app_submit_member_request` with TM01 parameters (`p_organisation_id`, `p_target_organisation_id`, `p_subject_person_id`, `p_subject_member_id`, `p_membership_type_id`, `p_form_response_id`, `p_request_type`, `p_source_organisation_id`, …) — see TM01 §5.1 and `src/lib/memberRequestRpc.ts`.
 - **ID contract:** use `UserId`, `OrganisationId`, `PageId` from `@solvera/pace-core/types` at hook and service boundaries.
-- **Form contract:** the org signup form step uses `useZodForm` from `@solvera/pace-core/hooks` for field validation, consistent with PR15/PR17 form rendering patterns. The org signup form is org-scoped (`organisation_id` FK) rather than event-scoped; `WorkflowFormRenderer` (or the equivalent renderer from PR17) renders the dynamic field set.
+- **Form contract:** the org signup form step uses shared `FormRenderer` (PR15) with `useZodForm` from `@solvera/pace-core/hooks`. Org-scoped published forms use the same participant eligibility rules as PR17 (`access_mode`, `is_active`, response window) via `src/lib/orgFormEligibility.ts`.
 - **Permission and context contracts:** authenticated route, `PagePermissionGuard` with `read:my-memberships`, current user/session context, and selected organisation context for the submission call.
 
 ---
@@ -76,8 +84,8 @@ Steps:
 1. **Request type** — Join (new member) or Transfer from another org. If Transfer, an additional "Source org" step follows org selection.
 2. **Org search/select** — type-ahead querying **`data_pace_joinable_organisations_search`**. Selected org shown as a confirmation chip before proceeding.
 3. **Source org** *(Transfer only)* — select the org the member is leaving from their active memberships.
-4. **Membership type** *(shown only if org has >1 active type)* — radio or select, filtered by age eligibility. If only one type exists, skip this step silently.
-5. **Org signup form** — renders the org's **published** `org_signup` form (`core_forms.status = 'published'`) via `WorkflowFormRenderer`. If no form is configured, shows a minimal review screen with a Submit button only.
+4. **Membership type** *(shown when org has >1 age-eligible type, or when none are eligible)* — control group filtered by age eligibility. If exactly one eligible type exists, skip this step silently. If none are eligible, stay on this step with an inline blocking message (no submit).
+5. **Org signup form** — renders the org's **published** `org_signup` form (`core_forms.status = 'published'`) via shared `FormRenderer` (PR15). Ineligible forms (inactive, wrong access mode, outside response window) are treated as not configured. If no usable form exists, shows a minimal review screen with a Submit button only.
 6. **Confirmation** — "Your request has been submitted. [Org name] will be in touch." with a return-to-list action.
 
 Pre-submission errors are shown inline before step 6 triggers the RPC.
@@ -109,9 +117,9 @@ Loading (while fetching membership list), empty, list with one or more cards, fl
 
 ## Slice boundaries
 
-- **PR21** owns `/my-memberships`, the membership state list, and the join/transfer flow shell.
+- **PR22** owns `/my-memberships`, the membership state list, and the join/transfer flow shell.
 - **TM01** owns all RPC contracts (`app_submit_member_request`, `app_resolve_member_request`), the `team_member_request` data model, and the `core_member` status enum. This slice consumes those contracts; it does not redefine them.
-- **PR15/PR17** own the `WorkflowFormRenderer` used for the org signup form step. This slice uses it; it does not re-implement dynamic form rendering.
+- **PR15** owns authenticated dynamic form rendering (`FormRenderer`); **PR17** owns the journey shell for `/forms/:slug`. This slice uses PR15 `FormRenderer` for the inline org signup step and shares org-form eligibility with PR17 via `orgFormEligibility.ts`.
 - **PR05/PR06** own the wizard that routes to this page after onboarding. The wizard's Step 5 (`OrgMemberRequestSection`) is the entry-point component for a first request; subsequent requests are managed here.
 - **PR07** owns member profile data used by the profile completeness pre-submission check.
 
@@ -119,7 +127,7 @@ Loading (while fetching membership list), empty, list with one or more cards, fl
 
 ## Do not
 
-- Do not re-implement dynamic form rendering — use `WorkflowFormRenderer` from PR17.
+- Do not re-implement dynamic form rendering — use shared `FormRenderer` from PR15 (same field pipeline as PR17 journey forms).
 - Do not write directly to `core_member` — all membership creation goes via `app_submit_member_request`.
 - Do not use legacy `membership_status` values (e.g. do not create `core_member` records with statuses other than `Provisional` from this surface).
 - Do not expose `team_member_request.review_notes` to the member — these are internal admin notes only.

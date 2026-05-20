@@ -6,7 +6,7 @@ export function buildCompletionPath(eventSlug: string | null, formSlug: string |
   if (eventSlug != null && formSlug != null) {
     return `/${encodeURIComponent(eventSlug)}/${encodeURIComponent(formSlug)}?fromWizard=true`;
   }
-  return '/dashboard';
+  return '/my-memberships';
 }
 
 type ShellValidateCtx = {

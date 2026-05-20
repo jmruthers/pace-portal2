@@ -25,6 +25,11 @@ describe('eventFormPaths', () => {
     expect(isReservedEventSlug('ACTIVITIES')).toBe(true);
   });
 
+  it('marks my-memberships as a reserved first segment for hub routing', () => {
+    expect(isReservedEventSlug('my-memberships')).toBe(true);
+    expect(isReservedEventSlug('MY-MEMBERSHIPS')).toBe(true);
+  });
+
   it('does not reserve typical event slugs', () => {
     expect(isReservedEventSlug('summer-gala')).toBe(false);
     expect(isReservedEventSlug('evt-2026')).toBe(false);

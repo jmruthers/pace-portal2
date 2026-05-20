@@ -57,6 +57,7 @@ These rules apply across slices; PR requirement docs reference this section inst
 | Member profile | `member-profile` | `read` |
 | Medical profile | `medical-profile` | `read` |
 | Additional contacts | `additional-contacts` | `read` |
+| My memberships | `my-memberships` | `read` |
 
 - **Delegated profile resource permissions:** delegated read `read:member-profiles`; delegated edit `update:member-profiles`. Delegated flows require both page-level and resource-level validation where applicable.
 - Event workflow routes require authenticated member context in MVP; when unauthenticated, show an auth-required handoff and preserve return URL context.
@@ -142,7 +143,7 @@ The implementation must branch on auth and routing state, not assume a single pa
 
 - **pace-portal is the single member-facing PACE web app** for authenticated members and delegates: profile, medical, contacts, proxy workspace, and **participant workflows that are configured or orchestrated from other modules** (e.g. BASE registration/application, activity booking). Those modules **do not** ship parallel participant SPAs on their own origins.
 - **BASE** (and similar) own **organiser/operator** surfaces, **configuration**, and **backend/RPC contracts** documented in [`docs/requirements/base/architecture.md`](../base/architecture.md). Portal **consumes** the same Supabase contracts; BASE does **not** own portal routes.
-- **Aligned today (portal requirement slices):** PR14 covers event selector + participant hub handoff, PR15–PR17 cover registration-style form flow for BASE S05a semantics, and PR21 covers the portal-hosted participant itinerary route that consumes the TRAC SLICE-05 participant contract.
+- **Aligned today (portal requirement slices):** PR14 covers event selector + participant hub handoff, PR15–PR17 cover registration-style form flow for BASE S05a semantics, PR21 covers the portal-hosted participant itinerary route that consumes the TRAC SLICE-05 participant contract, and PR22 covers `/my-memberships` (membership list and join/transfer requests).
 - **Participant itinerary contract authority:** The portal route `/:eventSlug/itinerary` is a **member-facing consumer** of the participant itinerary contract documented in `/Users/kusi/Documents/GitHub/pace-trac/rebuild/architecture.md`, `/Users/kusi/Documents/GitHub/pace-trac/rebuild/slices/SLICE-05_requirements.md`, `/Users/kusi/Documents/GitHub/pace-trac/rebuild/feature-list.md`, and `/Users/kusi/Documents/GitHub/pace-trac/rebuild/user-stories.md`. Portal owns the route, entry UX, and page composition; TRAC remains the authority for participant read rules and Option A RLS assumptions.
 - **Documented gaps (add portal slices / routes; BASE slices keep contract authority):**
   - **Application progress** (participant-visible status and checks; BASE **S05b** contract) — covered by [PR18-application-progress.md](./PR18-application-progress.md).
@@ -180,7 +181,7 @@ Reserved legacy slice IDs for a future payments wave: **POR-014, POR-015, POR-01
 | § 1 App shell | [PR01-app-shell-routing.md](./PR01-app-shell-routing.md), [PR02-shared-services-hooks.md](./PR02-shared-services-hooks.md) |
 | § 2 Auth / onboarding | [PR04-register-placeholder.md](./PR04-register-placeholder.md), [PR05-profile-wizard-shell.md](./PR05-profile-wizard-shell.md), [PR06-wizard-field-details.md](./PR06-wizard-field-details.md) |
 | § 3 Dashboard | [PR03-dashboard-composition.md](./PR03-dashboard-composition.md) |
-| § 4 Member / proxy | [PR07-member-profile-self-service.md](./PR07-member-profile-self-service.md), [PR08-proxy-delegated-editing.md](./PR08-proxy-delegated-editing.md) |
+| § 4 Member / proxy | [PR07-member-profile-self-service.md](./PR07-member-profile-self-service.md), [PR08-proxy-delegated-editing.md](./PR08-proxy-delegated-editing.md), [PR22-my-memberships.md](./PR22-my-memberships.md) |
 | § 5 Medical | [PR09-medical-profile-summary.md](./PR09-medical-profile-summary.md), [PR10-medical-conditions-crud.md](./PR10-medical-conditions-crud.md), [PR11-action-plan-files.md](./PR11-action-plan-files.md) |
 | § 6 Contacts | [PR12-contacts-listing.md](./PR12-contacts-listing.md), [PR13-contact-create-edit-flow.md](./PR13-contact-create-edit-flow.md) |
 | § 7 Events / forms | [PR14-event-selector-and-hub.md](./PR14-event-selector-and-hub.md), [PR15-authenticated-form-rendering.md](./PR15-authenticated-form-rendering.md), [PR16-event-application-submission.md](./PR16-event-application-submission.md), [PR17-form-journey-shell.md](./PR17-form-journey-shell.md), [PR18-application-progress.md](./PR18-application-progress.md), [PR19-activity-booking.md](./PR19-activity-booking.md), [PR20-token-approval-host.md](./PR20-token-approval-host.md), [PR21-participant-itinerary.md](./PR21-participant-itinerary.md) |
@@ -212,15 +213,16 @@ Reserved legacy slice IDs for a future payments wave: **POR-014, POR-015, POR-01
 | POR-022 | [PR19-activity-booking.md](./PR19-activity-booking.md) | Activity booking |
 | POR-023 | [PR20-token-approval-host.md](./PR20-token-approval-host.md) | Token approval host |
 | POR-024 | [PR21-participant-itinerary.md](./PR21-participant-itinerary.md) | Participant itinerary |
+| POR-025 | [PR22-my-memberships.md](./PR22-my-memberships.md) | My memberships |
 | POR-099 | [PR99-slice-reconciliation.md](./PR99-slice-reconciliation.md) | Built-slice reconciliation log |
 
-**Suggested implementation order (dependency-first):** **PR01 → PR02 → PR03** (dashboard composition, including event selector slot) → **PR04 → PR05 → PR06 → PR07 → PR09 → PR12 → PR14** (selector + participant event hub handoff) → **PR21** (member-facing participant itinerary route from the hub) → **PR15 → PR16 → PR17** (authenticated form rendering/submit + shared journey shell) → **PR18 → PR19 → PR20** (application progress, activity booking, token approval host) → org forms on `/forms/:formSlug` in follow-up TEAM-aligned slices.
+**Suggested implementation order (dependency-first):** **PR01 → PR02 → PR03** (dashboard composition, including event selector slot) → **PR04 → PR05 → PR06 → PR07 → PR09 → PR12 → PR14** (selector + participant event hub handoff) → **PR21** (member-facing participant itinerary route from the hub) → **PR15 → PR16 → PR17** (authenticated form rendering/submit + shared journey shell) → **PR18 → PR19 → PR20** (application progress, activity booking, token approval host) → **PR22** (my memberships; may follow PR05/PR06/PR07/PR15/PR17) → org forms on `/forms/:formSlug` in follow-up TEAM-aligned slices.
 
 ---
 
 ## Appendix B: Consolidated QA review themes
 
-The following themes from the former independent doc QA pass are **addressed in this architecture doc and PR01–PR21** (no separate review file):
+The following themes from the former independent doc QA pass are **addressed in this architecture doc and PR01–PR22** (no separate review file):
 
 - **pace-core2 entrypoints and hooks:** Centralized under [Cross-cutting contracts](#cross-cutting-contracts-normative-summary); slices use `useZodForm`, `usePublicFileDisplay` / authenticated file hooks, `SessionRestorationLoader`, `recordLogin`, and branded IDs as specified per slice.
 - **PaceAppLayout and RBAC duplication:** Single normative copy in this document; slices link here instead of repeating full prop tables.

@@ -8,11 +8,11 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { MemberProfilePage } from '@/pages/member-profile/MemberProfilePage';
 import { MedicalProfilePage } from '@/pages/MedicalProfilePage';
 import { AdditionalContactsPage } from '@/pages/AdditionalContactsPage';
+import { MyMembershipsPage } from '@/pages/memberships/MyMembershipsPage';
 import { ProfileCompletionWizardPage } from '@/pages/ProfileCompletionWizardPage';
 import { ProfileViewPage } from '@/pages/member-profile/ProfileViewPage';
 import { ProfileEditProxyPage } from '@/pages/member-profile/ProfileEditProxyPage';
 import { FormFillPage } from '@/pages/events/FormFillPage';
-
 vi.mock('@/hooks/auth/useProfileCompletionWizard', () => ({
   useProfileCompletionWizard: () => ({
     currentStep: 0,
@@ -45,6 +45,8 @@ vi.mock('@/hooks/auth/useProfileCompletionWizard', () => ({
   }),
 }));
 
+const authState = vi.hoisted(() => ({ isAuthenticated: false }));
+
 vi.mock('@solvera/pace-core/rbac', () => ({
   PagePermissionGuard: ({ children }: { children: ReactNode }) => <>{children}</>,
   AccessDenied: () => <p>Access denied</p>,
@@ -52,7 +54,11 @@ vi.mock('@solvera/pace-core/rbac', () => ({
 }));
 
 vi.mock('@solvera/pace-core', () => ({
-  useUnifiedAuthContext: () => ({ isAuthenticated: false }),
+  useUnifiedAuthContext: () => ({
+    isAuthenticated: authState.isAuthenticated,
+    user: { id: 'u1' },
+    supabase: null,
+  }),
 }));
 
 vi.mock('@solvera/pace-core/providers', () => ({
@@ -76,6 +82,51 @@ vi.mock('@/hooks/member-profile/useMemberProfileData', () => ({
 
 vi.mock('@/hooks/member-profile/useMemberAdditionalFields', () => ({
   useMemberAdditionalFields: () => ({ data: null, isLoading: false }),
+}));
+
+vi.mock('@/hooks/memberships/useMembershipList', () => ({
+  useMembershipList: () => ({
+    items: [],
+    isLoading: false,
+    isError: false,
+    errorMessage: null,
+    refetch: vi.fn(),
+    upsertListItem: vi.fn(),
+  }),
+}));
+
+vi.mock('@/hooks/memberships/useMemberRequestFlow', () => ({
+  useMemberRequestFlow: () => ({
+    flowStep: 'idle',
+    requestType: 'join',
+    setRequestType: vi.fn(),
+    orgSearchQuery: '',
+    setOrgSearchQuery: vi.fn(),
+    orgSearchResults: [],
+    orgSearchLoading: false,
+    orgSearchError: null,
+    selectedOrg: null,
+    selectOrg: vi.fn(),
+    sourceOrgId: null,
+    setSourceOrgId: vi.fn(),
+    membershipTypes: [],
+    eligibleMembershipTypes: [],
+    selectedMembershipTypeId: null,
+    setSelectedMembershipTypeId: vi.fn(),
+    orgSignupForm: null,
+    orgFormLoading: false,
+    preSubmitError: null,
+    preSubmitCode: null,
+    submitError: null,
+    submitPending: false,
+    confirmationOrgName: null,
+    startFlow: vi.fn(),
+    cancelFlow: vi.fn(),
+    goNext: vi.fn(),
+    goBack: vi.fn(),
+    submitRequest: vi.fn(),
+    activeSourceMemberships: [],
+  }),
 }));
 
 vi.mock('@/hooks/member-profile/useAddressOperations', () => ({
@@ -248,6 +299,7 @@ vi.mock('@/shared/hooks/useProxyDashboard', () => ({
 
 describe('placeholder pages', () => {
   beforeEach(() => {
+    authState.isAuthenticated = false;
     proxyModeImpl.mockImplementation(() => ({
       isProxyActive: false,
       isValidating: false,
@@ -305,6 +357,19 @@ describe('placeholder pages', () => {
       </QueryClientProvider>
     );
     expect(screen.getByRole('heading', { name: /additional contacts/i, level: 1 })).toBeInTheDocument();
+  });
+
+  it('renders my memberships page shell', () => {
+    authState.isAuthenticated = true;
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <MyMembershipsPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    expect(screen.getByRole('heading', { name: /my memberships/i })).toBeInTheDocument();
   });
 
   it('renders profile completion wizard shell', () => {

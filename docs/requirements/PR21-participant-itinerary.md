@@ -2,7 +2,7 @@
 
 ## Filename convention
 
-This file is **`PR21-participant-itinerary.md`** — portal requirement slice **PR21** (see [PR00-portal-project-brief.md](./PR00-portal-project-brief.md)).
+This file is **`PR21-participant-itinerary.md`** — portal requirement slice **PR21** (see [portal-project-brief.md](./portal-project-brief.md)).
 
 ---
 

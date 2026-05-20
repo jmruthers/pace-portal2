@@ -3,13 +3,13 @@
 ## Run Readiness Summary
 
 - Backend-ready report: `../pace-core2/docs/delivery/portal-backend-ready-report.md` (`Gate status: PASS`)
-- Backend freeze status: `Frozen for this run` — slices **PR01–PR21**; no incremental portal/backend DDL in this frontend execution lane (per portal-backend-ready-report)
+- Backend freeze status: `Frozen for this run` — slices **PR01–PR22**; no incremental portal/backend DDL in this frontend execution lane (per portal-backend-ready-report)
 - Unresolved blockers: **0** (`none`)
 - Execution mode: **full run**
 
 ## Dependency handling for this run
 
-- Source authority for slice identity/title/dependencies: [`docs/requirements/`](../requirements/) numbered `PR##-*.md` slices **PR01–PR21**.
+- Source authority for slice identity/title/dependencies: [`docs/requirements/`](../requirements/) numbered `PR##-*.md` slices **PR01–PR22**.
 - `.contract` dependencies from requirement prose (BASE BA05b/BA07/BA10/BA11, TEAM TM01, etc.) are backend-pre-satisfied for runtime sequencing **when** the backend-ready gate is PASS and backend is frozen for this run — record those edges **only under Evidence**, not as `depends_on` queue prerequisites.
 - Runtime `depends_on` values in the queue table list **executable** portal-slice build-order prerequisites only; authority wording that cites non-PR tracks does not duplicate as `depends_on` while the gate PASS + freeze applies.
 - TEAM backend-ready FAIL for TM02/TM11–TM13 remains a **QA cross-check advisory** only for dashboard profile-photo paths (portal-backend-ready-report); **not** a queued `Blocked` row for this frontend run absent missing portal slice contracts.
@@ -38,7 +38,8 @@
 | PR17 — Shared form journey shell | PR01, PR02, PR14, PR15, PR16 | Built | — |
 | PR18 — Participant application progress | PR14, PR17 | Built | — |
 | PR19 — Participant activity booking | PR14, PR17 | Built | — |
-| PR21 — My Memberships | PR01, PR02, PR05, PR06, PR07, PR15, PR17 |  |  |
+| PR21 — Participant itinerary | PR14 | Not built | — |
+| PR22 — My Memberships | PR01, PR02, PR05, PR06, PR07, PR15, PR17 | Built | — |
 
 ## Evidence
 
@@ -184,8 +185,20 @@
 - tests: [`activityBookingContracts.test.ts`](../src/lib/activityBookingContracts.test.ts), [`activityBookingConsent.test.ts`](../src/lib/activityBookingConsent.test.ts), [`activityBookingRpc.test.ts`](../src/lib/activityBookingRpc.test.ts), [`useActivityBooking.test.tsx`](../src/hooks/events/useActivityBooking.test.tsx), [`ActivityBookingPage.test.tsx`](../src/pages/events/ActivityBookingPage.test.tsx), [`EventHubActivitiesSection.test.tsx`](../src/components/events/EventHubActivitiesSection.test.tsx), [`eventFormPaths.test.ts`](../src/routing/eventFormPaths.test.ts)
 - validate: `npm run validate` — PASS (`audit/202605191916-*` step reports + `audit/202605191917-pace-core-audit.md`)
 
-### PR21 — My Memberships
+### PR21 — Participant itinerary
 
-- authority: [`docs/requirements/PR21-my-memberships.md`](../requirements/PR21-my-memberships.md)
+- acceptance: none — see [`PR21-participant-itinerary.md`](../requirements/PR21-participant-itinerary.md)
+- authority: [`docs/requirements/PR21-participant-itinerary.md`](../requirements/PR21-participant-itinerary.md)
+- backend freeze: TRAC SLICE-05 participant read contract + CR26 derivation helper (portal-backend-ready-report cross-check)
+- implementation: not started — no `/:eventSlug/itinerary` route or `ParticipantItineraryPage` in `src/` yet
+- tests: none
+
+### PR22 — My Memberships
+
+- acceptance: all eleven acceptance criteria in [`PR22-my-memberships.md`](../requirements/PR22-my-memberships.md) marked complete
+- authority: [`docs/requirements/PR22-my-memberships.md`](../requirements/PR22-my-memberships.md)
 - backend freeze: **PORTAL-DB-001**, **PORTAL-DB-002**, **PORTAL-DB-003** — my-memberships guard + `app_submit_member_request` draft link + joinable org search RPC verified (portal-backend-ready-report PORTAL deltas + RPC table)
-- contract (Evidence only): TEAM TM01 member request architecture owns RPC semantics PR21 consumes (`app_submit_member_request`, etc.) — see PR21 References
+- contract (Evidence only): TEAM TM01 member request architecture owns RPC semantics PR22 consumes (`app_submit_member_request`, etc.) — see PR22 References
+- implementation: route `/my-memberships` in [`src/App.tsx`](../src/App.tsx); page [`MyMembershipsPage.tsx`](../src/pages/memberships/MyMembershipsPage.tsx); view [`MyMembershipsView.tsx`](../src/components/memberships/MyMembershipsView.tsx); hooks [`useMembershipList.ts`](../src/hooks/memberships/useMembershipList.ts), [`useMemberRequestFlow.ts`](../src/hooks/memberships/useMemberRequestFlow.ts); lib [`memberRequestTypes.ts`](../src/lib/memberRequestTypes.ts), [`deriveMembershipDisplayState.ts`](../src/lib/deriveMembershipDisplayState.ts), [`fetchMembershipList.ts`](../src/lib/fetchMembershipList.ts), [`searchJoinableOrganisations.ts`](../src/lib/searchJoinableOrganisations.ts), [`fetchOrgMembershipTypes.ts`](../src/lib/fetchOrgMembershipTypes.ts), [`fetchOrgSignupForm.ts`](../src/lib/fetchOrgSignupForm.ts), [`validateMemberRequestPreSubmit.ts`](../src/lib/validateMemberRequestPreSubmit.ts), [`persistOrgSignupFormResponse.ts`](../src/lib/persistOrgSignupFormResponse.ts), [`memberRequestRpc.ts`](../src/lib/memberRequestRpc.ts), [`submitMemberRequestFlow.ts`](../src/lib/submitMemberRequestFlow.ts); wizard fallback [`buildCompletionPath`](../src/hooks/auth/profileWizardShell.ts) → `/my-memberships`; reserved slug in [`eventFormPaths.ts`](../src/routing/eventFormPaths.ts)
+- tests: [`deriveMembershipDisplayState.test.ts`](../src/lib/deriveMembershipDisplayState.test.ts), [`validateMemberRequestPreSubmit.test.ts`](../src/lib/validateMemberRequestPreSubmit.test.ts), [`memberRequestRpc.test.ts`](../src/lib/memberRequestRpc.test.ts), [`fetchOrgMembershipTypes.test.ts`](../src/lib/fetchOrgMembershipTypes.test.ts), [`fetchMembershipList.test.ts`](../src/lib/fetchMembershipList.test.ts), [`searchJoinableOrganisations.test.ts`](../src/lib/searchJoinableOrganisations.test.ts), [`submitMemberRequestFlow.test.ts`](../src/lib/submitMemberRequestFlow.test.ts), [`useMembershipList.test.tsx`](../src/hooks/memberships/useMembershipList.test.tsx), [`useMemberRequestFlow.test.tsx`](../src/hooks/memberships/useMemberRequestFlow.test.tsx), [`MyMembershipsPage.test.tsx`](../src/pages/memberships/MyMembershipsPage.test.tsx), [`MembershipStateCard.test.tsx`](../src/components/memberships/MembershipStateCard.test.tsx), [`profileWizardShell.test.ts`](../src/hooks/auth/profileWizardShell.test.ts), [`eventFormPaths.test.ts`](../src/routing/eventFormPaths.test.ts)
+- validate: `npm run validate` — PASS (`audit/202605201833-*` step reports + `audit/202605201901-pace-core-audit.md`)

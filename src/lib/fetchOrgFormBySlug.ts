@@ -2,57 +2,20 @@
  * PR17 — Org-scoped published form load for `/forms/:formSlug`.
  */
 import { err, normalizeToApiError, ok, type ApiResult } from '@solvera/pace-core/types';
-import { getWorkflowPreSubmissionCheckKeys } from '@solvera/pace-core/forms';
-import type { WorkflowFormDefinition } from '@solvera/pace-core/forms';
 import type { RBACSupabaseClient } from '@solvera/pace-core/rbac';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 import type { CoreFormFieldRow } from '@/shared/lib/formFieldMeta';
-import type { Database } from '@/types/pace-database';
-
-type CoreFormRow = Database['public']['Tables']['core_forms']['Row'];
+import {
+  confirmationKeysFromFormRow,
+  getOrgFormEligibilityFailure,
+  type CoreFormRow,
+} from '@/lib/orgFormEligibility';
 
 export type OrgFormBySlugReady = {
   form: CoreFormRow;
   fieldRows: CoreFormFieldRow[];
   confirmationKeys: string[];
 };
-
-/** Org `/forms/:slug` rows always have `event_id` null — apply opens/closes window only (not dashboard event-card rules). */
-function orgFormWithinResponseWindow(
-  form: Pick<CoreFormRow, 'opens_at' | 'closes_at'>,
-  now: Date
-): boolean {
-  const t = now.getTime();
-  if (form.opens_at != null && form.opens_at !== '') {
-    const opens = Date.parse(form.opens_at);
-    if (Number.isFinite(opens) && opens > t) {
-      return false;
-    }
-  }
-  if (form.closes_at != null && form.closes_at !== '') {
-    const closes = Date.parse(form.closes_at);
-    if (Number.isFinite(closes) && closes < t) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function workflowStubFromFormRow(form: CoreFormRow): WorkflowFormDefinition {
-  return {
-    id: form.id,
-    slug: form.slug,
-    name: form.name,
-    description: form.description ?? undefined,
-    workflowType: form.workflow_type as WorkflowFormDefinition['workflowType'],
-    accessMode: form.access_mode as WorkflowFormDefinition['accessMode'],
-    status: form.status as WorkflowFormDefinition['status'],
-    opensAt: form.opens_at,
-    closesAt: form.closes_at,
-    workflowConfig: (form.workflow_config ?? {}) as WorkflowFormDefinition['workflowConfig'],
-    fields: [],
-  };
-}
 
 export async function fetchOrgFormBySlug(
   secure: RBACSupabaseClient | null,
@@ -124,26 +87,9 @@ export async function fetchOrgFormBySlug(
       });
     }
 
-    if (form.access_mode !== 'authenticated_member') {
-      return err({
-        code: 'FORM_ACCESS_MODE',
-        message: 'This form is not available for signed-in members via this route.',
-      });
-    }
-
-    if (form.is_active === false) {
-      return err({
-        code: 'FORM_INACTIVE',
-        message: 'This form is not active.',
-      });
-    }
-
-    const now = new Date();
-    if (!orgFormWithinResponseWindow(form, now)) {
-      return err({
-        code: 'FORM_WINDOW_CLOSED',
-        message: 'This form is not open for responses right now.',
-      });
+    const eligibilityFailure = getOrgFormEligibilityFailure(form);
+    if (eligibilityFailure) {
+      return err(eligibilityFailure);
     }
 
     const fieldsRes = await client
@@ -161,12 +107,11 @@ export async function fetchOrgFormBySlug(
     }
 
     const fieldRows = (fieldsRes.data ?? []) as CoreFormFieldRow[];
-    const confirmationKeys = getWorkflowPreSubmissionCheckKeys(workflowStubFromFormRow(form));
 
     return ok({
       form,
       fieldRows,
-      confirmationKeys,
+      confirmationKeys: confirmationKeysFromFormRow(form),
     });
   } catch (e) {
     return err(normalizeToApiError(e, 'FORM_LOAD', 'Could not load form.'));

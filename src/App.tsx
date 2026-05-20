@@ -49,6 +49,10 @@ const AdditionalContactsPage = lazy(async () => {
   const m = await import('@/pages/AdditionalContactsPage');
   return { default: m.AdditionalContactsPage };
 });
+const MyMembershipsPage = lazy(async () => {
+  const m = await import('@/pages/memberships/MyMembershipsPage');
+  return { default: m.MyMembershipsPage };
+});
 const ProfileViewPage = lazy(async () => {
   const m = await import('@/pages/member-profile/ProfileViewPage');
   return { default: m.ProfileViewPage };
@@ -149,6 +153,7 @@ export default function App() {
                 <Route path="member-profile" element={<MemberProfilePage />} />
                 <Route path="medical-profile" element={<MedicalProfilePage />} />
                 <Route path="additional-contacts" element={<AdditionalContactsPage />} />
+                <Route path="my-memberships" element={<MyMembershipsPage />} />
                 <Route path="profile/view/:memberId" element={<ProfileViewPage />} />
                 <Route path="profile/edit/:memberId" element={<ProfileEditProxyPage />} />
               </Route>
