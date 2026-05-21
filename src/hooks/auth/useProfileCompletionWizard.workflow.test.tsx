@@ -16,11 +16,17 @@ const persistMocks = vi.hoisted(() => ({
   s2: vi.fn(),
 }));
 
-vi.mock('@/hooks/auth/profileWizardPersistence', () => ({
-  persistProfileWizardStep0: persistMocks.s0,
-  persistProfileWizardStep1: persistMocks.s1,
-  persistProfileWizardStep2: persistMocks.s2,
-}));
+vi.mock('@/hooks/auth/profileWizardPersistence', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/auth/profileWizardPersistence')>(
+    '@/hooks/auth/profileWizardPersistence'
+  );
+  return {
+    ...actual,
+    persistProfileWizardStep0: persistMocks.s0,
+    persistProfileWizardStep1: persistMocks.s1,
+    persistProfileWizardStep2: persistMocks.s2,
+  };
+});
 
 vi.mock('@/components/member-profile/MemberProfile/memberProfileWizardSchema', async () => {
   const actual = await vi.importActual<
@@ -123,7 +129,7 @@ const personRow = {
   email: 'ada@example.com',
   middle_name: null,
   preferred_name: null,
-  date_of_birth: null,
+  date_of_birth: '1990-01-01',
   gender_id: 1,
   pronoun_id: 1,
   residential_address_id: 'addr-1',

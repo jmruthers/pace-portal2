@@ -2,13 +2,14 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useUnifiedAuthContext } from '@solvera/pace-core';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
-import { err, isOk, type ApiResult } from '@solvera/pace-core/types';
+import { err, type ApiResult } from '@solvera/pace-core/types';
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
 import type { FormBySlugReady } from '@/hooks/events/useFormBySlug';
 import { useFormBySlug } from '@/hooks/events/useFormBySlug';
 import type { FormEntrypoint } from '@/lib/formEntrypointResolution';
 import { fetchOrgFormBySlug, type OrgFormBySlugReady } from '@/lib/fetchOrgFormBySlug';
 import { toTypedSupabase } from '@/lib/supabase-typed';
+import { buildOrgFormEntrypointResult } from '@/hooks/forms/useFormEntrypointOrg';
 
 export type FormJourneyReady =
   | ({ kind: 'event' } & FormBySlugReady)
@@ -26,7 +27,6 @@ export type UseFormEntrypointResult = {
   routeFormSlug: string | null;
 };
 
-/* eslint-disable complexity -- PR17 entrypoint switch: event vs org load paths share one hook surface. */
 export function useFormEntrypoint(entrypoint: FormEntrypoint): UseFormEntrypointResult {
   const { user } = useUnifiedAuthContext();
   const org = useOrganisationsContextOptional();
@@ -82,31 +82,14 @@ export function useFormEntrypoint(entrypoint: FormEntrypoint): UseFormEntrypoint
   });
 
   if (isOrg) {
-    const payload =
-      orgQuery.data && isOk(orgQuery.data) ? orgQuery.data.data : undefined;
-    const apiError =
-      orgQuery.data && !isOk(orgQuery.data)
-        ? orgQuery.data.error
-        : orgQuery.error instanceof Error
-          ? { code: 'FORM_LOAD_QUERY', message: orgQuery.error.message }
-          : null;
-
-    return {
-      data:
-        payload != null
-          ? {
-              kind: 'org',
-              shellTitle,
-              ...payload,
-            }
-          : undefined,
-      isLoading: Boolean(client && userId && organisationId && isOrg && orgFormSlug !== '') && orgQuery.isLoading,
-      error: apiError,
-      notFound: apiError?.code === 'FORM_NOT_FOUND',
-      reservedSlug: false,
-      routeEventSlug: null,
-      routeFormSlug: orgFormSlug !== '' ? orgFormSlug : null,
-    };
+    return buildOrgFormEntrypointResult({
+      orgQuery,
+      shellTitle,
+      orgFormSlug,
+      clientReady: Boolean(client),
+      userId,
+      organisationId,
+    });
   }
 
   const evData = eventLoad.data;
@@ -123,4 +106,3 @@ export function useFormEntrypoint(entrypoint: FormEntrypoint): UseFormEntrypoint
     routeFormSlug: entrypoint.kind === 'event_form' ? entrypoint.formSlug : null,
   };
 }
-/* eslint-enable complexity */

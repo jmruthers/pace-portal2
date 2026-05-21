@@ -57,7 +57,7 @@ const memberRow = {
 
 function buildSecureClient() {
   const rpc = vi.fn((name: string) => {
-    if (name === 'check_user_pace_member_access_via_member_id') {
+    if (name === 'data_pace_member_access_check_via_member_id') {
       return Promise.resolve({ data: true, error: null });
     }
     return Promise.resolve({ data: null, error: null });

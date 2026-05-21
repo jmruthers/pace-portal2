@@ -1,4 +1,3 @@
-/* eslint-disable pace-core-compliance/max-named-exports -- PR06 persistence surface is intentionally grouped; split only if it grows further. */
 import type { AddressValue } from '@solvera/pace-core/forms';
 import { createErrorResult, ok, type ApiResult } from '@solvera/pace-core/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -8,11 +7,15 @@ import {
   isAddressValueEmpty,
   type CoreAddressWritePayload,
 } from '@/components/member-profile/MemberProfile/addressMapping';
-import type { MemberProfileFormPhone, MemberProfileFormValues } from '@/components/member-profile/MemberProfile/memberProfileWizardSchema';
+import type { MemberProfileFormPhone } from '@/components/member-profile/MemberProfile/memberProfileWizardSchema';
 import type { CoreAddressRow } from '@/hooks/shared/useAddressData';
 import { normalizeMembershipStatus } from '@/hooks/member-profile/usePersonOperations';
-
-export type PaceMembershipStatus = Database['public']['Enums']['pace_membership_status'];
+import type {
+  PaceMembershipStatus,
+  PersistWizardStep0Input,
+  PersistWizardStep1Input,
+  PersistWizardStep2Input,
+} from '@/hooks/auth/profileWizardPersistenceTypes';
 
 /**
  * Same normalization as self-service member profile saves (PR06 / PR07).
@@ -144,19 +147,6 @@ export async function replacePersonPhones(
   return ok(undefined);
 }
 
-export type PersistWizardStep0Input = {
-  db: SupabaseClient<Database>;
-  organisationId: string;
-  userId: string | null;
-  personId: string;
-  memberId: string | null;
-  values: Pick<
-    MemberProfileFormValues,
-    'first_name' | 'last_name' | 'middle_name' | 'preferred_name' | 'email' | 'date_of_birth' | 'gender_id' | 'pronoun_id'
-  >;
-  existingMembershipStatus: PaceMembershipStatus | null;
-};
-
 export async function persistProfileWizardStep0(input: PersistWizardStep0Input): Promise<{ memberId: string | null }> {
   const {
     db,
@@ -272,23 +262,6 @@ export async function persistProfileWizardStep0(input: PersistWizardStep0Input):
   return { memberId: effectiveMemberId };
 }
 
-export type PersistWizardStep1Values = {
-  residential: AddressValue;
-  postal_same_as_residential: boolean;
-  postal?: AddressValue;
-  phones: MemberProfileFormPhone[];
-};
-
-export type PersistWizardStep1Input = {
-  db: SupabaseClient<Database>;
-  organisationId: string;
-  userId: string | null;
-  personId: string;
-  values: PersistWizardStep1Values;
-  residentialRow: CoreAddressRow | null;
-  postalRow: CoreAddressRow | null;
-};
-
 export async function persistProfileWizardStep1(input: PersistWizardStep1Input): Promise<void> {
   const { db, organisationId, userId, personId, values, residentialRow, postalRow } = input;
 
@@ -327,14 +300,6 @@ export async function persistProfileWizardStep1(input: PersistWizardStep1Input):
     throw new Error(phonesRes.error.message);
   }
 }
-
-export type PersistWizardStep2Input = {
-  db: SupabaseClient<Database>;
-  userId: string | null;
-  memberId: string;
-  values: Pick<MemberProfileFormValues, 'membership_number' | 'membership_type_id'>;
-  existingMembershipStatus: PaceMembershipStatus | null;
-};
 
 export async function persistProfileWizardStep2(input: PersistWizardStep2Input): Promise<void> {
   const { db, userId, memberId, values, existingMembershipStatus } = input;

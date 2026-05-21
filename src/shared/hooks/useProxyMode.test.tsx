@@ -75,7 +75,7 @@ describe('useProxyMode', () => {
     expect(result.current.targetMemberId).toBe('member-1');
 
     await waitFor(() => {
-      expect(rpc).toHaveBeenCalledWith('check_user_pace_member_access_via_member_id', {
+      expect(rpc).toHaveBeenCalledWith('data_pace_member_access_check_via_member_id', {
         p_member_id: 'member-1',
       });
     });

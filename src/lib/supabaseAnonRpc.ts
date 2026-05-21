@@ -1,8 +1,7 @@
 /**
- * BA07 token-only RPC bridge: base `anon` client is required (no session, no secure wrapper).
- * RPC names are fixed by BASE BA07.
+ * BA07 anonymous token RPC bridge: base `anon` client is required (no session, no secure wrapper).
+ * RPC names are fixed by BASE BA07 (PR20).
  */
-/* eslint-disable pace-core-compliance/no-base-supabase-import-outside-bootstrap -- PR20 anonymous token RPC */
 import { supabaseClient } from '@/lib/supabase';
 
 type RpcResult = { data: unknown; error: { message?: string } | null };

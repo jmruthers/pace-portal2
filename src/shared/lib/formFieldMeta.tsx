@@ -1,25 +1,8 @@
 /**
- * Dynamic form field metadata + portal field registry (PR15).
- * Field catalogue typing and DB row alias exported for hooks and tests.
+ * Dynamic form field metadata helpers (PR15).
  */
-/* eslint-disable pace-core-compliance/max-named-exports -- Single module for metadata helpers and registry; splitting would scatter CR20 glue. */
-import { Controller } from '@solvera/pace-core/forms';
-import {
-  composeSchemaFromFieldMetadata,
-  createDefaultFieldRegistryEntries,
-  createFieldRegistry,
-  type FormFieldMeta,
-} from '@solvera/pace-core/forms';
-import {
-  Checkbox,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@solvera/pace-core/components';
 import { z } from '@solvera/pace-core/utils';
+import type { FormFieldMeta } from '@solvera/pace-core/forms';
 import type { Database } from '@/types/pace-database';
 
 export type CoreFieldCatalogueRow =
@@ -27,9 +10,6 @@ export type CoreFieldCatalogueRow =
 
 export type CoreFormFieldRow = Database['public']['Tables']['core_form_fields']['Row'];
 
-/**
- * Parses `field_key` (e.g. `person.first_name`) into table/column semantics for catalogue + prefill.
- */
 export function parseFieldKey(fieldKey: string): { domain: string; columnPath: string } | null {
   const t = fieldKey.trim();
   const i = t.indexOf('.');
@@ -37,7 +17,6 @@ export function parseFieldKey(fieldKey: string): { domain: string; columnPath: s
   return { domain: t.slice(0, i), columnPath: t.slice(i + 1) };
 }
 
-/** Maps `field_key` domain prefix to a physical table name when prefill is supported. */
 export function domainToTableName(domain: string): string | null {
   switch (domain) {
     case 'person':
@@ -80,9 +59,6 @@ function displayOptionsFieldType(opts: unknown): string | null {
   return null;
 }
 
-/**
- * Resolves CR20 registry `fieldType` from catalogue row + `core_form_fields.display_options`.
- */
 export function resolveRegistryFieldType(
   catalogueRow: CoreFieldCatalogueRow | undefined,
   displayOptions: unknown
@@ -95,7 +71,6 @@ export function resolveRegistryFieldType(
   return 'text';
 }
 
-/** Builds {@link FormFieldMeta} for one `core_form_fields` row. */
 export function buildFormFieldMeta(
   row: CoreFormFieldRow,
   catalogueByTableColumn: Map<string, CoreFieldCatalogueRow>
@@ -159,7 +134,6 @@ export function buildCatalogueIndex(
   return m;
 }
 
-/** Zod shape for workflow pre-submission confirmation checkboxes (PR15). */
 export function buildConfirmationZodSchema(keys: string[]) {
   if (keys.length === 0) {
     return z.object({});
@@ -169,88 +143,4 @@ export function buildConfirmationZodSchema(keys: string[]) {
     shape[k] = z.boolean().refine((v) => v === true, { message: 'Please confirm to continue.' });
   }
   return z.object(shape);
-}
-
-export type EventFormRegistry = ReturnType<typeof createEventFormFieldRegistry>;
-
-function buildCheckboxSchema(meta: FormFieldMeta): z.ZodTypeAny {
-  if (meta.required === false) {
-    return z.boolean().optional();
-  }
-  return z.boolean().refine((v) => v === true, { message: 'Required' });
-}
-
-function buildSelectSchema(meta: FormFieldMeta): z.ZodTypeAny {
-  const base = z.string();
-  return meta.required === false ? base.optional() : base.min(1, 'Required');
-}
-
-/**
- * CR20 registry extended with checkbox + select (portal seeds / catalogue types).
- */
-export function createEventFormFieldRegistry() {
-  return createFieldRegistry({
-    entries: [
-      ...createDefaultFieldRegistryEntries(),
-      {
-        fieldType: 'checkbox',
-        buildSchema: buildCheckboxSchema,
-        render: ({ meta, control, name }) => (
-          <Controller
-            name={name as never}
-            control={control}
-            render={({ field, fieldState }) => (
-                <Label className="grid grid-cols-[auto_1fr] items-start gap-3">
-                  <Checkbox
-                    id={`ff-${String(name)}`}
-                    checked={Boolean(field.value)}
-                    onChange={(next) => field.onChange(next)}
-                    aria-invalid={fieldState.error != null}
-                  />
-                  <p>
-                    {meta.label ?? meta.id}
-                    {meta.required !== false ? ' *' : null}
-                  </p>
-                </Label>
-            )}
-          />
-        ),
-      },
-      {
-        fieldType: 'select',
-        buildSchema: buildSelectSchema,
-        render: ({ meta, control, name }) => {
-          const options = Array.isArray(meta.options) ? meta.options : [];
-          return (
-            <Controller
-              name={name as never}
-              control={control}
-              render={({ field, fieldState }) => (
-                <Label className="grid gap-1">
-                  {meta.label ?? meta.id}
-                  {meta.required !== false ? ' *' : null}
-                  <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                    <SelectTrigger aria-invalid={fieldState.error != null}>
-                      <SelectValue placeholder="Choose…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {options.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Label>
-              )}
-            />
-          );
-        },
-      },
-    ],
-  });
-}
-
-export function composeDynamicFormSchema(registry: EventFormRegistry, fields: FormFieldMeta[]) {
-  return composeSchemaFromFieldMetadata(registry, fields);
 }

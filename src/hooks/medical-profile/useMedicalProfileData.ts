@@ -14,8 +14,9 @@ export type MedicalConditionSummaryRow = Pick<
   'id' | 'name' | 'severity' | 'medical_alert' | 'is_active'
 >;
 
-/** Full condition row from `get_medi_conditions` RPC (PR10/PR11). */
-export type MediConditionDetail = Database['public']['Functions']['get_medi_conditions']['Returns'][number];
+/** Full condition row from `data_medi_conditions_list` RPC (PR10/PR11). */
+export type MediConditionDetail =
+  Database['public']['Functions']['data_medi_conditions_list']['Returns'][number];
 
 export type MedicalProfileLoadModel = {
   profile: MediProfileRow | null;
@@ -110,8 +111,7 @@ export async function fetchMedicalProfileData(
 
     let conditions: MediConditionDetail[] = [];
     if (profile?.id) {
-      // eslint-disable-next-line pace-core-compliance/rpc-naming-pattern -- database RPC name (PR09/PR10)
-      const rpcCond = await client.rpc('get_medi_conditions', { p_profile_id: profile.id });
+      const rpcCond = await client.rpc('data_medi_conditions_list', { p_profile_id: profile.id });
       if (rpcCond.error) {
         return err({
           code: 'MEDICAL_CONDITION_SUMMARY',

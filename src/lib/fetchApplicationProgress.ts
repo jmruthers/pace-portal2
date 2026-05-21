@@ -1,5 +1,5 @@
 /**
- * BA05b — Participant application progress via `app_base_application_progress_get` only.
+ * BA05b — Participant application progress via `data_base_application_progress_get`.
  */
 import { err, ok, type ApiResult } from '@solvera/pace-core/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -24,13 +24,9 @@ export async function fetchApplicationProgress(
     return err({ code: 'APPLICATION_PROGRESS_SHAPE', message: 'Application id is required.' });
   }
 
-  const { data, error } = await client.rpc(
-    // eslint-disable-next-line pace-core-compliance/rpc-naming-pattern -- BA05b contract name (BASE)
-    'app_base_application_progress_get',
-    {
-      p_application_id: trimmed,
-    }
-  );
+  const { data, error } = await client.rpc('data_base_application_progress_get', {
+    p_application_id: trimmed,
+  });
 
   if (error) {
     const msg = error.message?.trim() ?? '';

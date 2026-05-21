@@ -4,11 +4,10 @@ import {
   buildCatalogueIndex,
   buildConfirmationZodSchema,
   buildFormFieldMeta,
-  composeDynamicFormSchema,
-  createEventFormFieldRegistry,
   parseFieldKey,
   resolveRegistryFieldType,
 } from '@/shared/lib/formFieldMeta';
+import { composeDynamicFormSchema, createEventFormFieldRegistry } from '@/shared/lib/formFieldRegistry';
 import type { CoreFieldCatalogueRow, CoreFormFieldRow } from '@/shared/lib/formFieldMeta';
 
 function minimalFieldRow(overrides: Partial<CoreFormFieldRow>): CoreFormFieldRow {

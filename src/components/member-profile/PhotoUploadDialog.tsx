@@ -40,14 +40,18 @@ export function PhotoUploadDialog({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const canUpload = Boolean(organisationId && appId.trim() !== '' && supabase);
 
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      setUploadError(null);
+    }
+    onOpenChange(next);
+  };
+
   useEffect(() => {
     const d = dialogRef.current;
     if (!d) return;
     if (open) {
       if (!d.open) d.showModal();
-      // Reset server error when the dialog is shown again (sync with imperative dialog element).
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear stale upload message when reopening
-      setUploadError(null);
     } else if (d.open) {
       d.close();
     }
@@ -110,12 +114,12 @@ export function PhotoUploadDialog({
               onUploaded?.(result);
               void queryClient.refetchQueries({ queryKey: ['profilePhoto'] });
               void queryClient.invalidateQueries({ queryKey: ['enhancedLanding'] });
-              onOpenChange(false);
+              handleOpenChange(false);
             }}
           />
         )}
         <footer className="grid justify-items-end">
-          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="secondary" onClick={() => handleOpenChange(false)}>
             Close
           </Button>
         </footer>

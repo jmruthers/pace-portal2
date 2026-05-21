@@ -8,7 +8,7 @@ import {
   computeWaitlistOpen,
   mapActivityBookingRpcMessage,
   primaryBookingBlockMessage,
-} from '@/lib/activityBookingContracts';
+} from '@/lib/activityBookingRules';
 import { validateActivityBooking as validateFromModule } from '@/lib/validateActivityBooking';
 
 describe('activityBookingContracts', () => {

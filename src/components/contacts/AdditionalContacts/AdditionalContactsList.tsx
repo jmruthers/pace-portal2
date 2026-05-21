@@ -68,26 +68,28 @@ export function AdditionalContactsList({
                   </ul>
                 ) : null}
               </CardContent>
-              <CardFooter className="grid gap-2 md:grid-cols-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    onEdit(c.contact_id);
-                  }}
-                >
-                  Edit
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={isDeletePending}
-                  onClick={() => {
-                    setConfirmDeleteId(c.contact_id);
-                  }}
-                >
-                  Delete
-                </Button>
+              <CardFooter className="text-right">
+                <fieldset className="grid auto-cols-max grid-flow-col justify-end gap-2 border-0 p-0">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      onEdit(c.contact_id);
+                    }}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={isDeletePending}
+                    onClick={() => {
+                      setConfirmDeleteId(c.contact_id);
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </fieldset>
               </CardFooter>
             </Card>
           </li>

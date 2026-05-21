@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { Fragment, useMemo, type ReactNode } from 'react';
 import type { UseFormReturn } from '@solvera/pace-core/forms';
 import {
   Alert,
@@ -10,22 +10,19 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-  Checkbox,
   Form,
-  Label,
   LoadingSpinner,
 } from '@solvera/pace-core/components';
-import { Controller, resolveFieldRenderer, type FormFieldMeta } from '@solvera/pace-core/forms';
+import { resolveFieldRenderer, type FormFieldMeta } from '@solvera/pace-core/forms';
+import { FormRendererConfirmations } from '@/components/events/FormRendererConfirmations';
+import { buildConfirmationZodSchema } from '@/shared/lib/formFieldMeta';
+import { computeFormRendererDefaultValues } from '@/lib/formRendererDefaultValues';
+import { useFormRendererDraftSync } from '@/hooks/events/useFormRendererDraftSync';
 import {
-  buildConfirmationZodSchema,
   composeDynamicFormSchema,
   createEventFormFieldRegistry,
-} from '@/shared/lib/formFieldMeta';
-import { usePhoneNumbers } from '@/hooks/auth/usePhoneNumbers';
-import { useMedicalProfileData } from '@/hooks/medical-profile/useMedicalProfileData';
-import { useFormAdditionalContactsPreview } from '@/hooks/events/useFormAdditionalContactsPreview';
-import { MedicalProfileDisplay } from '@/components/medical-profile/MedicalProfile/MedicalProfileDisplay';
-import type { EventFormRegistry } from '@/shared/lib/formFieldMeta';
+  type EventFormRegistry,
+} from '@/shared/lib/formFieldRegistry';
 
 export type FormRendererProps = {
   eventTitle: string;
@@ -61,46 +58,6 @@ type FormRendererBodyProps = FormRendererProps & {
   registry: EventFormRegistry;
 };
 
-function emptyAddress() {
-  return {
-    line1: '',
-    line2: '',
-    locality: '',
-    region: '',
-    postalCode: '',
-    countryCode: '',
-  };
-}
-
-function buildDefaultValues(
-  fieldMetas: FormFieldMeta[],
-  fieldDefaults: Record<string, unknown>,
-  draftValues: Record<string, unknown>,
-  confirmationKeys: string[],
-  confirmationsReadOnlyTreatedAsAcknowledged: boolean
-): Record<string, unknown> {
-  const conf: Record<string, boolean> = {};
-  for (const k of confirmationKeys) {
-    conf[k] = confirmationsReadOnlyTreatedAsAcknowledged;
-  }
-  const out: Record<string, unknown> = { confirmations: conf };
-  for (const m of fieldMetas) {
-    const v = draftValues[m.id] ?? fieldDefaults[m.id];
-    if (m.fieldType === 'address') {
-      out[m.id] =
-        v != null && typeof v === 'object' && !Array.isArray(v)
-          ? v
-          : emptyAddress();
-    } else if (m.fieldType === 'checkbox') {
-      out[m.id] = v === true || v === 'true';
-    } else {
-      out[m.id] = v == null || v === '' ? '' : String(v);
-    }
-  }
-  return out;
-}
-
-/* eslint-disable complexity -- PR15/16 shell: confirmations, draft autosave, and dynamic fields share one form contract. */
 function FormRendererBody({
   eventTitle,
   formTitle,
@@ -127,44 +84,17 @@ function FormRendererBody({
   form,
   registry,
 }: FormRendererBodyProps) {
-  /** Blocks one `watch` emission after programmatic `reset` (draft/field hydrate) so autosave cannot echo defaults. */
-  const skipDraftPersistenceRef = useRef(false);
-
-  useEffect(() => {
-    if (isDraftHydrating) return;
-    skipDraftPersistenceRef.current = true;
-    form.reset(
-      buildDefaultValues(fieldMetas, fieldDefaults, draftValues, confirmationKeys, readOnly)
-    );
-    const t = window.setTimeout(() => {
-      skipDraftPersistenceRef.current = false;
-    }, 0);
-    return () => {
-      window.clearTimeout(t);
-      skipDraftPersistenceRef.current = false;
-    };
-  }, [isDraftHydrating, fieldMetas, fieldDefaults, draftValues, confirmationKeys, form, readOnly]);
-
-  useEffect(() => {
-    const subscription = form.watch((value) => {
-      if (readOnly) return;
-      if (skipDraftPersistenceRef.current) return;
-      if (isDraftHydrating || draftHydrateError) return;
-      if (value == null || typeof value !== 'object') return;
-      const w = value as Record<string, unknown>;
-      const dynamic: Record<string, unknown> = {};
-      for (const k of Object.keys(w)) {
-        if (k === 'confirmations') continue;
-        dynamic[k] = w[k];
-      }
-      scheduleSaveDraft(dynamic);
-    });
-    return () => subscription.unsubscribe();
-  }, [form, scheduleSaveDraft, isDraftHydrating, draftHydrateError, readOnly]);
-
-  const phonesQuery = usePhoneNumbers(personId);
-  const medicalQuery = useMedicalProfileData(memberId);
-  const contactsQuery = useFormAdditionalContactsPreview(memberId);
+  useFormRendererDraftSync({
+    form,
+    fieldMetas,
+    fieldDefaults,
+    draftValues,
+    confirmationKeys,
+    readOnly,
+    isDraftHydrating,
+    draftHydrateError,
+    scheduleSaveDraft,
+  });
 
   const hasDraftRestore = useMemo(
     () => Object.keys(draftValues).some((k) => draftValues[k] !== undefined && draftValues[k] !== ''),
@@ -220,139 +150,15 @@ function FormRendererBody({
       ) : null}
 
       {!readOnly && confirmationKeys.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Confirmations</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-6">
-            <fieldset className="min-w-0 border-0 p-0 m-0 grid gap-6">
-            {confirmationKeys.includes('member_profile') ? (
-              <section className="grid gap-2" aria-label="Member profile confirmation">
-                <h3>Member profile</h3>
-                <Card>
-                  <CardContent className="grid gap-2">
-                    <p>
-                      {(personFirstName ?? '').trim()} {(personLastName ?? '').trim()}
-                    </p>
-                    <p>{(personEmail ?? '').trim()}</p>
-                    {phonesQuery.isError ? (
-                      <Alert variant="destructive">
-                        <AlertTitle>Phone numbers</AlertTitle>
-                        <AlertDescription>
-                          {phonesQuery.error instanceof Error
-                            ? phonesQuery.error.message
-                            : 'Could not load phone numbers.'}
-                        </AlertDescription>
-                      </Alert>
-                    ) : (
-                      <ul>
-                        {(phonesQuery.data ?? []).map((ph) => (
-                          <li key={ph.id}>
-                            {ph.phone_number}
-                            {ph.phone_type_id != null ? ` (type ${ph.phone_type_id})` : ''}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </CardContent>
-                </Card>
-                <Controller
-                  name={'confirmations.member_profile' as never}
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Label className="grid grid-cols-[auto_1fr] items-start gap-3">
-                      <Checkbox
-                        id="confirm-member-profile"
-                        checked={Boolean(field.value)}
-                        onChange={(next) => field.onChange(next)}
-                        aria-invalid={fieldState.error != null}
-                      />
-                      <p>I confirm my member profile information is accurate.</p>
-                    </Label>
-                  )}
-                />
-              </section>
-            ) : null}
-
-            {confirmationKeys.includes('medical_profile') ? (
-              <section className="grid gap-2" aria-label="Medical profile confirmation">
-                <h3>Medical profile</h3>
-                {medicalQuery.isLoading ? <LoadingSpinner label="Loading medical summary…" /> : null}
-                {medicalQuery.isError ? (
-                  <Alert variant="destructive">
-                    <AlertTitle>Medical profile</AlertTitle>
-                    <AlertDescription>
-                      {medicalQuery.error instanceof Error
-                        ? medicalQuery.error.message
-                        : 'Could not load medical summary.'}
-                    </AlertDescription>
-                  </Alert>
-                ) : medicalQuery.data ? (
-                  <MedicalProfileDisplay conditions={medicalQuery.data.conditions} />
-                ) : null}
-                <Controller
-                  name={'confirmations.medical_profile' as never}
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Label className="grid grid-cols-[auto_1fr] items-start gap-3">
-                      <Checkbox
-                        id="confirm-medical-profile"
-                        checked={Boolean(field.value)}
-                        onChange={(next) => field.onChange(next)}
-                        aria-invalid={fieldState.error != null}
-                      />
-                      <p>I confirm my medical profile summary is accurate.</p>
-                    </Label>
-                  )}
-                />
-              </section>
-            ) : null}
-
-            {confirmationKeys.includes('additional_contacts') ? (
-              <section className="grid gap-2" aria-label="Additional contacts confirmation">
-                <h3>Additional contacts</h3>
-                {contactsQuery.isLoading ? <LoadingSpinner label="Loading contacts…" /> : null}
-                {contactsQuery.isError ? (
-                  <Alert variant="destructive">
-                    <AlertTitle>Additional contacts</AlertTitle>
-                    <AlertDescription>
-                      {contactsQuery.error instanceof Error
-                        ? contactsQuery.error.message
-                        : 'Could not load additional contacts.'}
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <>
-                    <ul>
-                      {(contactsQuery.data ?? []).map((c) => (
-                        <li key={c.contact_id}>
-                          {c.first_name} {c.last_name} — {c.contact_type_name}
-                        </li>
-                      ))}
-                    </ul>
-                    {(contactsQuery.data ?? []).length === 0 ? <p>No additional contacts on file.</p> : null}
-                  </>
-                )}
-                <Controller
-                  name={'confirmations.additional_contacts' as never}
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Label className="grid grid-cols-[auto_1fr] items-start gap-3">
-                      <Checkbox
-                        id="confirm-additional-contacts"
-                        checked={Boolean(field.value)}
-                        onChange={(next) => field.onChange(next)}
-                        aria-invalid={fieldState.error != null}
-                      />
-                      <p>I confirm my additional contacts are up to date.</p>
-                    </Label>
-                  )}
-                />
-              </section>
-            ) : null}
-            </fieldset>
-          </CardContent>
-        </Card>
+        <FormRendererConfirmations
+          confirmationKeys={confirmationKeys}
+          personId={personId}
+          memberId={memberId}
+          personFirstName={personFirstName}
+          personLastName={personLastName}
+          personEmail={personEmail}
+          form={form}
+        />
       ) : null}
 
       <Card>
@@ -415,7 +221,6 @@ function FormRendererBody({
     </>
   );
 }
-/* eslint-enable complexity */
 
 /**
  * PR15 dynamic event form: pace-core `Form` + CR20 registry, confirmation blocks in-schema; PR16 submit wired to the same RHF instance.
@@ -440,7 +245,7 @@ export function FormRenderer(props: FormRendererProps) {
 
   const defaultValues = useMemo(
     () =>
-      buildDefaultValues(
+      computeFormRendererDefaultValues(
         props.fieldMetas,
         props.fieldDefaults,
         props.draftValues,

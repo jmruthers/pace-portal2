@@ -1,6 +1,13 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, CardContent, CardHeader, CardTitle } from '@solvera/pace-core/components';
+import {
+  Button,
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@solvera/pace-core/components';
 import { createEventId } from '@solvera/pace-core/types';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
 import type { DashboardEvent } from '@/shared/hooks/useEnhancedLanding';
@@ -106,7 +113,7 @@ export function EventList({ eventsByCategory, applicationStatusByEventId }: Even
           <CardTitle>Events</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <ul className="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-3 list-none">
+          <ul className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-3 list-none">
             {flat.map((ev) => {
               const logoRef = refByEventId.get(createEventId(ev.event_id)) ?? null;
               const applicationStatus = applicationStatusByEventId[ev.event_id];
@@ -114,30 +121,37 @@ export function EventList({ eventsByCategory, applicationStatusByEventId }: Even
               const codeOk = Boolean(ev.event_code?.trim());
               return (
                 <li key={ev.event_id}>
-                  <article
-                    className="grid gap-2 rounded-md border border-sec-200 p-3"
-                    aria-labelledby={`event-title-${ev.event_id}`}
-                  >
-                    <EventLogo
-                      eventName={ev.event_name}
-                      logoRef={logoRef}
-                      refsBusy={logoRefsBusy}
-                      refsFailed={logoRefsFailed}
-                    />
-                    <h2 id={`event-title-${ev.event_id}`}>{ev.event_name}</h2>
-                    {ev.event_date ? (
-                      <time dateTime={ev.event_date}>{formatEventDateForDisplay(ev.event_date)}</time>
-                    ) : null}
-                    {multipleOrgsInList ? <p>{orgNameById.get(ev.organisation_id) ?? 'Organisation'}</p> : null}
-                    <Button
-                      type="button"
-                      variant={label === 'Manage' ? 'default' : 'secondary'}
-                      disabled={!codeOk}
-                      onClick={() => navigateForEvent(ev)}
-                    >
-                      {label}
-                    </Button>
-                  </article>
+                  <Card aria-labelledby={`event-title-${ev.event_id}`}>
+                    <CardHeader className="grid justify-items-center text-center">
+                      <CardTitle id={`event-title-${ev.event_id}`}>{ev.event_name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid justify-items-center gap-2 text-center">
+                      <EventLogo
+                        eventName={ev.event_name}
+                        logoRef={logoRef}
+                        refsBusy={logoRefsBusy}
+                        refsFailed={logoRefsFailed}
+                      />
+                      {ev.event_date ? (
+                        <time dateTime={ev.event_date}>{formatEventDateForDisplay(ev.event_date)}</time>
+                      ) : null}
+                      {multipleOrgsInList ? (
+                        <p>{orgNameById.get(ev.organisation_id) ?? 'Organisation'}</p>
+                      ) : null}
+                    </CardContent>
+                    <CardFooter className="text-right">
+                      <fieldset className="grid auto-cols-max grid-flow-col justify-end gap-2 border-0 p-0">
+                        <Button
+                          type="button"
+                          variant={label === 'Manage' ? 'default' : 'secondary'}
+                          disabled={!codeOk}
+                          onClick={() => navigateForEvent(ev)}
+                        >
+                          {label}
+                        </Button>
+                      </fieldset>
+                    </CardFooter>
+                  </Card>
                 </li>
               );
             })}

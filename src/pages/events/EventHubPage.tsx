@@ -113,16 +113,13 @@ export function EventHubPage() {
 
       <section aria-label="Event summary" className="grid gap-4">
         <Card>
-          <CardContent className="grid gap-4">
-            {/* eslint-disable-next-line pace-core-compliance/prefer-semantic-html -- constrained logo framing inside summary card */}
-            <span className="grid justify-items-start">
-              <EventLogo
-                eventName={ev.event_name}
-                logoRef={logoRef}
-                refsBusy={logoBusy}
-                refsFailed={logoRefsFailed}
-              />
-            </span>
+          <CardContent className="grid gap-4 place-content-start">
+            <EventLogo
+              eventName={ev.event_name}
+              logoRef={logoRef}
+              refsBusy={logoBusy}
+              refsFailed={logoRefsFailed}
+            />
             {ev.event_date ? (
               <p>
                 <time dateTime={ev.event_date}>{formatEventDateForDisplay(ev.event_date)}</time>

@@ -5,11 +5,11 @@ import { deriveMembershipDisplayState } from '@/lib/deriveMembershipDisplayState
 import { fetchOrgMembershipTypes } from '@/lib/fetchOrgMembershipTypes';
 import { persistOrgSignupFormResponse } from '@/lib/persistOrgSignupFormResponse';
 import { submitMemberRequest } from '@/lib/memberRequestRpc';
+import type { MembershipListItem } from '@/lib/memberRequestTypes';
 import type {
-  MembershipListItem,
   SubmitMemberRequestFlowInput,
   SubmitMemberRequestFlowResult,
-} from '@/lib/memberRequestTypes';
+} from '@/lib/memberRequestFlowSubmitTypes';
 import {
   asPreSubmitFailure,
   validateMemberRequestPreSubmit,

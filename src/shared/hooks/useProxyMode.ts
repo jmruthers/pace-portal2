@@ -71,11 +71,9 @@ export function useProxyMode() {
     setValidationError(null);
     setTargetPersonId(null);
     try {
-      const rpcResult = (await secure.rpc(
-        // eslint-disable-next-line pace-core-compliance/rpc-naming-pattern -- shared schema RPC name
-        'check_user_pace_member_access_via_member_id',
-        { p_member_id: targetMemberId }
-      )) as { data: boolean | null; error: Error | null };
+      const rpcResult = (await secure.rpc('data_pace_member_access_check_via_member_id', {
+        p_member_id: targetMemberId,
+      })) as { data: boolean | null; error: Error | null };
       const allowed = rpcResult.data;
       const rpcError = rpcResult.error;
 

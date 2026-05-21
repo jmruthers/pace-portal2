@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Controller, useFormContext } from '@solvera/pace-core/forms';
 import {
   Alert,
@@ -14,6 +14,7 @@ import {
   FileDisplay,
   Form,
   FormField,
+  Input,
   Label,
   LoadingSpinner,
   Select,
@@ -141,9 +142,10 @@ function MedicalConditionFormFields({
     };
   }, [existingRef, storageClient]);
 
-  const handleActionPlanFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const list = event.target.files;
-    event.target.value = '';
+  const handleActionPlanFileChange = async () => {
+    const input = actionPlanFileInputRef.current;
+    const list = input?.files;
+    if (input) input.value = '';
     const file = list?.[0];
     if (!file || !conditionId || !appId) {
       return;
@@ -312,17 +314,15 @@ function MedicalConditionFormFields({
               <>
                 <Label htmlFor={actionPlanInputId} className="grid gap-2">
                   {existingRef ? 'Replace action plan file' : 'Add action plan file'}
-                  {/* eslint-disable-next-line pace-core-compliance/prefer-pace-core-components -- hidden file input; validateActionPlanFile must run before upload (FileUpload exposes no pre-upload hook). */}
-                  <input
+                  <Input
                     id={actionPlanInputId}
                     ref={actionPlanFileInputRef}
                     type="file"
                     accept={ACTION_PLAN_ACCEPT}
-                    className="sr-only"
                     aria-hidden
                     tabIndex={-1}
                     disabled={isUploadingPlan || !persistReady}
-                    onChange={(e) => void handleActionPlanFileChange(e)}
+                    onChange={() => void handleActionPlanFileChange()}
                   />
                   <Button
                     type="button"

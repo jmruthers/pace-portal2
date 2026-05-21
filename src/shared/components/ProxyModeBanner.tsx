@@ -56,7 +56,6 @@ export function ProxyModeBanner() {
 
   return (
     <Alert>
-      <AlertTitle>Delegated access</AlertTitle>
       <AlertDescription>
         You are working on behalf of <strong>{who}</strong>. Go back to the main dashboard to access your
         own account.

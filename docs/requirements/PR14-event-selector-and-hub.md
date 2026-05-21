@@ -43,7 +43,7 @@ This file is **`PR14-event-selector-and-hub.md`** — portal requirement slice *
 
 - Component layout and composition: authenticated dashboard event cards with action buttons, plus participant event-hub page with event summary/details and workflow links.
 - States: loading, invalid slug, event not found, inactive-window, logo fallback, and empty form list.
-- Authoritative visual recipe: use `Card`, `Button`, `Badge`, `Alert`, and authenticated `FileDisplay`; preserve the current `Apply` / `Resume` / `Manage` distinction in CTA treatment, with `Manage` opening the hub page.
+- Authoritative visual recipe: use `Card`, `Button`, `Badge`, `Alert`, and authenticated `FileDisplay`; dashboard event tiles are nested pace-core `Card` components (same visual treatment as linked-profile tiles: shadow, header/content/footer slots) in a wider auto-fill column (`minmax(16rem, 1fr)`), with center-aligned logo/date in `CardContent`, `CardTitle` in `CardHeader`, and the action in `CardFooter`; preserve the current `Apply` / `Resume` / `Manage` distinction in CTA treatment, with `Manage` opening the hub page.
 - Globals: follow `pace-core` Standard 07 Part A and Part C for shared visual behavior rather than restating global layout rules here.
 
 ## Verification

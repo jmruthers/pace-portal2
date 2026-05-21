@@ -32,7 +32,7 @@ describe('fetchApplicationProgress', () => {
     const rpc = vi.fn().mockResolvedValue({ data: payload, error: null });
     const r = await fetchApplicationProgress(makeClient(rpc), '11111111-1111-4111-a111-111111111111');
     expect(r.ok && r.data.application.status === 'submitted').toBe(true);
-    expect(rpc).toHaveBeenCalledWith('app_base_application_progress_get', {
+    expect(rpc).toHaveBeenCalledWith('data_base_application_progress_get', {
       p_application_id: '11111111-1111-4111-a111-111111111111',
     });
   });

@@ -52,7 +52,7 @@ function buildClient() {
       expect(args.p_member_id).toBe('m1');
       return Promise.resolve({ data: [profileRpcRow], error: null });
     }
-    if (name === 'get_medi_conditions') {
+    if (name === 'data_medi_conditions_list') {
       expect(args.p_profile_id).toBe('mp1');
       return Promise.resolve({ data: [mediConditionRpcRow], error: null });
     }

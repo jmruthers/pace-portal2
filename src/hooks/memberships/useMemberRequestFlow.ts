@@ -20,16 +20,18 @@ import {
 import { preSubmitFailureMessage } from '@/lib/memberRequestRules';
 import type {
   JoinableOrganisation,
-  MemberRequestFlowStartOptions,
-  MemberRequestFlowStep,
   MembershipListItem,
   OrgMembershipTypeOption,
   OrgSignupFormReady,
   TeamMemberRequestType,
-  UseMemberRequestFlowResult,
 } from '@/lib/memberRequestTypes';
+import type {
+  MemberRequestFlowStartOptions,
+  MemberRequestFlowStep,
+  UseMemberRequestFlowResult,
+} from '@/lib/memberRequestFlowTypes';
 
-export type { UseMemberRequestFlowResult } from '@/lib/memberRequestTypes';
+export type { UseMemberRequestFlowResult } from '@/lib/memberRequestFlowTypes';
 import type { ProfileProgressTracked } from '@/shared/lib/profileProgress';
 import { fetchCurrentPersonMember } from '@/shared/lib/utils/userUtils';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';

@@ -11,7 +11,7 @@ import {
   LoadingSpinner,
 } from '@solvera/pace-core/components';
 import { MemberRequestOrgFormStep } from '@/components/memberships/MemberRequestOrgFormStep';
-import type { UseMemberRequestFlowResult } from '@/lib/memberRequestTypes';
+import type { UseMemberRequestFlowResult } from '@/lib/memberRequestFlowTypes';
 
 export type MemberRequestFlowPanelProps = {
   flow: UseMemberRequestFlowResult;

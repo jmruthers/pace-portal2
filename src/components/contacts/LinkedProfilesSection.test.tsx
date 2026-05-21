@@ -81,8 +81,8 @@ describe('LinkedProfilesSection', () => {
       error: null,
     } as never);
     renderSection();
-    expect(screen.getAllByRole('button', { name: /view profile/i })).toHaveLength(2);
-    expect(screen.getByRole('button', { name: /edit on their behalf/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^View$/i })).toHaveLength(2);
+    expect(screen.getByRole('button', { name: /^Edit$/i })).toBeInTheDocument();
   });
 
   it('shows error alert when query fails', () => {

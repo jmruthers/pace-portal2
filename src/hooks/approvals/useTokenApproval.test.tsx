@@ -18,7 +18,7 @@ vi.mock('@/lib/supabaseBrowserEnv', () => ({
   hasSupabaseBrowserConfig: () => hasBrowserConfig(),
 }));
 
-vi.mock('@/lib/tokenApprovalRpc', () => ({
+vi.mock('@/lib/supabaseAnonRpc', () => ({
   appBaseApplicationCheckResolveToken: (token: string) => resolveToken(token),
   appBaseApplicationCheckSubmit: (args: {
     p_raw_token: string;

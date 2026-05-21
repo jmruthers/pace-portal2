@@ -4,7 +4,7 @@ import { hasSupabaseBrowserConfig } from '@/lib/supabaseBrowserEnv';
 import {
   appBaseApplicationCheckResolveToken,
   appBaseApplicationCheckSubmit,
-} from '@/lib/tokenApprovalRpc';
+} from '@/lib/supabaseAnonRpc';
 import {
   BA07_ERROR_MESSAGES,
   TOKEN_APPROVAL_LINK_UNAVAILABLE,

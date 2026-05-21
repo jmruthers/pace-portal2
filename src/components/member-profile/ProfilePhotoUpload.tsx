@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { FileUploadResult } from '@solvera/pace-core/types';
 import { Button } from '@solvera/pace-core/components';
 import { useUnifiedAuthContext } from '@solvera/pace-core';
@@ -13,6 +13,34 @@ import { useResolvedAppId } from '@/shared/hooks/useResolvedAppId';
 import { PhotoUploadDialog } from '@/components/member-profile/PhotoUploadDialog';
 
 type PersonRow = Database['public']['Tables']['core_person']['Row'];
+
+function ProfilePhotoChangeButton({
+  children,
+  onOpenDialog,
+}: {
+  children: ReactNode;
+  onOpenDialog: () => void;
+}) {
+  return (
+    <section className="group relative grid size-50 shrink-0 overflow-hidden rounded-full border border-sec-200 bg-sec-100">
+      <Button
+        type="button"
+        variant="ghost"
+        className="grid h-full w-full p-0"
+        aria-label="Change photo"
+        onClick={onOpenDialog}
+      >
+        {children}
+      </Button>
+      <small
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 grid content-center justify-center rounded-full bg-main-50/70 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        Change photo
+      </small>
+    </section>
+  );
+}
 
 function initialsFromPerson(person: PersonRow): string {
   const a = person.first_name?.trim().charAt(0) ?? '';
@@ -57,12 +85,19 @@ export type ProfilePhotoUploadProps = {
   person: PersonRow;
   organisationId: string | null;
   appId: string | null;
+  /** Layout classes from {@link ContactSummaryCard} (e.g. column height). */
+  className?: string;
 };
 
 /**
- * Circular avatar via pace-core FileDisplay (PR03); upload via FileUpload in PhotoUploadDialog.
+ * Contact-card profile photo (PR03): full-height circular avatar rail on the right; upload via PhotoUploadDialog.
  */
-export function ProfilePhotoUpload({ person, organisationId, appId }: ProfilePhotoUploadProps) {
+export function ProfilePhotoUpload({
+  person,
+  organisationId,
+  appId,
+  className,
+}: ProfilePhotoUploadProps) {
   const { user } = useUnifiedAuthContext();
   const storageClient = useStorageCapableClient();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -108,29 +143,49 @@ export function ProfilePhotoUpload({ person, organisationId, appId }: ProfilePho
   const label = initialsFromPerson(person);
   const busy = photoRowsLoading || (Boolean(latestRef) && urlLoading && !displayUrl);
   const showInitials = !busy && !displayUrl;
+  const canChangePhoto = Boolean(effectiveAppId && user?.id);
+
+  const avatarFrame = (
+    <>
+      {busy ? (
+        <output className="grid h-full content-center justify-center" aria-busy="true">
+          …
+        </output>
+      ) : null}
+      {!busy && displayUrl ? (
+        <img
+          key={latestRef?.id ?? 'preview'}
+          src={displayUrl}
+          alt=""
+          className="h-full w-full object-cover"
+        />
+      ) : null}
+      {showInitials ? (
+        <strong className="grid h-full content-center justify-center" aria-hidden="true">
+          {label}
+        </strong>
+      ) : null}
+    </>
+  );
 
   return (
     <>
-      <section className="grid place-items-center gap-2" aria-label="Profile photo">
-        {/* Presentational avatar frame; not body copy (Standard 7 semantic rule exception). */}
-        {/* eslint-disable-next-line pace-core-compliance/prefer-semantic-html -- circular crop for photo/initials */}
-        <span className="grid h-24 w-24 place-items-center overflow-hidden rounded-full border border-sec-200 bg-sec-100">
-          {busy ? <span aria-busy="true">…</span> : null}
-          {!busy && displayUrl ? (
-            <img
-              key={latestRef?.id ?? 'preview'}
-              src={displayUrl}
-              alt="Profile photo"
-              className="h-full w-full object-cover"
-            />
-          ) : null}
-          {showInitials ? <span aria-hidden="true">{label}</span> : null}
-        </span>
-        {effectiveAppId && user?.id ? (
-          <Button type="button" variant="secondary" onClick={() => setDialogOpen(true)}>
-            Change photo
-          </Button>
-        ) : null}
+      <section
+        className={`grid h-full min-h-0 content-start justify-items-center py-2 pe-3 ps-2${className ? ` ${className}` : ''}`}
+        aria-label="Profile photo"
+      >
+        {canChangePhoto ? (
+          <ProfilePhotoChangeButton onOpenDialog={() => setDialogOpen(true)}>
+            {avatarFrame}
+          </ProfilePhotoChangeButton>
+        ) : (
+          <section
+            aria-label="Profile photo preview"
+            className="grid size-50 shrink-0 content-center justify-center overflow-hidden rounded-full border border-sec-200 bg-sec-100"
+          >
+            {avatarFrame}
+          </section>
+        )}
       </section>
       {effectiveAppId && user?.id ? (
         <PhotoUploadDialog

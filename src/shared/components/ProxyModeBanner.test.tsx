@@ -74,7 +74,6 @@ describe('ProxyModeBanner', () => {
     proxy.targetMemberId = 'm1';
     proxy.targetPersonId = 'p-target';
     renderBanner();
-    expect(screen.getByText(/delegated access/i)).toBeInTheDocument();
     expect(screen.getByText(/working on behalf of/i)).toBeInTheDocument();
   });
 

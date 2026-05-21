@@ -23,7 +23,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ProxyModeBanner } from '@/shared/components/ProxyModeBanner';
 import { useProxyMode } from '@/shared/hooks/useProxyMode';
 import { formatEventDateForDisplay } from '@/shared/lib/formatEventDateForDisplay';
-import { primaryBookingBlockMessage } from '@/lib/activityBookingContracts';
+import { primaryBookingBlockMessage } from '@/lib/activityBookingRules';
 import type { OfferingBrowseItem, SessionBrowseItem } from '@/lib/activityBookingTypes';
 import { useActivityBooking } from '@/hooks/events/useActivityBooking';
 

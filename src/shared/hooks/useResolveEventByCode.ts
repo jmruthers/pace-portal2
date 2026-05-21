@@ -2,9 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useUnifiedAuthContext } from '@solvera/pace-core';
 import { isOk } from '@solvera/pace-core/types';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
-// Event RPC helpers are defined alongside the bootstrap client (public `data_event_get_by_code`).
-// eslint-disable-next-line pace-core-compliance/no-base-supabase-import-outside-bootstrap -- see PR01 event slug resolution
-import { fetchEventExistsWithCaseFallback, hasSupabaseBrowserConfig } from '@/lib/supabase';
+import {
+  fetchEventExistsWithCaseFallback,
+  hasSupabaseBrowserConfig,
+} from '@/lib/eventSlugResolution';
 import { isReservedEventSlug } from '@/routing/eventFormPaths';
 
 export type ResolveEventByCodeStatus = 'loading' | 'found' | 'missing' | 'error';
