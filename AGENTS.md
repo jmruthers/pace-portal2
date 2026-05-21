@@ -44,7 +44,7 @@ Copy `.env.example` to `.env`. Supabase credentials are optional for dev server 
 
 ### Case sensitivity note
 
-The import `./app.css` in `src/main.tsx` was corrected to `./App.css` for Linux case-sensitive filesystems. The original codebase targets macOS (case-insensitive). Keep this fix when working on Linux.
+The stylesheet on disk is `src/app.css` (lowercase). `src/main.tsx` must import `./app.css` exactly so Vite and `npm run validate` resolve it on case-sensitive filesystems (Linux, CI).
 
 ### Port assignments
 

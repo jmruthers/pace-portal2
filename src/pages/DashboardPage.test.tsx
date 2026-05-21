@@ -4,7 +4,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DashboardPage } from '@/pages/DashboardPage';
 
-const refetch = vi.fn();
 const clearProxy = vi.fn();
 
 vi.mock('@solvera/pace-core/rbac', async () => {
@@ -18,17 +17,20 @@ vi.mock('@solvera/pace-core/rbac', async () => {
     }: {
       children: React.ReactNode;
     }) => <>{children}</>,
+    useSecureSupabase: () => ({}),
   };
 });
 
 vi.mock('@solvera/pace-core/providers', () => ({
   useOrganisationsContextOptional: () => ({
+    isLoading: false,
     selectedOrganisation: { id: 'org-1' },
   }),
 }));
 
 vi.mock('@/shared/hooks/useEnhancedLanding', () => ({
   useEnhancedLanding: () => ({
+    isLoading: false,
     data: {
       needsProfileSetup: false,
       person: {
@@ -61,10 +63,8 @@ vi.mock('@/shared/hooks/useEnhancedLanding', () => ({
         filledFields: 4,
       },
     },
-    isLoading: false,
     isError: false,
     error: null,
-    refetch,
   }),
 }));
 
@@ -93,7 +93,7 @@ describe('DashboardPage', () => {
     vi.clearAllMocks();
   });
 
-  it('refetches landing data once on mount and clears proxy', async () => {
+  it('renders dashboard and clears proxy on mount', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
@@ -103,7 +103,6 @@ describe('DashboardPage', () => {
       </QueryClientProvider>
     );
 
-    expect(refetch).toHaveBeenCalled();
     expect(clearProxy).toHaveBeenCalled();
     expect(screen.queryByText(/billing/i)).toBeNull();
     expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeTruthy();

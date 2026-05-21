@@ -51,6 +51,7 @@ vi.mock('@solvera/pace-core/rbac', () => ({
   PagePermissionGuard: ({ children }: { children: ReactNode }) => <>{children}</>,
   AccessDenied: () => <p>Access denied</p>,
   useSecureSupabase: () => null,
+  useStorageCapableClient: () => null,
 }));
 
 vi.mock('@solvera/pace-core', () => ({

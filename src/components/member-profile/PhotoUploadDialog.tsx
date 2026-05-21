@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, AlertDescription, AlertTitle, Button, FileUpload } from '@solvera/pace-core/components';
-import { useSecureSupabase } from '@solvera/pace-core/rbac';
-import { toSupabaseClientLike } from '@/lib/supabase-typed';
-import {
-  FILE_STORAGE_BUCKET,
-  FILE_UPLOAD_NO_EVENT_ID,
-  FILE_UPLOAD_NO_ORG_ID,
-} from '@/constants/fileStorage';
+import { clearFileDisplayCache } from '@solvera/pace-core/hooks';
+import type { FileUploadResult } from '@solvera/pace-core/types';
+import { useStorageCapableClient } from '@solvera/pace-core/rbac';
+import { NormalizeSupabaseError } from '@solvera/pace-core/utils';
+import { FILE_STORAGE_BUCKET, FILE_UPLOAD_NO_EVENT_ID } from '@/constants/fileStorage';
 import {
   PROFILE_PHOTO_CATEGORY,
   PROFILE_PHOTO_FOLDER,
@@ -22,6 +20,7 @@ export type PhotoUploadDialogProps = {
   personId: string;
   organisationId: string | null;
   appId: string;
+  onUploaded?: (result: FileUploadResult) => void;
 };
 
 /**
@@ -33,12 +32,13 @@ export function PhotoUploadDialog({
   personId,
   organisationId,
   appId,
+  onUploaded,
 }: PhotoUploadDialogProps) {
-  const secure = useSecureSupabase();
-  const supabase = toSupabaseClientLike(secure);
+  const supabase = useStorageCapableClient();
   const queryClient = useQueryClient();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const canUpload = Boolean(organisationId && appId.trim() !== '' && supabase);
 
   useEffect(() => {
     const d = dialogRef.current;
@@ -72,35 +72,48 @@ export function PhotoUploadDialog({
             <AlertDescription>{uploadError}</AlertDescription>
           </Alert>
         ) : null}
-        <FileUpload
-          supabase={supabase}
-          bucket={FILE_STORAGE_BUCKET}
-          table_name="core_person"
-          record_id={personId}
-          organisation_id={organisationId ?? FILE_UPLOAD_NO_ORG_ID}
-          event_id={FILE_UPLOAD_NO_EVENT_ID}
-          app_id={appId}
-          category={PROFILE_PHOTO_CATEGORY}
-          folder={PROFILE_PHOTO_FOLDER}
-          pageContext={PROFILE_PHOTO_PAGE_CONTEXT}
-          accept="image/jpeg,image/png,image/webp"
-          maxSize={PROFILE_PHOTO_MAX_BYTES}
-          multiple={false}
-          label="Choose image"
-          onUploadError={(error) => {
-            const msg =
-              error && typeof error === 'object' && 'message' in error
-                ? String((error as Error).message)
-                : 'Could not upload the image. Try again or contact support.';
-            setUploadError(msg);
-          }}
-          onUploadSuccess={() => {
-            setUploadError(null);
-            void queryClient.invalidateQueries({ queryKey: ['enhancedLanding'] });
-            void queryClient.invalidateQueries({ queryKey: ['profilePhoto'] });
-            onOpenChange(false);
-          }}
-        />
+        {!canUpload ? (
+          <Alert variant="destructive">
+            <AlertTitle>Upload unavailable</AlertTitle>
+            <AlertDescription>
+              Select an organisation in the header and wait for the app to finish loading, then try
+              again.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <FileUpload
+            supabase={supabase}
+            bucket={FILE_STORAGE_BUCKET}
+            table_name="core_person"
+            record_id={personId}
+            organisation_id={organisationId as string}
+            event_id={FILE_UPLOAD_NO_EVENT_ID}
+            app_id={appId}
+            category={PROFILE_PHOTO_CATEGORY}
+            folder={PROFILE_PHOTO_FOLDER}
+            pageContext={PROFILE_PHOTO_PAGE_CONTEXT}
+            accept="image/jpeg,image/png,image/webp"
+            maxSize={PROFILE_PHOTO_MAX_BYTES}
+            multiple={false}
+            label="Choose image"
+            disabled={!canUpload}
+            onUploadError={(error) => {
+              const { message } = NormalizeSupabaseError(
+                error,
+                'Could not upload the image. Try again or contact support.'
+              );
+              setUploadError(message);
+            }}
+            onUploadSuccess={(result) => {
+              setUploadError(null);
+              clearFileDisplayCache();
+              onUploaded?.(result);
+              void queryClient.refetchQueries({ queryKey: ['profilePhoto'] });
+              void queryClient.invalidateQueries({ queryKey: ['enhancedLanding'] });
+              onOpenChange(false);
+            }}
+          />
+        )}
         <footer className="grid justify-items-end">
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
             Close

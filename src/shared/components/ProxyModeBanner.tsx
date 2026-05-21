@@ -56,10 +56,10 @@ export function ProxyModeBanner() {
 
   return (
     <Alert>
-      <AlertTitle>Delegated context active</AlertTitle>
+      <AlertTitle>Delegated access</AlertTitle>
       <AlertDescription>
-        You are working on behalf of {who}. Use linked-profile and delegated workspace routes so changes apply to
-        this member; keep using your own dashboard for your account.
+        You are working on behalf of <strong>{who}</strong>. Go back to the main dashboard to access your
+        own account.
       </AlertDescription>
     </Alert>
   );

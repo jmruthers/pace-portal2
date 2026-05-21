@@ -33,6 +33,7 @@ describe('appShellAuthConfig', () => {
   it('exports PR01 idle and warning durations', () => {
     expect(SHELL_IDLE_TIMEOUT_MS).toBe(15 * 60 * 1000);
     expect(SHELL_WARN_BEFORE_MS).toBe(2 * 60 * 1000);
+    expect(SHELL_WARN_BEFORE_MS).toBeLessThan(SHELL_IDLE_TIMEOUT_MS);
   });
 
   it('renderShellInactivityWarning renders InactivityWarningModal', () => {

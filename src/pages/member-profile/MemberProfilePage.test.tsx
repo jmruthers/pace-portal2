@@ -193,6 +193,6 @@ describe('MemberProfilePage', () => {
     hooks.proxy.targetMemberId = 'm-proxy';
 
     renderPage();
-    expect(screen.getByText(/delegated context active/i)).toBeInTheDocument();
+    expect(screen.getByText(/delegated access/i)).toBeInTheDocument();
   });
 });

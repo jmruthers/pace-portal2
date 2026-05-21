@@ -56,18 +56,15 @@ function ProfileEditProxyContent() {
     );
   }
 
-  if (activeTargetMemberId !== memberId && !validationError) {
-    return (
-      <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
-        <LoadingSpinner label="Starting delegated session…" />
-      </main>
-    );
-  }
+  const proxySessionPending =
+    activeTargetMemberId !== memberId ||
+    isValidating ||
+    (activeTargetMemberId === memberId && !validationError && !isProxyActive);
 
-  if (isValidating) {
+  if (proxySessionPending) {
     return (
       <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
-        <LoadingSpinner label="Validating delegated access…" />
+        <LoadingSpinner label="Loading delegated workspace…" />
       </main>
     );
   }
@@ -86,23 +83,7 @@ function ProfileEditProxyContent() {
     );
   }
 
-  if (!isProxyActive) {
-    return (
-      <main className="grid gap-4 px-4">
-        <Alert variant="destructive">
-          <AlertTitle>Delegated session unavailable</AlertTitle>
-          <AlertDescription>
-            Proxy context could not be activated. Open this page from a linked profile with edit access.
-          </AlertDescription>
-        </Alert>
-        <Button type="button" variant="secondary" onClick={() => navigate('/')}>
-          Back to dashboard
-        </Button>
-      </main>
-    );
-  }
-
-  if (isLoading) {
+  if (!isProxyActive || isLoading) {
     return (
       <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
         <LoadingSpinner label="Loading delegated workspace…" />
@@ -159,8 +140,8 @@ export function ProfileEditProxyPage() {
       pageName="member-profile"
       operation="read"
       loading={
-        <main className="grid min-h-[50vh] place-items-center px-4" aria-busy="true">
-          <LoadingSpinner label="Checking access…" />
+        <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
+          <LoadingSpinner label="Loading delegated workspace…" />
         </main>
       }
       fallback={<AccessDenied />}

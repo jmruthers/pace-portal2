@@ -68,11 +68,13 @@ async function saveMemberProfileTransaction(input: {
   });
 
   const postalFinalId = values.postal_same_as_residential ? residentialAddressId : postalAddressId;
+  /** Member row is org-scoped; use its organisation_id (delegated target may differ from header selection). */
+  const membershipOrganisationId = member?.organisation_id ?? organisationId;
 
   await savePersonMember({
     personId: person.id,
     memberId: member?.id ?? null,
-    organisationId,
+    organisationId: membershipOrganisationId,
     person: {
       first_name: values.first_name,
       last_name: values.last_name,

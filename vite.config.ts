@@ -9,7 +9,9 @@ export default defineConfig({
     react(),
   ],
   optimizeDeps: {
+    // react-router-dom stays excluded (pace-core); pre-bundle its CJS deps for ESM dev
     exclude: ['@solvera/pace-core', 'react-router-dom'],
+    include: ['cookie', 'set-cookie-parser'],
   },
   resolve: {
     alias: {

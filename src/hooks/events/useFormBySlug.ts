@@ -181,6 +181,27 @@ export async function fetchFormBySlug(
   }
 }
 
+function resolveFormBySlugApiError(
+  data: ApiResult<FormBySlugReady> | undefined,
+  queryError: unknown
+): { code: string; message: string } | null {
+  if (data && !isOk(data)) {
+    return data.error;
+  }
+  if (queryError instanceof Error) {
+    return { code: 'FORM_LOAD_QUERY', message: queryError.message };
+  }
+  return null;
+}
+
+function formBySlugShowsLoading(
+  canLoad: boolean,
+  orgLoading: boolean,
+  queryLoading: boolean
+): boolean {
+  return (canLoad && orgLoading) || (canLoad && !orgLoading && queryLoading);
+}
+
 export function useFormBySlug(eventSlugRaw: string | undefined, formSlugExplicit: string | null) {
   const { user } = useUnifiedAuthContext();
   const org = useOrganisationsContextOptional();
@@ -196,6 +217,8 @@ export function useFormBySlug(eventSlugRaw: string | undefined, formSlugExplicit
 
   const slug = eventSlugRaw?.trim() ?? '';
   const reserved = slug.length > 0 && isReservedEventSlug(slug);
+  const orgLoading = org?.isLoading ?? false;
+  const canLoad = Boolean(client && userId && organisationId && slug && !reserved);
 
   const query = useQuery({
     queryKey: [
@@ -207,7 +230,7 @@ export function useFormBySlug(eventSlugRaw: string | undefined, formSlugExplicit
       slug,
       formSlugExplicit,
     ],
-    enabled: Boolean(client && userId && organisationId && slug && !reserved),
+    enabled: canLoad && !orgLoading,
     staleTime: 30_000,
     queryFn: async (): Promise<ApiResult<FormBySlugReady>> => {
       if (!userId || !organisationId || !slug) {
@@ -221,16 +244,11 @@ export function useFormBySlug(eventSlugRaw: string | undefined, formSlugExplicit
   });
 
   const payload = query.data && isOk(query.data) ? query.data.data : undefined;
-  const apiError =
-    query.data && !isOk(query.data)
-      ? query.data.error
-      : query.error instanceof Error
-        ? { code: 'FORM_LOAD_QUERY', message: query.error.message }
-        : null;
+  const apiError = resolveFormBySlugApiError(query.data, query.error);
 
   return {
     data: payload,
-    isLoading: Boolean(client && userId && organisationId && slug && !reserved) && query.isLoading,
+    isLoading: formBySlugShowsLoading(canLoad, orgLoading, query.isLoading),
     error: apiError,
     refetch: query.refetch,
     notFound: apiError?.code === 'EVENT_NOT_FOUND' || apiError?.code === 'FORM_NOT_FOUND',

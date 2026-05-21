@@ -30,6 +30,7 @@ import {
 } from '@/hooks/events/useApplicationSubmission';
 import { useFormFillTargetPerson } from '@/hooks/events/useFormFillTargetPerson';
 import type { EventSubmissionErrorCode } from '@/lib/eventApplicationSubmission';
+import { toTypedSupabase } from '@/lib/supabase-typed';
 import type { FormFieldMeta } from '@solvera/pace-core/forms';
 import { FormRenderer } from '@/components/events/FormRenderer';
 import type { FormEntrypoint } from '@/lib/formEntrypointResolution';
@@ -295,9 +296,16 @@ export function FormJourneyShell({ entrypoint, renderExtension }: FormJourneyShe
   const ctxEventId = ready && ready.kind === 'event' ? ready.event.event_id : null;
   const ctxFormId = ready?.form.id ?? null;
 
+  const secureClient = toTypedSupabase(secure);
   const personQuery = useQuery({
-    queryKey: ['formFillPersonMember', 'v1', user?.id, organisationId],
-    enabled: Boolean(isAuthenticated && user?.id && organisationId),
+    queryKey: [
+      'formFillPersonMember',
+      'v1',
+      user?.id,
+      organisationId,
+      secureClient ? 'scoped' : 'pending',
+    ],
+    enabled: Boolean(isAuthenticated && user?.id && organisationId && secureClient),
     staleTime: 15_000,
     queryFn: async () => fetchCurrentPersonMember(secure, user!.id!, organisationId!),
   });
@@ -317,6 +325,7 @@ export function FormJourneyShell({ entrypoint, renderExtension }: FormJourneyShe
   const fieldData = useFormFieldData(effectivePersonId, organisationId, ctxEventId, ctxRows);
 
   const draft = useDraftApplication(
+    user?.id ?? null,
     effectivePersonId,
     organisationId,
     ctxEventId,
@@ -374,7 +383,11 @@ export function FormJourneyShell({ entrypoint, renderExtension }: FormJourneyShe
           );
         }
 
-        if (personQuery.isLoading) {
+        const personContextPending = Boolean(
+          isAuthenticated && user?.id && organisationId && !secureClient
+        );
+
+        if (personContextPending || personQuery.isLoading) {
           return (
             <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
               <LoadingSpinner label="Loading profile…" />
@@ -393,12 +406,8 @@ export function FormJourneyShell({ entrypoint, renderExtension }: FormJourneyShe
           );
         }
 
-        if (
-          !proxy.isProxyActive &&
-          pm &&
-          !isOk(pm) &&
-          pm.error.code === NO_PERSON_PROFILE_ERROR_CODE
-        ) {
+        if (!proxy.isProxyActive && pm && !isOk(pm)) {
+          if (pm.error.code === NO_PERSON_PROFILE_ERROR_CODE) {
           const ev = entry.routeEventSlug;
           const fs = entry.routeFormSlug;
           const qs =
@@ -423,6 +432,17 @@ export function FormJourneyShell({ entrypoint, renderExtension }: FormJourneyShe
                   </Button>
                 </CardFooter>
               </Card>
+            </main>
+          );
+          }
+
+          const memberMsg = pm.error.message?.trim() || 'Could not load member context.';
+          return (
+            <main className="mx-auto grid max-w-(--app-width) gap-4 p-4">
+              <Alert variant="destructive">
+                <AlertTitle>Member context</AlertTitle>
+                <AlertDescription>{memberMsg}</AlertDescription>
+              </Alert>
             </main>
           );
         }

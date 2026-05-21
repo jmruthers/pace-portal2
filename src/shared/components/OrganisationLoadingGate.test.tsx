@@ -29,10 +29,32 @@ describe('OrganisationLoadingGate', () => {
     expect(screen.getByLabelText(/loading organisation context/i)).toBeInTheDocument();
   });
 
+  it('shows organisation required message when context is not valid after load', () => {
+    vi.mocked(useUnifiedAuth).mockReturnValue({
+      isAuthenticated: true,
+      organisationLoading: false,
+      hasValidOrganisationContext: false,
+    } as never);
+
+    render(
+      <MemoryRouter>
+        <Routes>
+          <Route element={<OrganisationLoadingGate />}>
+            <Route path="/" element={<p>Child</p>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/no organisation access/i)).toBeInTheDocument();
+    expect(screen.queryByText('Child')).not.toBeInTheDocument();
+  });
+
   it('renders outlet when not loading', () => {
     vi.mocked(useUnifiedAuth).mockReturnValue({
       isAuthenticated: true,
       organisationLoading: false,
+      hasValidOrganisationContext: true,
     } as never);
 
     render(

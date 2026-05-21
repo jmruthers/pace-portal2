@@ -264,9 +264,11 @@ export function useEnhancedLanding() {
     [org?.organisations]
   );
 
+  const scopeReady = Boolean(client && userId && organisationId && !org?.isLoading);
+
   const query = useQuery({
     queryKey: ['enhancedLanding', 'v4', userId, organisationId, accessibleOrganisationIds.join(',')],
-    enabled: Boolean(client && userId && organisationId),
+    enabled: scopeReady,
     staleTime: 60_000,
     queryFn: async (): Promise<ApiResult<EnhancedLandingModel>> => {
       if (!userId || !organisationId) {
@@ -280,6 +282,9 @@ export function useEnhancedLanding() {
   });
 
   const apiError = query.data && !isOk(query.data) ? query.data.error : null;
+  const isLoading =
+    query.isLoading ||
+    (Boolean(userId) && (org?.isLoading === true || (organisationId != null && client == null)));
   return {
     ...query,
     data: query.data && isOk(query.data) ? query.data.data : undefined,
@@ -289,6 +294,7 @@ export function useEnhancedLanding() {
         ? query.error
         : null,
     isError: Boolean(apiError) || query.isError,
+    isLoading,
     isSuccess: query.isSuccess && !apiError,
   };
 }

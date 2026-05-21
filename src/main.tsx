@@ -14,7 +14,7 @@ import { QueryRetryHandler, queryErrorHandler } from '@solvera/pace-core/utils';
 import { APP_NAME } from '@/constants';
 import { resolveRbacAppIdForSetup } from '@/lib/rbacResolveAppId';
 import { supabaseClient } from '@/lib/supabase';
-import './App.css';
+import './app.css';
 import App from './App';
 
 /** Required for selected org/event context in headers, guards, and dashboard hooks. */

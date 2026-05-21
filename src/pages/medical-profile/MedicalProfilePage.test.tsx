@@ -448,7 +448,7 @@ describe('MedicalProfilePage', () => {
       </QueryClientProvider>
     );
 
-    expect(await screen.findByText(/delegated context active/i)).toBeInTheDocument();
+    expect(await screen.findByText(/delegated access/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /medical profile/i })).toBeInTheDocument();
   });
 });

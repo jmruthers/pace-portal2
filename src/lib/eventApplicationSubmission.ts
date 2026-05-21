@@ -168,6 +168,7 @@ export async function submitEventApplication(
 
   const bundleRes = await ensureDraftBundle(
     client,
+    actingUserId,
     applicantPersonId,
     organisationId,
     eventId,

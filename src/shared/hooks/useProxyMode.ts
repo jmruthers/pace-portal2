@@ -69,6 +69,7 @@ export function useProxyMode() {
     }
     setIsValidating(true);
     setValidationError(null);
+    setTargetPersonId(null);
     try {
       const rpcResult = (await secure.rpc(
         // eslint-disable-next-line pace-core-compliance/rpc-naming-pattern -- shared schema RPC name
@@ -143,6 +144,9 @@ export function useProxyMode() {
     }
     writeStoredMemberId(memberId);
     setTargetMemberId(memberId);
+    setTargetPersonId(null);
+    setValidationError(null);
+    setIsValidating(true);
   }, [clearProxy]);
 
   const isProxyActive = Boolean(targetMemberId && targetPersonId && !validationError);

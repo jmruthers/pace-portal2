@@ -75,7 +75,7 @@ describe('ensureDraftBundle', () => {
       }),
     } as unknown as Client;
 
-    const r = await ensureDraftBundle(client, 'p1', 'o1', 'ev1', 'form-1');
+    const r = await ensureDraftBundle(client, 'user-1', 'p1', 'o1', 'ev1', 'form-1');
     expect(isOk(r)).toBe(true);
     if (isOk(r)) {
       expect(r.data.applicationId).toBe('app-1');
@@ -84,6 +84,11 @@ describe('ensureDraftBundle', () => {
   });
 
   it('creates unlinked draft response when no application exists (PR16 no base_application at draft time)', async () => {
+    const insert = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({ data: { id: 'resp-new' }, error: null }),
+      }),
+    });
     const client = {
       from: vi.fn((table: string) => {
         if (table === 'base_application') {
@@ -101,11 +106,7 @@ describe('ensureDraftBundle', () => {
             order: vi.fn().mockReturnThis(),
             limit: vi.fn().mockReturnThis(),
             maybeSingle: vi.fn().mockResolvedValueOnce({ data: null, error: null }),
-            insert: vi.fn().mockReturnValue({
-              select: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: { id: 'resp-new' }, error: null }),
-              }),
-            }),
+            insert,
           };
         }
         if (table === 'core_form_response_values') {
@@ -115,7 +116,10 @@ describe('ensureDraftBundle', () => {
       }),
     } as unknown as Client;
 
-    const r = await ensureDraftBundle(client, 'p1', 'o1', 'ev1', 'form-1');
+    const r = await ensureDraftBundle(client, 'user-1', 'p1', 'o1', 'ev1', 'form-1');
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({ respondent_id: 'user-1' })
+    );
     expect(isOk(r)).toBe(true);
     if (isOk(r)) {
       expect(r.data.applicationId).toBeNull();

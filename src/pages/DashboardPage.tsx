@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useOrganisationsContextOptional } from '@solvera/pace-core/providers';
 import { Alert, AlertDescription, AlertTitle, LoadingSpinner } from '@solvera/pace-core/components';
-import { AccessDenied, PagePermissionGuard } from '@solvera/pace-core/rbac';
+import { AccessDenied, PagePermissionGuard, useSecureSupabase } from '@solvera/pace-core/rbac';
 import { useEnhancedLanding } from '@/shared/hooks/useEnhancedLanding';
 import { useProxyMode } from '@/shared/hooks/useProxyMode';
 import { ContactSummaryCard } from '@/components/contacts/ContactSummaryCard';
@@ -13,21 +13,18 @@ import { ProfileSetupPrompt } from '@/components/member-profile/ProfileSetupProm
 function DashboardContent() {
   const org = useOrganisationsContextOptional();
   const organisationId = org?.selectedOrganisation?.id ?? null;
+  const secure = useSecureSupabase();
   const { clearProxy } = useProxyMode();
-  const { data, isLoading, isError, error, refetch } = useEnhancedLanding();
-  const didRefetch = useRef(false);
+  const { data, isLoading, isError, error } = useEnhancedLanding();
 
   useEffect(() => {
     clearProxy();
   }, [clearProxy]);
 
-  useEffect(() => {
-    if (didRefetch.current) return;
-    didRefetch.current = true;
-    void refetch();
-  }, [refetch]);
+  const awaitingOrganisationContext =
+    org?.isLoading === true || !organisationId || secure == null;
 
-  if (isLoading) {
+  if (awaitingOrganisationContext || isLoading) {
     return (
       <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
         <LoadingSpinner label="Loading dashboard…" />

@@ -13,7 +13,8 @@ import type { CoreFormFieldRow } from '@/shared/lib/formFieldMeta';
 export type { DraftApplicationBundle } from '@/lib/eventDraftPersistence';
 
 export function useDraftApplication(
-  personId: string | null,
+  actingUserId: string | null,
+  applicantPersonId: string | null,
   organisationId: string | null,
   eventId: string | null,
   formId: string | null,
@@ -29,14 +30,32 @@ export function useDraftApplication(
   const stableFieldIds = fieldRows.map((r) => r.id).join(',');
 
   const bundleQuery = useQuery({
-    queryKey: ['draftApplication', 'v1', personId, organisationId, eventId, formId, stableFieldIds],
-    enabled: Boolean(client && personId && organisationId && eventId && formId),
+    queryKey: [
+      'draftApplication',
+      'v1',
+      actingUserId,
+      applicantPersonId,
+      organisationId,
+      eventId,
+      formId,
+      stableFieldIds,
+    ],
+    enabled: Boolean(
+      client && actingUserId && applicantPersonId && organisationId && eventId && formId
+    ),
     staleTime: 10_000,
     queryFn: async (): Promise<ApiResult<DraftApplicationBundle>> => {
-      if (!client || !personId || !organisationId || !eventId || !formId) {
+      if (!client || !actingUserId || !applicantPersonId || !organisationId || !eventId || !formId) {
         return err({ code: 'DRAFT_CONTEXT', message: 'Draft requires full context.' });
       }
-      return ensureDraftBundle(client, personId, organisationId, eventId, formId);
+      return ensureDraftBundle(
+        client,
+        actingUserId,
+        applicantPersonId,
+        organisationId,
+        eventId,
+        formId
+      );
     },
   });
 

@@ -23,9 +23,14 @@ export type DraftApplicationBundle = {
   valueByFieldId: Record<string, unknown>;
 };
 
+/**
+ * Ensures a draft `core_form_responses` row (and optional legacy `base_application`).
+ * `respondent_id` is the signed-in auth user (FK → `auth.users`); `applicantPersonId` scopes application lookup.
+ */
 export async function ensureDraftBundle(
   client: NonNullable<ReturnType<typeof toTypedSupabase>>,
-  personId: string,
+  actingUserId: string,
+  applicantPersonId: string,
   organisationId: string,
   eventId: string,
   formId: string
@@ -36,7 +41,7 @@ export async function ensureDraftBundle(
   const existingApp = await client
     .from('base_application')
     .select('id, status, form_id')
-    .eq('person_id', personId)
+    .eq('person_id', applicantPersonId)
     .eq('event_id', eventIdTyped)
     .maybeSingle();
 
@@ -73,7 +78,7 @@ export async function ensureDraftBundle(
           .from('core_form_responses')
           .select('id')
           .eq('form_id', formId)
-          .eq('respondent_id', personId)
+          .eq('respondent_id', actingUserId)
           .eq('status', DRAFT_STATUS)
           .is('workflow_subject_id', null)
           .order('updated_at', { ascending: false, nullsFirst: false })
@@ -96,7 +101,7 @@ export async function ensureDraftBundle(
       .insert({
         form_id: formId,
         organisation_id: orgIdTyped,
-        respondent_id: personId,
+        respondent_id: actingUserId,
         status: DRAFT_STATUS,
         workflow_subject_type: applicationId != null ? WORKFLOW_SUBJECT_TYPE : null,
         workflow_subject_id: applicationId,

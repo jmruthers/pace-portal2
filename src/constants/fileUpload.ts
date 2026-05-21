@@ -3,8 +3,8 @@ export const PROFILE_PHOTO_CATEGORY = 'profile_photo';
 export const PROFILE_PHOTO_FOLDER = 'profile_photos';
 export const PROFILE_PHOTO_ACCEPT = 'image/jpeg,image/png,image/webp';
 export const PROFILE_PHOTO_MAX_BYTES = 5 * 1024 * 1024;
-/** First segment of the storage path (`pageContext/folder/category/...`); use app id prefix expected by storage policies. */
-export const PROFILE_PHOTO_PAGE_CONTEXT = 'pace';
+/** RBAC page for `app_file_reference_create` (`create:page.*` / `update:page.*`); see portal-architecture § RBAC. */
+export const PROFILE_PHOTO_PAGE_CONTEXT = 'member-profile';
 
 /** Medical action-plan files (PR11) — `core_file_references` + `medi_condition.action_plan_file_id`. */
 export const ACTION_PLAN_CATEGORY = 'medi_action_plan';

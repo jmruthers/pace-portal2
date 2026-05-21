@@ -6,8 +6,18 @@ import { PhotoUploadDialog } from '@/components/member-profile/PhotoUploadDialog
 
 type FileUploadMockProps = {
   onUploadError?: (error: unknown) => void;
-  onUploadSuccess?: () => void;
+  onUploadSuccess?: (result: { file_reference: { id: string }; file_url: string }) => void;
 };
+
+vi.mock('@solvera/pace-core/utils', () => ({
+  NormalizeSupabaseError: (error: unknown, fallback: string) => ({
+    message: error instanceof Error ? error.message : fallback,
+  }),
+}));
+
+vi.mock('@solvera/pace-core/hooks', () => ({
+  clearFileDisplayCache: vi.fn(),
+}));
 
 vi.mock('@solvera/pace-core/components', () => ({
   Alert: ({ children }: { children: ReactNode }) => <section>{children}</section>,
@@ -34,7 +44,17 @@ vi.mock('@solvera/pace-core/components', () => ({
       >
         Trigger upload error
       </span>
-      <span role="button" tabIndex={0} onClick={() => onUploadSuccess?.()} onKeyDown={() => {}}>
+      <span
+        role="button"
+        tabIndex={0}
+        onClick={() =>
+          onUploadSuccess?.({
+            file_reference: { id: 'ref-new' },
+            file_url: 'https://example.com/photo.jpg',
+          })
+        }
+        onKeyDown={() => {}}
+      >
         Trigger upload success
       </span>
     </div>
@@ -42,7 +62,7 @@ vi.mock('@solvera/pace-core/components', () => ({
 }));
 
 vi.mock('@solvera/pace-core/rbac', () => ({
-  useSecureSupabase: () => ({}),
+  useStorageCapableClient: () => ({}),
 }));
 
 vi.mock('@/lib/supabase-typed', () => ({
@@ -96,6 +116,14 @@ describe('PhotoUploadDialog', () => {
     return { onOpenChange, invalidateSpy };
   }
 
+  it('shows unavailable message when organisation context is missing', () => {
+    renderDialog({ organisationId: null });
+
+    expect(screen.getByText(/upload unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(/select an organisation/i)).toBeInTheDocument();
+    expect(screen.queryByText(/choose image/i)).not.toBeInTheDocument();
+  });
+
   it('shows upload error when file upload fails', async () => {
     renderDialog();
 
@@ -104,13 +132,29 @@ describe('PhotoUploadDialog', () => {
     expect(await screen.findByText(/upload failed from test/i)).toBeInTheDocument();
   });
 
-  it('invalidates profile queries and closes dialog after upload success', () => {
-    const { invalidateSpy, onOpenChange } = renderDialog();
+  it('refetches profile photo query and closes dialog after upload success', async () => {
+    const refetchSpy = vi.fn().mockResolvedValue(undefined);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    queryClient.refetchQueries = refetchSpy;
+    const onOpenChange = vi.fn();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PhotoUploadDialog
+          open
+          onOpenChange={onOpenChange}
+          personId="person-1"
+          organisationId="org-1"
+          appId="app-1"
+        />
+      </QueryClientProvider>
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /trigger upload success/i }));
 
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['enhancedLanding'] });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['profilePhoto'] });
+    expect(refetchSpy).toHaveBeenCalledWith({ queryKey: ['profilePhoto'] });
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 

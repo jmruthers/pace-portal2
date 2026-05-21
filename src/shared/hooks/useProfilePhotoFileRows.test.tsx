@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useProfilePhotoFileRows } from '@/shared/hooks/useProfilePhotoFileRows';
 
-const mockRpc = vi.fn();
+const mockSelect = vi.fn();
 
 vi.mock('@solvera/pace-core', () => ({
   useUnifiedAuthContext: () => ({
@@ -13,7 +13,21 @@ vi.mock('@solvera/pace-core', () => ({
 }));
 
 vi.mock('@solvera/pace-core/rbac', () => ({
-  useSecureSupabase: () => ({ rpc: mockRpc }),
+  useSecureSupabase: () => ({}),
+}));
+
+vi.mock('@/lib/supabase-typed', () => ({
+  toTypedSupabase: () => ({
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          eq: () => ({
+            order: mockSelect,
+          }),
+        }),
+      }),
+    }),
+  }),
 }));
 
 function createWrapper() {
@@ -25,55 +39,69 @@ function createWrapper() {
 
 describe('useProfilePhotoFileRows', () => {
   beforeEach(() => {
-    mockRpc.mockReset();
+    mockSelect.mockReset();
   });
 
-  it('loads file rows for person when enabled', async () => {
-    mockRpc.mockResolvedValue({
-      data: [{ id: 'f1', file_path: 'p/a.jpg', file_metadata: {}, is_public: false, created_at: 't' }],
+  it('loads profile photo rows for person when secure client is available', async () => {
+    mockSelect.mockResolvedValue({
+      data: [
+        {
+          id: 'f1',
+          file_path: 'org/p.jpg',
+          file_metadata: { category: 'profile_photo' },
+          is_public: false,
+          created_at: '2026-05-21T00:00:00Z',
+          app_id: 'app-1',
+        },
+        {
+          id: 'f0',
+          file_path: 'org/other.pdf',
+          file_metadata: { category: 'other' },
+          is_public: false,
+          created_at: '2026-05-20T00:00:00Z',
+          app_id: 'app-1',
+        },
+      ],
       error: null,
     });
 
-    const { result } = renderHook(
-      () => useProfilePhotoFileRows('person-1', 'org-1', true),
-      { wrapper: createWrapper() }
-    );
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
-    expect(result.current.data?.length).toBe(1);
-    expect(mockRpc).toHaveBeenCalledWith(
-      'data_file_reference_by_category_list',
-      expect.objectContaining({
-        p_record_id: 'person-1',
-        p_table_name: 'core_person',
-        p_user_id: 'u1',
-      })
-    );
-  });
-
-  it('does not run when disabled', () => {
-    const { result } = renderHook(
-      () => useProfilePhotoFileRows('person-1', 'org-1', false),
-      { wrapper: createWrapper() }
-    );
-    expect(result.current.fetchStatus).toBe('idle');
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it('retries without org scope when org-scoped list is empty', async () => {
-    mockRpc
-      .mockResolvedValueOnce({ data: [], error: null })
-      .mockResolvedValueOnce({
-        data: [{ id: 'f1', file_path: 'p/a.jpg', file_metadata: {}, is_public: false, created_at: 't' }],
-        error: null,
-      });
-
-    const { result } = renderHook(() => useProfilePhotoFileRows('person-1', 'org-1', true), {
+    const { result } = renderHook(() => useProfilePhotoFileRows('person-1', 'org-1'), {
       wrapper: createWrapper(),
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
     expect(result.current.data?.length).toBe(1);
-    expect(mockRpc).toHaveBeenCalledTimes(2);
+    expect(result.current.data?.[0]?.id).toBe('f1');
+  });
+
+  it('includes legacy profile_photos category rows', async () => {
+    mockSelect.mockResolvedValue({
+      data: [
+        {
+          id: 'legacy',
+          file_path: 'org/legacy.jpg',
+          file_metadata: { category: 'profile_photos' },
+          is_public: false,
+          created_at: '2025-01-01T00:00:00Z',
+          app_id: null,
+        },
+      ],
+      error: null,
+    });
+
+    const { result } = renderHook(() => useProfilePhotoFileRows('person-1', 'org-1'), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
+    expect(result.current.data?.length).toBe(1);
+  });
+
+  it('does not run when person id is missing', () => {
+    const { result } = renderHook(() => useProfilePhotoFileRows(null, 'org-1'), {
+      wrapper: createWrapper(),
+    });
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(mockSelect).not.toHaveBeenCalled();
   });
 });

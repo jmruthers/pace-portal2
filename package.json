@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "build:pace-core": "npm run build --prefix ../pace-core2/packages/core",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "type-check": "tsc -b",

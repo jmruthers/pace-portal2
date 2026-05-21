@@ -140,7 +140,7 @@ describe('ProfileEditProxyPage', () => {
 
     renderPage('/profile/edit/m1');
 
-    expect(await screen.findByLabelText(/checking access/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/loading delegated workspace/i)).toBeInTheDocument();
   });
 
   it('shows access denied when guard denies', async () => {
@@ -151,12 +151,12 @@ describe('ProfileEditProxyPage', () => {
     expect(await screen.findByText(/access denied/i)).toBeInTheDocument();
   });
 
-  it('shows aligning spinner when stored target differs from route', async () => {
+  it('shows workspace loading when stored target differs from route', async () => {
     proxy.targetMemberId = 'm-old';
 
     renderPage('/profile/edit/m-new');
 
-    expect(await screen.findByLabelText(/starting delegated session/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/loading delegated workspace/i)).toBeInTheDocument();
   });
 
   it('requires organisation before delegated workspace', async () => {
@@ -173,22 +173,22 @@ describe('ProfileEditProxyPage', () => {
     expect(await screen.findByText(/missing member id/i)).toBeInTheDocument();
   });
 
-  it('shows spinner while proxy target aligns with route', async () => {
+  it('shows workspace loading while proxy target aligns with route', async () => {
     proxy.targetMemberId = null;
 
     renderPage('/profile/edit/m1');
 
-    expect(await screen.findByLabelText(/starting delegated session/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/loading delegated workspace/i)).toBeInTheDocument();
     expect(proxy.setProxyTargetMemberId).toHaveBeenCalledWith('m1');
   });
 
-  it('shows validating spinner', async () => {
+  it('shows workspace loading while proxy validates', async () => {
     proxy.targetMemberId = 'm1';
     proxy.isValidating = true;
 
     renderPage('/profile/edit/m1');
 
-    expect(await screen.findByLabelText(/validating delegated access/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/loading delegated workspace/i)).toBeInTheDocument();
   });
 
   it('shows validation error from proxy mode', async () => {
@@ -200,14 +200,15 @@ describe('ProfileEditProxyPage', () => {
     expect(await screen.findByText(/proxy access was denied/i)).toBeInTheDocument();
   });
 
-  it('shows unavailable when proxy never activates', async () => {
+  it('shows workspace loading while proxy session is not yet active', async () => {
     proxy.targetMemberId = 'm1';
     proxy.isProxyActive = false;
     proxy.validationError = null;
+    proxy.isValidating = false;
 
     renderPage('/profile/edit/m1');
 
-    expect(await screen.findByText(/delegated session unavailable/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/loading delegated workspace/i)).toBeInTheDocument();
   });
 
   it('shows workspace error when dashboard query fails', async () => {
@@ -273,16 +274,16 @@ describe('ProfileEditProxyPage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/');
   });
 
-  it('navigates home when delegated session is unavailable', async () => {
-    const user = userEvent.setup();
+  it('keeps workspace loading without back action while proxy session is not yet active', async () => {
     proxy.targetMemberId = 'm1';
     proxy.isProxyActive = false;
     proxy.validationError = null;
+    proxy.isValidating = false;
 
     renderPage('/profile/edit/m1');
 
-    await user.click(await screen.findByRole('button', { name: /back to dashboard/i }));
-    expect(navigateMock).toHaveBeenCalledWith('/');
+    expect(await screen.findByLabelText(/loading delegated workspace/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /back to dashboard/i })).not.toBeInTheDocument();
   });
 
   it('navigates home from workspace load error', async () => {

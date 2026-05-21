@@ -42,6 +42,16 @@ function normalizeOptionalText(value: string | null | undefined): string | undef
   return normalized === '' ? undefined : normalized;
 }
 
+/** Form state uses string ids; generated RPC types use string (Postgres coerces to smallint). */
+function validateContactTypeId(value: string): string {
+  const trimmed = value.trim();
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(parsed) || String(parsed) !== trimmed) {
+    throw new Error('Invalid contact type.');
+  }
+  return String(parsed);
+}
+
 /**
  * Contact mutations for additional contacts (create, update, delete).
  * Invalidates additional-contacts list queries on successful mutations.
@@ -72,7 +82,7 @@ export function useContactOperations(): UseContactOperationsResult {
         p_last_name: lastName,
         p_preferred_name: normalizedPreferredName,
         p_email: normalizedEmail,
-        p_contact_type_id: contactTypeId,
+        p_contact_type_id: validateContactTypeId(contactTypeId),
         p_permission_type: input.permissionType,
         p_phone_number: normalizedPhoneNumber,
         p_phone_type_id: input.phoneTypeId ?? undefined,
@@ -126,7 +136,7 @@ export function useContactOperations(): UseContactOperationsResult {
         p_last_name: input.lastName,
         p_preferred_name: normalizedPreferredName,
         p_email: normalizedEmail,
-        p_contact_type_id: input.contactTypeId,
+        p_contact_type_id: validateContactTypeId(input.contactTypeId),
         p_permission_type: input.permissionType,
         p_phone_number: normalizedPhoneNumber,
         p_phone_type_id: input.phoneTypeId ?? undefined,
