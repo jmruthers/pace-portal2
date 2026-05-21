@@ -8,6 +8,7 @@ import { toTypedSupabase } from '@/lib/supabase-typed';
 import { useProxyMode } from '@/shared/hooks/useProxyMode';
 import { useMemberProfileData } from '@/hooks/member-profile/useMemberProfileData';
 import { useResolvedAppId } from '@/shared/hooks/useResolvedAppId';
+import { isMemberProfileIncompleteForMedical } from '@/shared/lib/memberProfileMedicalGate';
 import { fetchMedicalProfileData, useMedicalProfileData } from '@/hooks/medical-profile/useMedicalProfileData';
 import type { MedicalProfileFormValues } from '@/utils/medical-profile/validation';
 
@@ -66,8 +67,16 @@ export function useEffectiveMedicalMemberId(): {
   const { user } = useUnifiedAuthContext();
   const org = useOrganisationsContextOptional();
   const organisationId = org?.selectedOrganisation?.id ?? null;
+  const secure = useSecureSupabase();
+  const client = toTypedSupabase(secure);
   const proxy = useProxyMode();
-  const { data: memberData, isLoading, isError } = useMemberProfileData();
+  const {
+    data: memberData,
+    isLoading,
+    isPending,
+    isFetching,
+    isError,
+  } = useMemberProfileData();
 
   if (!organisationId) {
     return { effectiveMemberId: null, isReady: true, blockedReason: 'no_organisation' };
@@ -85,16 +94,28 @@ export function useEffectiveMedicalMemberId(): {
     return { effectiveMemberId: proxy.targetMemberId, isReady: true, blockedReason: null };
   }
 
-  if (isLoading) {
+  const awaitingScope =
+    org?.isLoading === true ||
+    (Boolean(user?.id) && client == null) ||
+    isPending ||
+    isFetching ||
+    isLoading;
+
+  if (awaitingScope) {
     return { effectiveMemberId: null, isReady: false, blockedReason: null };
   }
 
-  if (isError || !memberData || memberData === 'needs_setup') {
+  if (
+    isError ||
+    !memberData ||
+    memberData === 'needs_setup' ||
+    isMemberProfileIncompleteForMedical(memberData, user?.id)
+  ) {
     return { effectiveMemberId: null, isReady: true, blockedReason: 'needs_member_profile' };
   }
 
   const selfMemberId = memberData.member?.id ?? null;
-  if (!selfMemberId || !user?.id) {
+  if (!selfMemberId) {
     return { effectiveMemberId: null, isReady: true, blockedReason: 'needs_member_profile' };
   }
 

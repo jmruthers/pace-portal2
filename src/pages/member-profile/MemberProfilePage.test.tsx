@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { err } from '@solvera/pace-core/types';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { MemberProfileLoadModel } from '@/hooks/member-profile/useMemberProfileData';
@@ -14,8 +14,18 @@ vi.mock('@solvera/pace-core/rbac', () => ({
   useSecureSupabase: () => null,
 }));
 
+const mockNavigate = vi.fn();
+
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>();
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 vi.mock('@solvera/pace-core', () => ({
-  useUnifiedAuthContext: () => ({ isAuthenticated: true }),
+  useUnifiedAuthContext: () => ({ isAuthenticated: true, user: { id: 'u1' } }),
 }));
 
 vi.mock('@solvera/pace-core/providers', () => ({
@@ -152,6 +162,7 @@ function renderPage(path = '/member-profile') {
 
 describe('MemberProfilePage', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     hooks.memberProfile.data = 'needs_setup';
     hooks.memberProfile.isLoading = false;
     hooks.memberProfile.isError = false;
@@ -194,5 +205,35 @@ describe('MemberProfilePage', () => {
 
     renderPage();
     expect(screen.getByText(/working on behalf of/i)).toBeInTheDocument();
+  });
+
+  it('auto-returns to medical profile when handoff is set but profile is already complete', async () => {
+    hooks.memberProfile.data = loadedProfile;
+    hooks.memberProfile.dataUpdatedAt = 1;
+    hooks.reference.data = referenceBundle;
+
+    renderPage('/member-profile?completeMemberFirst=1&returnTo=%2Fmedical-profile');
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/medical-profile', { replace: true });
+    });
+    expect(screen.queryByText(/complete your member profile first/i)).not.toBeInTheDocument();
+  });
+
+  it('shows complete-first alert when handoff is set and profile is incomplete', () => {
+    hooks.memberProfile.data = {
+      ...loadedProfile,
+      person: { ...loadedProfile.person, first_name: '', gender_id: 0, pronoun_id: 0 },
+      member: loadedProfile.member
+        ? { ...loadedProfile.member, membership_type_id: null, membership_number: null }
+        : null,
+    };
+    hooks.memberProfile.dataUpdatedAt = 1;
+    hooks.reference.data = referenceBundle;
+
+    renderPage('/member-profile?completeMemberFirst=1');
+
+    expect(screen.getByText(/complete your member profile first/i)).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

@@ -47,14 +47,10 @@ const mediConditionRpcRow = {
 };
 
 function buildClient() {
-  const rpc = vi.fn((name: string, args: { p_member_id?: string; p_profile_id?: string }) => {
+  const rpc = vi.fn((name: string, args: { p_member_id?: string }) => {
     if (name === 'data_medi_profile_get') {
       expect(args.p_member_id).toBe('m1');
       return Promise.resolve({ data: [profileRpcRow], error: null });
-    }
-    if (name === 'data_medi_conditions_list') {
-      expect(args.p_profile_id).toBe('mp1');
-      return Promise.resolve({ data: [mediConditionRpcRow], error: null });
     }
     return Promise.resolve({ data: null, error: null });
   });
@@ -65,6 +61,19 @@ function buildClient() {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: { person_id: 'p1' }, error: null }),
+      };
+    }
+    if (table === 'medi_condition') {
+      const afterProfileId = {
+        eq: vi.fn().mockResolvedValue({ data: [mediConditionRpcRow], error: null }),
+      };
+      return {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockImplementation((col: string, val: unknown) => {
+            if (col === 'profile_id') expect(val).toBe('mp1');
+            return afterProfileId;
+          }),
+        }),
       };
     }
     return {};

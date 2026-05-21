@@ -199,7 +199,10 @@ describe('MedicalProfilePage', () => {
       </QueryClientProvider>
     );
     expect(screen.getByRole('heading', { name: /medical profile/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /recorded conditions \(summary\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^medical conditions$/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(/quick reference for conditions on file/i)
+    ).toBeInTheDocument();
     expect(screen.getAllByText(/Asthma/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole('button', { name: /add condition/i })).toBeInTheDocument();
   });

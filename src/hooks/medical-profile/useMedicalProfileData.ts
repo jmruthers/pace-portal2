@@ -111,14 +111,20 @@ export async function fetchMedicalProfileData(
 
     let conditions: MediConditionDetail[] = [];
     if (profile?.id) {
-      const rpcCond = await client.rpc('data_medi_conditions_list', { p_profile_id: profile.id });
-      if (rpcCond.error) {
+      // Table read: `data_medi_conditions_list` RPC can fail when RETURNS TABLE still
+      // declares condition_type_id as integer after p4_batch15 (column is smallint).
+      const condRes = await client
+        .from('medi_condition')
+        .select('*')
+        .eq('profile_id', profile.id)
+        .eq('is_active', true);
+      if (condRes.error) {
         return err({
           code: 'MEDICAL_CONDITION_SUMMARY',
-          message: rpcCond.error.message || 'Could not load conditions.',
+          message: condRes.error.message || 'Could not load conditions.',
         });
       }
-      conditions = (rpcCond.data ?? []) as MediConditionDetail[];
+      conditions = (condRes.data ?? []) as MediConditionDetail[];
     }
 
     return ok({

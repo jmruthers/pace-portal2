@@ -146,7 +146,7 @@ describe('useMedicalConditions', () => {
 
     const values = { ...defaultMedicalConditionFormValues(), condition_type_id: 2 };
     await expect(result.current.updateCondition.mutateAsync({ id: 'c-up', values })).rejects.toThrow(
-      /no rows were updated/i
+      /could not update condition/i
     );
   });
 
@@ -176,6 +176,6 @@ describe('useMedicalConditions', () => {
       { wrapper: wrapper(qc) }
     );
 
-    await expect(result.current.deleteCondition.mutateAsync('cond-99')).rejects.toThrow(/no rows were deleted/i);
+    await expect(result.current.deleteCondition.mutateAsync('cond-99')).rejects.toThrow(/could not delete condition/i);
   });
 });

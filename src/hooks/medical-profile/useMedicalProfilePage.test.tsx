@@ -9,11 +9,29 @@ import {
 import * as supabaseTyped from '@/lib/supabase-typed';
 import * as medicalModule from '@/hooks/medical-profile/useMedicalProfileData';
 
-const memberData = vi.hoisted(() => ({
-  data: null as unknown,
+const memberData = vi.hoisted(() => {
+  const completeSelfProfile = () => ({
+    member: { id: 'self-m', membership_type_id: 1, membership_number: 'M1' },
+    person: {
+      id: 'p1',
+      first_name: 'A',
+      last_name: 'B',
+      email: 'a@b.c',
+      date_of_birth: '2000-01-01',
+      preferred_name: null,
+      gender_id: 2,
+      pronoun_id: 3,
+    },
+  });
+  return {
+  data: completeSelfProfile() as unknown,
   isLoading: false,
+  isPending: false,
+  isFetching: false,
   isError: false,
-}));
+  completeSelfProfile,
+  };
+});
 
 const proxy = vi.hoisted(() => ({
   isProxyActive: false,
@@ -24,6 +42,11 @@ const proxy = vi.hoisted(() => ({
 
 const orgState = vi.hoisted(() => ({
   id: 'org-1' as string | null,
+  isLoading: false,
+}));
+
+const secureState = vi.hoisted(() => ({
+  client: {} as object | null,
 }));
 
 const authState = vi.hoisted(() => ({
@@ -36,12 +59,22 @@ vi.mock('@solvera/pace-core', () => ({
 
 vi.mock('@solvera/pace-core/providers', () => ({
   useOrganisationsContextOptional: () =>
-    orgState.id ? { selectedOrganisation: { id: orgState.id } } : null,
+    orgState.id
+      ? { selectedOrganisation: { id: orgState.id }, isLoading: orgState.isLoading }
+      : null,
 }));
 
 vi.mock('@solvera/pace-core/rbac', () => ({
-  useSecureSupabase: () => ({}),
+  useSecureSupabase: () => secureState.client,
 }));
+
+vi.mock('@/lib/supabase-typed', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/supabase-typed')>();
+  return {
+    ...actual,
+    toTypedSupabase: (client: unknown) => (client == null ? null : ({} as never)),
+  };
+});
 
 vi.mock('@/hooks/member-profile/useMemberProfileData', () => ({
   useMemberProfileData: () => memberData,
@@ -83,8 +116,12 @@ describe('useEffectiveMedicalMemberId', () => {
   beforeEach(() => {
     authState.userId = 'user-1';
     orgState.id = 'org-1';
-    memberData.data = { member: { id: 'self-m' }, person: { id: 'p1' } };
+    orgState.isLoading = false;
+    secureState.client = {};
+    memberData.data = memberData.completeSelfProfile();
     memberData.isLoading = false;
+    memberData.isPending = false;
+    memberData.isFetching = false;
     memberData.isError = false;
     proxy.isProxyActive = false;
     proxy.isValidating = false;
@@ -109,6 +146,39 @@ describe('useEffectiveMedicalMemberId', () => {
 
     expect(result.current.isReady).toBe(false);
     expect(result.current.effectiveMemberId).toBeNull();
+  });
+
+  it('waits while member profile query is pending without isLoading (disabled-query race)', () => {
+    memberData.data = undefined;
+    memberData.isLoading = false;
+    memberData.isPending = true;
+    memberData.isFetching = false;
+
+    const { result } = renderHook(() => useEffectiveMedicalMemberId(), { wrapper });
+
+    expect(result.current.isReady).toBe(false);
+    expect(result.current.blockedReason).toBeNull();
+  });
+
+  it('waits while secure client is not ready', () => {
+    secureState.client = null;
+    memberData.data = undefined;
+    memberData.isPending = true;
+
+    const { result } = renderHook(() => useEffectiveMedicalMemberId(), { wrapper });
+
+    expect(result.current.isReady).toBe(false);
+    expect(result.current.blockedReason).toBeNull();
+  });
+
+  it('waits while organisation context is loading', () => {
+    orgState.isLoading = true;
+    memberData.data = undefined;
+
+    const { result } = renderHook(() => useEffectiveMedicalMemberId(), { wrapper });
+
+    expect(result.current.isReady).toBe(false);
+    expect(result.current.blockedReason).toBeNull();
   });
 
   it('blocks when member data errors', () => {
@@ -193,7 +263,27 @@ describe('useEffectiveMedicalMemberId', () => {
 
   it('blocks when user id missing for self path', () => {
     authState.userId = null;
-    memberData.data = { member: { id: 'self-m' }, person: { id: 'p1' } };
+    memberData.data = memberData.completeSelfProfile();
+
+    const { result } = renderHook(() => useEffectiveMedicalMemberId(), { wrapper });
+
+    expect(result.current.blockedReason).toBe('needs_member_profile');
+  });
+
+  it('blocks when profile is below completeness threshold', () => {
+    memberData.data = {
+      member: { id: 'self-m', membership_type_id: null, membership_number: null },
+      person: {
+        id: 'p1',
+        first_name: '',
+        last_name: '',
+        email: '',
+        date_of_birth: '',
+        preferred_name: null,
+        gender_id: 0,
+        pronoun_id: 0,
+      },
+    };
 
     const { result } = renderHook(() => useEffectiveMedicalMemberId(), { wrapper });
 
@@ -205,8 +295,12 @@ describe('useMedicalProfilePage save', () => {
   beforeEach(() => {
     authState.userId = 'user-1';
     orgState.id = 'org-1';
-    memberData.data = { member: { id: 'self-m' }, person: { id: 'p1' } };
+    orgState.isLoading = false;
+    secureState.client = {};
+    memberData.data = memberData.completeSelfProfile();
     memberData.isLoading = false;
+    memberData.isPending = false;
+    memberData.isFetching = false;
     memberData.isError = false;
     proxy.isProxyActive = false;
     vi.spyOn(supabaseTyped, 'toTypedSupabase').mockReturnValue({ rpc: vi.fn(), from: vi.fn() } as never);

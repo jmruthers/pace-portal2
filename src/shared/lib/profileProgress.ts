@@ -31,6 +31,11 @@ function isFilled(value: unknown): boolean {
   return true;
 }
 
+/** Lookup ids use 0 as unset in forms; do not count as filled for completion. */
+function isLookupIdFilled(value: unknown): boolean {
+  return typeof value === 'number' && value > 0 && !Number.isNaN(value);
+}
+
 /**
  * Computes member-profile completion from a fixed set of tracked person + member fields.
  */
@@ -51,7 +56,9 @@ export function computeProfileProgress(input: ProfileProgressTracked): ProfilePr
     ];
     for (const k of pkeys) {
       total += 1;
-      if (isFilled(p[k])) filled += 1;
+      const filledForField =
+        k === 'gender_id' || k === 'pronoun_id' ? isLookupIdFilled(p[k]) : isFilled(p[k]);
+      if (filledForField) filled += 1;
     }
   } else {
     total += 7;

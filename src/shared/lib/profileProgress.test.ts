@@ -34,6 +34,26 @@ describe('computeProfileProgress', () => {
     expect(r.filledFields).toBeLessThan(r.totalFields);
   });
 
+  it('treats gender_id and pronoun_id 0 as unfilled', () => {
+    const r = computeProfileProgress({
+      person: {
+        first_name: 'A',
+        last_name: 'B',
+        email: 'a@b.c',
+        date_of_birth: '2000-01-01',
+        preferred_name: null,
+        gender_id: 0,
+        pronoun_id: 0,
+      },
+      member: {
+        membership_type_id: 1,
+        membership_number: 'M1',
+      },
+    });
+    expect(r.filledFields).toBe(6);
+    expect(r.totalFields).toBe(9);
+  });
+
   it('treats non-primitive member field values as filled for the ratio', () => {
     const r = computeProfileProgress({
       person: null,

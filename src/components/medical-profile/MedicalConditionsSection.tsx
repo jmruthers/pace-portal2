@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   CardContent,
+  CardFooter,
   CardHeader,
   CardTitle,
   Dialog,
@@ -98,24 +99,18 @@ export function MedicalConditionsSection({
   return (
     <>
       <Card>
-        <CardHeader className="grid gap-4 md:grid-cols-[1fr_auto] md:items-start">
+        <CardHeader>
           <CardTitle>Medical conditions</CardTitle>
-          <fieldset className="m-0 border-0 p-0 text-right">
-            <Button
-              type="button"
-              variant="default"
-              disabled={!canEdit}
-              onClick={() => setEditor({ open: true, condition: null })}
-            >
-              Add condition
-            </Button>
-          </fieldset>
         </CardHeader>
         <CardContent className="grid gap-3">
+          <p>
+            Quick reference for conditions on file. Add, edit, or delete conditions here for full details and
+            action-plan documents.
+          </p>
           {!canEdit ? (
             <p role="status">Save your medical profile summary first, then you can manage conditions.</p>
           ) : null}
-          {conditions.length === 0 && canEdit ? <p>No conditions are recorded yet.</p> : null}
+          {conditions.length === 0 ? <p>No conditions are recorded yet.</p> : null}
           <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {conditions.map((c) => {
               const label = (c.name ?? 'Condition').trim();
@@ -183,6 +178,16 @@ export function MedicalConditionsSection({
             })}
           </ul>
         </CardContent>
+        <CardFooter className="text-right">
+          <Button
+            type="button"
+            variant="default"
+            disabled={!canEdit}
+            onClick={() => setEditor({ open: true, condition: null })}
+          >
+            Add condition
+          </Button>
+        </CardFooter>
       </Card>
 
       {profileId && organisationId && appId ? (

@@ -20,8 +20,10 @@ import {
 } from '@/hooks/member-profile/useMemberProfileData';
 import { normalizeMembershipStatus, usePersonOperations } from '@/hooks/member-profile/usePersonOperations';
 import { bustCurrentPersonMemberCache } from '@/shared/lib/utils/userUtils';
+import { isMemberProfileIncompleteForMedical } from '@/shared/lib/memberProfileMedicalGate';
 import { ProxyModeBanner } from '@/shared/components/ProxyModeBanner';
 import { useProxyMode } from '@/shared/hooks/useProxyMode';
+import { useUnifiedAuthContext } from '@solvera/pace-core';
 
 const PROFILE_DEBUG_LOGS =
   import.meta.env.DEV || String(import.meta.env.VITE_PROFILE_DEBUG_LOGS ?? '') === 'true';
@@ -100,11 +102,14 @@ function MemberProfileContent() {
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useUnifiedAuthContext();
   const org = useOrganisationsContextOptional();
   const organisationId = org?.selectedOrganisation?.id ?? null;
-  const medicalSummaryRedirect = searchParams.get('completeMemberFirst') === '1';
+  const medicalHandoff = searchParams.get('completeMemberFirst') === '1';
+  const returnTo = searchParams.get('returnTo')?.trim() || '/medical-profile';
   const targetMemberId = searchParams.get('targetMemberId');
   const { setProxyTargetMemberId, validationError, isValidating, targetMemberId: proxyMemberId } = useProxyMode();
+  const proxyHandoffPending = Boolean(targetMemberId && isValidating);
 
   useEffect(() => {
     if (targetMemberId) {
@@ -157,6 +162,22 @@ function MemberProfileContent() {
     if (!data || data === 'needs_setup') return null;
     return mapLoadModelToFormValues(data);
   }, [data]);
+
+  const profileIncompleteForMedical = isMemberProfileIncompleteForMedical(data, user?.id);
+
+  useEffect(() => {
+    if (!medicalHandoff || isLoading || refLoading || proxyHandoffPending) return;
+    if (profileIncompleteForMedical) return;
+    navigate(returnTo, { replace: true });
+  }, [
+    medicalHandoff,
+    isLoading,
+    refLoading,
+    proxyHandoffPending,
+    profileIncompleteForMedical,
+    navigate,
+    returnTo,
+  ]);
 
   const handleSubmit = async (values: MemberProfileFormValues) => {
     profileDebugLog('submit:start', {
@@ -218,7 +239,6 @@ function MemberProfileContent() {
     );
   }
 
-  const proxyHandoffPending = Boolean(targetMemberId && isValidating);
   const proxyHandoffDenied = Boolean(targetMemberId && validationError);
 
   if (proxyHandoffDenied) {
@@ -267,7 +287,7 @@ function MemberProfileContent() {
   return (
     <main className="mx-auto grid max-w-(--app-width) gap-6 p-4">
       <h1>Member profile</h1>
-      {medicalSummaryRedirect ? (
+      {medicalHandoff && profileIncompleteForMedical ? (
         <Alert>
           <AlertTitle>Complete your member profile first</AlertTitle>
           <AlertDescription>

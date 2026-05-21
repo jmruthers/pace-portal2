@@ -5,13 +5,13 @@ import {
   Button,
   Card,
   CardContent,
-  CardFooter,
   CardHeader,
   CardTitle,
   Checkbox,
   Dialog,
   DialogBody,
   DialogContent,
+  DialogFooter,
   DialogPortal,
   Form,
   FormField,
@@ -30,7 +30,6 @@ import {
   type MedicalProfileFormValues,
 } from '@/utils/medical-profile/validation';
 import { MedicalConditionsSection } from '@/components/medical-profile/MedicalConditionsSection';
-import { MedicalProfileDisplay } from '@/components/medical-profile/MedicalProfile/MedicalProfileDisplay';
 import type { MediConditionDetail } from '@/hooks/medical-profile/useMedicalProfileData';
 
 const MENU_SELECT_NONE = '__menu_none__';
@@ -92,12 +91,12 @@ function DietDescriptionsDialog({
                 </tbody>
               </table>
             </section>
-            <p>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Close
-              </Button>
-            </p>
           </DialogBody>
+          <DialogFooter className="text-right">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </DialogPortal>
     </Dialog>
@@ -196,8 +195,8 @@ function MedicalProfileFormInner({
               const valueForSelect = selectedRow?.diettype_id ?? field.value;
               const menuTriggerLabel =
                 field.value.trim() === ''
-                  ? undefined
-                  : (selectedRow?.diettype_name ?? menuLabelHint ?? undefined);
+                  ? 'Not selected'
+                  : (selectedRow?.diettype_name ?? menuLabelHint ?? 'Select a menu');
               return (
                 <section
                   className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,50%)_auto] md:items-center md:gap-4"
@@ -274,15 +273,11 @@ function MedicalProfileFormInner({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardFooter className="text-right">
-          <Button type="submit" variant="default" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving…' : 'Save medical profile'}
-          </Button>
-        </CardFooter>
-      </Card>
-
-      <MedicalProfileDisplay conditions={conditions} />
+      <fieldset className="text-right">
+        <Button type="submit" variant="default" disabled={isSubmitting}>
+          {isSubmitting ? 'Saving…' : 'Save medical profile'}
+        </Button>
+      </fieldset>
 
       <MedicalConditionsSection
         conditions={conditions}

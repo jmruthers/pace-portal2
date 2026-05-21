@@ -1,12 +1,4 @@
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@solvera/pace-core/components';
+import { Card, CardContent, CardHeader, CardTitle } from '@solvera/pace-core/components';
 import type { MediConditionDetail } from '@/hooks/medical-profile/useMedicalProfileData';
 
 export type MedicalProfileDisplayProps = {
@@ -14,25 +6,20 @@ export type MedicalProfileDisplayProps = {
 };
 
 /**
- * PR09 read-only condition overview before the PR10/PR11 management block on the same page.
+ * PR09 read-only condition list for form confirmation previews (no add/edit/delete on this surface).
  */
 export function MedicalProfileDisplay({ conditions }: MedicalProfileDisplayProps) {
   return (
-    <>
-      <Alert>
-        <AlertTitle>Recorded conditions (summary)</AlertTitle>
-        <AlertDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle>Recorded conditions</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-3">
+        <p>
           Quick reference for conditions on file. Use add, edit, or delete below for full details and action-plan
           documents.
-        </AlertDescription>
-      </Alert>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recorded conditions</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3">
-          {conditions.length === 0 ? (
+        </p>
+        {conditions.length === 0 ? (
             <p>No conditions are recorded yet.</p>
           ) : (
             <ul className="grid gap-2">
@@ -52,8 +39,7 @@ export function MedicalProfileDisplay({ conditions }: MedicalProfileDisplayProps
               })}
             </ul>
           )}
-        </CardContent>
-      </Card>
-    </>
+      </CardContent>
+    </Card>
   );
 }

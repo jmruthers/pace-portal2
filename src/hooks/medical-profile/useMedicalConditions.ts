@@ -93,7 +93,9 @@ export function useMedicalConditions(input: {
       if (upd.error) throw new Error(upd.error.message ?? 'Could not update condition.');
       const updatedRows = Array.isArray(upd.data) ? upd.data.length : 0;
       if (updatedRows !== 1) {
-        throw new Error('Could not update condition: no rows were updated.');
+        throw new Error(
+          'Could not update condition. You may not have permission to edit this record, or it may no longer exist.'
+        );
       }
       return inputRow.id;
     },
@@ -165,7 +167,9 @@ export function useMedicalConditions(input: {
       if (del.error) throw new Error(del.error.message ?? 'Could not delete condition.');
       const deletedRows = Array.isArray(del.data) ? del.data.length : 0;
       if (deletedRows !== 1) {
-        throw new Error('Could not delete condition: no rows were deleted.');
+        throw new Error(
+          'Could not delete condition. You may not have permission to delete this record, or it may no longer exist.'
+        );
       }
     },
     onSuccess: async () => {

@@ -78,6 +78,7 @@ function MedicalConditionFormFields({
   const actionPlanFileInputRef = useRef<HTMLInputElement>(null);
   const { persistActionPlanFile, isReady: persistReady } = useActionPlanFileAttachment();
   const [isUploadingPlan, setIsUploadingPlan] = useState(false);
+  const [actionPlanFileInputKey, setActionPlanFileInputKey] = useState(0);
 
   const existingRef =
     actionPlanQuery.data?.fileReference != null ? actionPlanQuery.data.fileReference : null;
@@ -142,11 +143,12 @@ function MedicalConditionFormFields({
     };
   }, [existingRef, storageClient]);
 
+  const resetActionPlanFileInput = () => {
+    setActionPlanFileInputKey((k) => k + 1);
+  };
+
   const handleActionPlanFileChange = async () => {
-    const input = actionPlanFileInputRef.current;
-    const list = input?.files;
-    if (input) input.value = '';
-    const file = list?.[0];
+    const file = actionPlanFileInputRef.current?.files?.[0];
     if (!file || !conditionId || !appId) {
       return;
     }
@@ -154,12 +156,14 @@ function MedicalConditionFormFields({
     const validated = validateActionPlanFile(file);
     if (!validated.ok) {
       setUploadError(validated.message);
+      resetActionPlanFileInput();
       return;
     }
 
     setUploadError(null);
     if (!persistReady) {
       setUploadError('Application context is not ready. Try again.');
+      resetActionPlanFileInput();
       return;
     }
 
@@ -175,6 +179,7 @@ function MedicalConditionFormFields({
       setUploadError(err instanceof Error ? err.message : 'Could not upload action plan file.');
     } finally {
       setIsUploadingPlan(false);
+      resetActionPlanFileInput();
     }
   };
 
@@ -232,7 +237,9 @@ function MedicalConditionFormFields({
                 }
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Please select" />
+                  <SelectValue placeholder="Please select">
+                    {field.value == null ? 'Please select' : field.value}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={SEVERITY_NONE}>Please select</SelectItem>
@@ -314,16 +321,18 @@ function MedicalConditionFormFields({
               <>
                 <Label htmlFor={actionPlanInputId} className="grid gap-2">
                   {existingRef ? 'Replace action plan file' : 'Add action plan file'}
-                  <Input
-                    id={actionPlanInputId}
-                    ref={actionPlanFileInputRef}
-                    type="file"
-                    accept={ACTION_PLAN_ACCEPT}
-                    aria-hidden
-                    tabIndex={-1}
-                    disabled={isUploadingPlan || !persistReady}
-                    onChange={() => void handleActionPlanFileChange()}
-                  />
+                  <section className="sr-only" aria-hidden>
+                    <Input
+                      key={actionPlanFileInputKey}
+                      ref={actionPlanFileInputRef}
+                      id={actionPlanInputId}
+                      type="file"
+                      accept={ACTION_PLAN_ACCEPT}
+                      tabIndex={-1}
+                      disabled={isUploadingPlan || !persistReady}
+                      onChange={() => void handleActionPlanFileChange()}
+                    />
+                  </section>
                   <Button
                     type="button"
                     variant="outline"
