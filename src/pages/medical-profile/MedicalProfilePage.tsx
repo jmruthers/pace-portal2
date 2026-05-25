@@ -177,7 +177,7 @@ function MedicalProfileContent() {
 }
 
 /**
- * PR09 — Medical profile summary (self-service and proxy), readiness redirect, dual save actions.
+ * PR09 — Medical profile summary (self-service and proxy), readiness redirect, save action.
  */
 export function MedicalProfilePage() {
   return (

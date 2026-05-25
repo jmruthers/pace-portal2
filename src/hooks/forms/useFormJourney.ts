@@ -7,27 +7,18 @@ import {
   fetchSubmittedRegistrationSnapshot,
   type SubmittedRegistrationSnapshot,
 } from '@/lib/fetchSubmittedRegistrationSnapshot';
+import { isAlreadySubmittedParticipantMessage } from '@/lib/participantAlreadySubmittedMessage';
 import type { useDraftApplication } from '@/hooks/events/useDraftApplication';
 
-export type FormJourneyPhase = 'loading' | 'intro' | 'filling' | 'view_submitted';
-
-function hasMeaningfulDraftValues(valueByFieldId: Record<string, unknown>): boolean {
-  return Object.keys(valueByFieldId).some((k) => {
-    const v = valueByFieldId[k];
-    if (v === undefined || v === '') return false;
-    if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
-      return Object.keys(v as object).length > 0;
-    }
-    return true;
-  });
-}
+export type FormJourneyPhase = 'loading' | 'filling' | 'view_submitted';
 
 export type UseFormJourneyArgs = {
   entry: Pick<UseFormEntrypointResult, 'data' | 'isLoading' | 'error' | 'reservedSlug'>;
   ready: FormJourneyReady | undefined;
   draft: ReturnType<typeof useDraftApplication>;
   effectivePersonId: string | null;
-  userStartedFilling: boolean;
+  /** When true, only the target person's submitted snapshot may enter read-only (not acting-user draft errors). */
+  proxyActive?: boolean;
 };
 
 export type UseFormJourneyResult = {
@@ -40,7 +31,7 @@ export function useFormJourney({
   ready,
   draft,
   effectivePersonId,
-  userStartedFilling,
+  proxyActive = false,
 }: UseFormJourneyArgs): UseFormJourneyResult {
   const secure = useSecureSupabase();
 
@@ -78,11 +69,6 @@ export function useFormJourney({
   const submittedSnapshot =
     submittedQuery.data && isOk(submittedQuery.data) ? submittedQuery.data.data : null;
 
-  const hasDraftRestore =
-    !draft.isHydrating &&
-    draft.hydrateError == null &&
-    hasMeaningfulDraftValues(draft.valueByFieldId);
-
   const phase: FormJourneyPhase = useMemo(() => {
     if (entry.reservedSlug) {
       return 'loading';
@@ -103,29 +89,29 @@ export function useFormJourney({
       return 'view_submitted';
     }
 
+    if (
+      !proxyActive &&
+      ready.kind === 'event' &&
+      ready.form.workflow_type === 'base_registration' &&
+      isAlreadySubmittedParticipantMessage(draft.hydrateError)
+    ) {
+      return 'view_submitted';
+    }
+
     if (draft.isHydrating) {
       return 'loading';
     }
 
-    if (draft.hydrateError != null) {
-      return 'filling';
-    }
-
-    if (hasDraftRestore || userStartedFilling) {
-      return 'filling';
-    }
-
-    return 'intro';
+    return 'filling';
   }, [
     entry.isLoading,
     entry.reservedSlug,
     ready,
     submittedQuery.isLoading,
     submittedSnapshot,
-    draft.isHydrating,
     draft.hydrateError,
-    hasDraftRestore,
-    userStartedFilling,
+    draft.isHydrating,
+    proxyActive,
   ]);
 
   return { phase, submittedSnapshot };

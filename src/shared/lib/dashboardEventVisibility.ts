@@ -7,9 +7,10 @@ export type FormRowForDashboardVisibility = Pick<
 >;
 
 /**
- * Whether a form counts as “open” for dashboard event cards: published, active, in window, tied to an event.
+ * Whether an event should appear on the dashboard: published, active, tied to an event.
+ * Response window (`opens_at` / `closes_at`) does not affect listing — only apply/fill access.
  */
-export function isDashboardEligibleForm(form: FormRowForDashboardVisibility, now: Date): boolean {
+export function isDashboardListedForm(form: FormRowForDashboardVisibility): boolean {
   const eventId = form.event_id;
   if (eventId == null || String(eventId).trim() === '') {
     return false;
@@ -18,6 +19,19 @@ export function isDashboardEligibleForm(form: FormRowForDashboardVisibility, now
     return false;
   }
   if (form.is_active === false) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Whether a published event form accepts responses now (application/fill routes and hub form links).
+ */
+export function isFormResponseWindowOpen(
+  form: FormRowForDashboardVisibility,
+  now: Date
+): boolean {
+  if (!isDashboardListedForm(form)) {
     return false;
   }
   const t = now.getTime();
@@ -36,16 +50,45 @@ export function isDashboardEligibleForm(form: FormRowForDashboardVisibility, now
   return true;
 }
 
-/** Distinct `event_id` values that have at least one eligible form at `now`. */
-export function distinctEligibleEventIds(
-  forms: FormRowForDashboardVisibility[],
+/** @deprecated Use {@link isFormResponseWindowOpen}. */
+export function isDashboardEligibleForm(
+  form: FormRowForDashboardVisibility,
   now: Date
-): string[] {
+): boolean {
+  return isFormResponseWindowOpen(form, now);
+}
+
+/** Distinct `event_id` values that have at least one dashboard-listed form. */
+export function distinctListedEventIds(forms: FormRowForDashboardVisibility[]): string[] {
   const ids = new Set<string>();
   for (const f of forms) {
-    if (isDashboardEligibleForm(f, now)) {
+    if (isDashboardListedForm(f)) {
       ids.add(String(f.event_id));
     }
   }
   return [...ids];
+}
+
+/** @deprecated Use {@link distinctListedEventIds}. */
+export function distinctEligibleEventIds(
+  forms: FormRowForDashboardVisibility[],
+  now: Date
+): string[] {
+  void now;
+  return distinctListedEventIds(forms);
+}
+
+/** True when at least one listed form for the event accepts responses at `now`. */
+export function buildFormResponseOpenByEventId(
+  forms: FormRowForDashboardVisibility[],
+  now: Date
+): Record<string, boolean> {
+  const out: Record<string, boolean> = {};
+  for (const f of forms) {
+    if (!isFormResponseWindowOpen(f, now)) {
+      continue;
+    }
+    out[String(f.event_id)] = true;
+  }
+  return out;
 }

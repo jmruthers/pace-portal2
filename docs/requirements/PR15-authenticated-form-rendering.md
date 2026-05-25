@@ -45,9 +45,9 @@ This file is **`PR15-authenticated-form-rendering.md`** — portal requirement s
 
 ## Visual specification
 
-- Component layout and composition: authenticated route wrapper, event and form header, form description card, profile confirmation card, dynamic field card, draft-resume state, and loading/auth/profile-gate/error states.
+- Component layout and composition: authenticated route wrapper, event and form header (including event logo, date, contact email, location, and participant description on event application routes), form description card, profile confirmation card, dynamic field card, draft-resume state, and loading/auth/profile-gate/error states.
 - States: loading, unauthenticated landing handoff, profile-gate, proxy-mode bypass, empty form, validation error, unsupported field type, and resume-from-draft.
-- Authoritative visual recipe: use `Form`, `FormField`, `Input`, `Textarea`, `Checkbox`, `Select`, `Button`, `Card`, `Alert`, `LoadingSpinner`, and `FileDisplay` primitives; keep the page wrapper thin and keep confirmation blocks inside the renderer unless they become noisy enough to extract.
+- Authoritative visual recipe: use `Form`, `FormField`, `Input`, `Textarea`, `Checkbox`, `Select`, `DatePickerWithTimezone`, `Button`, `Card`, `Alert`, `LoadingSpinner`, and `FileDisplay` primitives; event and org form routes render inside `PortalAuthenticatedLayout` (`PaceMain`); on event application routes, render the event logo prominently in the top-right of the header with event date, contact email, venue, and event description (`core_events.description` only) on the left; wrap the authenticated form journey in one main pace-core `Card` within the standard `max-w-(--app-width)` page content shell; keep the page wrapper thin and keep confirmation blocks inside the renderer unless they become noisy enough to extract.
 - Globals: follow `pace-core` Standard 07 Part A and Part C for shared visual behavior and avoid restating global layout rules here.
 
 ## Verification

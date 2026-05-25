@@ -12,7 +12,6 @@ import { MyMembershipsPage } from '@/pages/memberships/MyMembershipsPage';
 import { ProfileCompletionWizardPage } from '@/pages/ProfileCompletionWizardPage';
 import { ProfileViewPage } from '@/pages/member-profile/ProfileViewPage';
 import { ProfileEditProxyPage } from '@/pages/member-profile/ProfileEditProxyPage';
-import { FormFillPage } from '@/pages/events/FormFillPage';
 vi.mock('@/hooks/auth/useProfileCompletionWizard', () => ({
   useProfileCompletionWizard: () => ({
     currentStep: 0,
@@ -415,18 +414,5 @@ describe('placeholder pages', () => {
       </QueryClientProvider>
     );
     expect(screen.getByRole('heading', { name: /delegated workspace/i })).toBeInTheDocument();
-  });
-
-  it('redirects unauthenticated users to login with return URL (PR01 handoff)', async () => {
-    const { MemoryRouter } = await import('react-router-dom');
-    const client = new QueryClient();
-    render(
-      <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/evt/frm']}>
-          <FormFillPage eventSlug="evt" formSlug="frm" />
-        </MemoryRouter>
-      </QueryClientProvider>
-    );
-    expect(await screen.findByText(/redirecting to sign in/i)).toBeInTheDocument();
   });
 });

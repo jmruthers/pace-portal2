@@ -35,7 +35,7 @@ export function EventLogo({ eventName, logoRef, refsBusy, refsFailed = false }: 
 
   return (
     <span
-      className={`grid min-h-[8rem] max-h-[8rem] w-full place-items-center overflow-hidden rounded-md border border-sec-200 bg-sec-100${showRefsFailureChrome ? ' ring-1 ring-acc-400' : ''}`}
+      className={`grid min-h-[11rem] max-h-[11rem] w-full place-items-center overflow-hidden rounded-md border border-sec-200 bg-sec-100${showRefsFailureChrome ? ' ring-1 ring-acc-400' : ''}`}
     >
       {showRefsFailureChrome ? (
         <output className="sr-only" aria-live="polite">
@@ -44,7 +44,13 @@ export function EventLogo({ eventName, logoRef, refsBusy, refsFailed = false }: 
       ) : null}
       {busy ? <span aria-busy="true">…</span> : null}
       {!busy && url && logoRef ? (
-        <FileDisplay fileReference={logoRef} url={url} label={`${eventName} logo`} />
+        <FileDisplay
+          fileReference={logoRef}
+          url={url}
+          variant="inline"
+          className="h-[11rem] w-full max-w-full object-contain"
+          label={`${eventName} logo`}
+        />
       ) : null}
       {showInitialsFallback ? <span aria-hidden="true">{initialsFromEventName(eventName)}</span> : null}
     </span>

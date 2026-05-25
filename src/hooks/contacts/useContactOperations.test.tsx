@@ -175,6 +175,39 @@ describe('useContactOperations', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['additionalContacts', 'v1'] });
   });
 
+  it('passes p_previous_phone_number when updating the primary phone in place', async () => {
+    rpc.mockResolvedValue({
+      data: [{ id: 'c1' }],
+      error: null,
+    });
+
+    const { result } = renderHook(() => useContactOperations(), { wrapper });
+
+    await result.current.updateContact.mutateAsync({
+      contactId: 'c1',
+      firstName: 'Jessica',
+      lastName: 'Rutherford',
+      preferredName: '',
+      email: '',
+      contactTypeId: '2',
+      permissionType: 'full',
+      primaryPhoneUpdate: {
+        previousPhoneNumber: '0412 345 678',
+        nextPhoneNumber: '0412 345 000',
+        phoneTypeId: 1,
+      },
+    });
+
+    expect(rpc).toHaveBeenCalledWith(
+      'app_pace_contact_update',
+      expect.objectContaining({
+        p_phone_number: '0412 345 000',
+        p_phone_type_id: 1,
+        p_previous_phone_number: '0412 345 678',
+      })
+    );
+  });
+
   it('sends undefined email when update email is blank', async () => {
     rpc.mockResolvedValue({
       data: [{ id: 'c1' }],

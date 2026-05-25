@@ -8,7 +8,7 @@ This file is **`PR17-form-journey-shell.md`** — portal requirement slice **PR1
 
 ## Overview
 
-- Purpose and scope: define the shared authenticated form journey used by event and org workflows: intro, start/resume, draft persistence, field rendering handoff, submit handoff, and completion routing.
+- Purpose and scope: define the shared authenticated form journey used by event and org workflows: direct fill/resume, draft persistence, field rendering handoff, submit handoff, and completion routing.
 - Dependencies: PR01, PR02, PR14, PR15, PR16, and workflow contracts from BASE/TEAM slices.
 - Standards: 01, 02, 03, 04, 05, 07, 08, 09.
 - Rebuild intent: one reusable member-facing journey shell rather than duplicating per-workflow page structures.
@@ -17,15 +17,15 @@ This file is **`PR17-form-journey-shell.md`** — portal requirement slice **PR1
 
 - [x] The form journey supports route contexts for `/:eventSlug/application`, `/:eventSlug/:formSlug`, and `/forms/:formSlug`.
 - [x] All routes require authenticated member context by default and preserve return URL through auth-required handoff.
-- [x] The same shell supports start, resume, and view-submitted (read-only where applicable) states.
+- [x] The same shell supports fill, resume, and view-submitted (read-only where applicable) states.
 - [x] Draft creation/reuse and restore are handled through typed hooks/services and do not duplicate workflow side effects.
 - [x] Unsupported field types fail safely without crashing and are observable in tests.
 
 ## Implementation notes (pace-portal)
 
-- **Event `base_registration`:** Full journey — intro (`Start`), draft resume via `useDraftApplication`, submit via PR16 adapter (`resolveSubmitMode` → `useApplicationSubmission`), and read-only **view-submitted** when `fetchSubmittedRegistrationSnapshot` returns a submitted snapshot (`FormRenderer` `readOnly`). In-app navigation to application progress (`/:eventSlug/applications/:applicationId`) ships with PR18; this slice avoids a dead-link control until that route exists.
-- **`/forms/:formSlug` (org):** Authenticated load, intro, fill, and pre-submit confirmations render through the same shell; **draft persistence and submit** are deferred to follow-up TEAM/org-aligned slices per [portal-architecture.md](./portal-architecture.md) (org signup / org workflow semantics). `useDraftApplication` stays disabled without an event scope (`event_id`). **Response window:** eligibility uses `opens_at` / `closes_at` only (org rows have no `event_id`, so dashboard event-card rules do not apply).
-- **`view_submitted`:** Only for **event** routes where `workflow_type === 'base_registration'` and a non-draft submitted snapshot exists; otherwise the member stays in intro/filling.
+- **Event `base_registration`:** Full journey — opens directly into fill, draft resume via `useDraftApplication`, submit via PR16 adapter (`resolveSubmitMode` → `useApplicationSubmission`), and read-only **view-submitted** when `fetchSubmittedRegistrationSnapshot` returns a submitted snapshot (`FormRenderer` `readOnly`). In-app navigation to application progress (`/:eventSlug/applications/:applicationId`) ships with PR18; this slice avoids a dead-link control until that route exists.
+- **`/forms/:formSlug` (org):** Authenticated load, fill, and pre-submit confirmations render through the same shell; **draft persistence and submit** are deferred to follow-up TEAM/org-aligned slices per [portal-architecture.md](./portal-architecture.md) (org signup / org workflow semantics). `useDraftApplication` stays disabled without an event scope (`event_id`). **Response window:** eligibility uses `opens_at` / `closes_at` only (org rows have no `event_id`, so dashboard event-card rules do not apply).
+- **`view_submitted`:** Only for **event** routes where `workflow_type === 'base_registration'` and a non-draft submitted snapshot exists; otherwise the member stays in fill.
 
 ## API / Contract
 
@@ -39,13 +39,14 @@ This file is **`PR17-form-journey-shell.md`** — portal requirement slice **PR1
 
 ## Visual specification
 
-- Compose the page as: header/intro card, optional pre-submit checks, form renderer, primary action row, and state banners.
+- Compose the page as: form renderer, optional pre-submit checks, primary action row, and state banners.
 - Keep layout shared across workflow types; workflow-specific controls may be inserted as explicit extension points.
+- App chrome (header, nav, footer) comes from the route-level `PortalAuthenticatedLayout` wrapper; `FormJourneyShell` owns page content only.
 
 ## Verification
 
 - Verify route resolution for `/:eventSlug/application`, `/:eventSlug/:formSlug`, and `/forms/:formSlug`.
-- Verify authenticated handoff, start/resume behavior, and draft restore.
+- Verify authenticated handoff, fill/resume behavior, and draft restore.
 - Verify submitted-state behavior is read-only unless workflow explicitly allows edits.
 
 ## Testing requirements

@@ -45,6 +45,9 @@ function buildLandingMockClient(options?: {
   applicationRows?: Array<{ event_id: string; status: string }>;
   formRows?: FormRow[];
   eventRows?: unknown[];
+  registrationFormRows?: Array<{ id: string; event_id: string }>;
+  submittedFormResponseRows?: Array<{ form_id: string }>;
+  draftFormResponseRows?: Array<{ form_id: string }>;
 }) {
   const rpc = vi.fn((name: string) => {
     if (name === 'data_pace_contacts_list') {
@@ -52,6 +55,7 @@ function buildLandingMockClient(options?: {
     }
     return Promise.resolve({ data: null, error: null });
   });
+  let coreFormsCallCount = 0;
   const from = vi.fn((table: string) => {
     if (table === 'medi_profile') {
       return {
@@ -68,15 +72,32 @@ function buildLandingMockClient(options?: {
       };
     }
     if (table === 'core_forms') {
-      return {
-        select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue(
-          options?.formsQueryFails
-            ? { data: null, error: { message: 'forms failed' } }
-            : { data: options?.formRows ?? [], error: null }
-        ),
+      coreFormsCallCount += 1;
+      if (coreFormsCallCount === 1) {
+        return {
+          select: vi.fn().mockReturnThis(),
+          in: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue(
+            options?.formsQueryFails
+              ? { data: null, error: { message: 'forms failed' } }
+              : { data: options?.formRows ?? [], error: null }
+          ),
+        };
+      }
+      const chain = {
+        select: vi.fn(() => chain),
+        in: vi.fn(() => chain),
+        eq: vi.fn((column: string) => {
+          if (column === 'status') {
+            return Promise.resolve({
+              data: options?.registrationFormRows ?? [],
+              error: null,
+            });
+          }
+          return chain;
+        }),
       };
+      return chain;
     }
     if (table === 'core_events') {
       const chain = {
@@ -106,6 +127,29 @@ function buildLandingMockClient(options?: {
           options?.applicationQueryFails
             ? { data: null, error: { message: 'application query failed' } }
             : { data: options?.applicationRows ?? [], error: null }
+        ),
+      };
+      return chain;
+    }
+    if (table === 'core_form_responses') {
+      let statusFilter: string | null = null;
+      const chain = {
+        select: vi.fn(() => chain),
+        eq: vi.fn((column: string, value: string) => {
+          if (column === 'status') {
+            statusFilter = value;
+          }
+          return chain;
+        }),
+        is: vi.fn(() => chain),
+        in: vi.fn().mockImplementation(() =>
+          Promise.resolve({
+            data:
+              statusFilter === 'submitted'
+                ? (options?.submittedFormResponseRows ?? [])
+                : (options?.draftFormResponseRows ?? []),
+            error: null,
+          })
         ),
       };
       return chain;
@@ -279,6 +323,62 @@ describe('fetchEnhancedLanding', () => {
     if (isOk(r)) {
       expect(r.data.eventsByCategory.camp?.map((e) => e.event_id)).toEqual(['ev1']);
       expect(r.data.applicationStatusByEventId).toEqual({});
+      expect(r.data.formResponseOpenByEventId).toEqual({ ev1: true });
+    }
+  });
+
+  it('lists events before the form response window opens', async () => {
+    vi.spyOn(userUtils, 'fetchCurrentPersonMember').mockResolvedValue(
+      ok({
+        person: samplePerson,
+        member: null,
+        usedReducedFieldFallback: false,
+      })
+    );
+    const sampleEvent = {
+      event_id: 'ev1',
+      event_name: 'Camp',
+      organisation_id: 'o1',
+      registration_scope: 'camp',
+      created_at: null,
+      created_by: null,
+      description: null,
+      event_code: 'c',
+      event_colours: null,
+      event_date: null,
+      event_days: null,
+      event_email: null,
+      event_venue: null,
+      expected_participants: null,
+      is_visible: true,
+      public_readable: true,
+      participant_admin_email: null,
+      participant_blurb: null,
+      participant_website_url: null,
+      typical_unit_size: null,
+      updated_at: null,
+      updated_by: null,
+    };
+    vi.spyOn(supabaseTyped, 'toTypedSupabase').mockReturnValue(
+      buildLandingMockClient({
+        formRows: [
+          {
+            event_id: 'ev1',
+            status: 'published',
+            is_active: true,
+            opens_at: '2099-01-01T00:00:00.000Z',
+            closes_at: null,
+          },
+        ],
+        eventRows: [sampleEvent],
+      }) as unknown as SupabaseClient<Database>
+    );
+
+    const r = await fetchEnhancedLanding({} as RBACSupabaseClient, 'u1', 'o1', ['o1']);
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) {
+      expect(r.data.eventsByCategory.camp?.map((e) => e.event_id)).toEqual(['ev1']);
+      expect(r.data.formResponseOpenByEventId).toEqual({});
     }
   });
 
@@ -391,6 +491,122 @@ describe('fetchEnhancedLanding', () => {
     expect(isOk(r)).toBe(true);
     if (isOk(r)) {
       expect(r.data.applicationStatusByEventId).toEqual({ ev1: 'draft' });
+    }
+  });
+
+  it('maps draft core_form_responses to Resume when no base_application exists', async () => {
+    vi.spyOn(userUtils, 'fetchCurrentPersonMember').mockResolvedValue(
+      ok({
+        person: samplePerson,
+        member: null,
+        usedReducedFieldFallback: false,
+      })
+    );
+    const sampleEvent = {
+      event_id: 'ev1',
+      event_name: 'Camp',
+      organisation_id: 'o1',
+      registration_scope: 'camp',
+      created_at: null,
+      created_by: null,
+      description: null,
+      event_code: 'c',
+      event_colours: null,
+      event_date: null,
+      event_days: null,
+      event_email: null,
+      event_venue: null,
+      expected_participants: null,
+      is_visible: true,
+      public_readable: true,
+      participant_admin_email: null,
+      participant_blurb: null,
+      participant_website_url: null,
+      typical_unit_size: null,
+      updated_at: null,
+      updated_by: null,
+      logo_id: null,
+    };
+    vi.spyOn(supabaseTyped, 'toTypedSupabase').mockReturnValue(
+      buildLandingMockClient({
+        formRows: [
+          {
+            event_id: 'ev1',
+            status: 'published',
+            is_active: true,
+            opens_at: null,
+            closes_at: null,
+          },
+        ],
+        eventRows: [sampleEvent],
+        applicationRows: [],
+        registrationFormRows: [{ id: 'form-1', event_id: 'ev1' }],
+        draftFormResponseRows: [{ form_id: 'form-1' }],
+      }) as unknown as SupabaseClient<Database>
+    );
+
+    const r = await fetchEnhancedLanding({} as RBACSupabaseClient, 'u1', 'o1', ['o1']);
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) {
+      expect(r.data.applicationStatusByEventId).toEqual({ ev1: 'draft' });
+    }
+  });
+
+  it('maps submitted core_form_responses to Manage when no base_application exists', async () => {
+    vi.spyOn(userUtils, 'fetchCurrentPersonMember').mockResolvedValue(
+      ok({
+        person: samplePerson,
+        member: null,
+        usedReducedFieldFallback: false,
+      })
+    );
+    const sampleEvent = {
+      event_id: 'ev1',
+      event_name: 'Camp',
+      organisation_id: 'o1',
+      registration_scope: 'camp',
+      created_at: null,
+      created_by: null,
+      description: null,
+      event_code: 'c',
+      event_colours: null,
+      event_date: null,
+      event_days: null,
+      event_email: null,
+      event_venue: null,
+      expected_participants: null,
+      is_visible: true,
+      public_readable: true,
+      participant_admin_email: null,
+      participant_blurb: null,
+      participant_website_url: null,
+      typical_unit_size: null,
+      updated_at: null,
+      updated_by: null,
+      logo_id: null,
+    };
+    vi.spyOn(supabaseTyped, 'toTypedSupabase').mockReturnValue(
+      buildLandingMockClient({
+        formRows: [
+          {
+            event_id: 'ev1',
+            status: 'published',
+            is_active: true,
+            opens_at: null,
+            closes_at: null,
+          },
+        ],
+        eventRows: [sampleEvent],
+        applicationRows: [],
+        registrationFormRows: [{ id: 'form-1', event_id: 'ev1' }],
+        submittedFormResponseRows: [{ form_id: 'form-1' }],
+      }) as unknown as SupabaseClient<Database>
+    );
+
+    const r = await fetchEnhancedLanding({} as RBACSupabaseClient, 'u1', 'o1', ['o1']);
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) {
+      expect(r.data.applicationStatusByEventId).toEqual({ ev1: 'submitted' });
     }
   });
 });

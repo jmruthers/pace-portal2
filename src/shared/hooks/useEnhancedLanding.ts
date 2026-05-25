@@ -18,7 +18,10 @@ import {
   type ApiResult,
 } from '@solvera/pace-core/types';
 import { toTypedSupabase } from '@/lib/supabase-typed';
-import { distinctEligibleEventIds } from '@/shared/lib/dashboardEventVisibility';
+import {
+  buildFormResponseOpenByEventId,
+  distinctListedEventIds,
+} from '@/shared/lib/dashboardEventVisibility';
 import { fetchApplicationStatusByEventIds } from '@/shared/lib/fetchApplicationStatusByEventIds';
 /** Re-export for modules that imported this constant from `useEnhancedLanding`. */
 export { NO_PERSON_PROFILE_ERROR_CODE } from '@/shared/lib/utils/userUtils';
@@ -100,6 +103,8 @@ export type EnhancedLandingModel = {
   eventsByCategory: Record<string, DashboardEvent[]>;
   /** `base_application.status` keyed by `event_id` for the signed-in person's applications. */
   applicationStatusByEventId: Record<string, string>;
+  /** True when at least one published form for the event accepts responses now. */
+  formResponseOpenByEventId: Record<string, boolean>;
   profileProgress: ProfileProgressResult;
   /** True when no `core_person` row exists for the user in org context (dashboard setup prompt). */
   needsProfileSetup: boolean;
@@ -114,6 +119,7 @@ export function createEmptyEnhancedLandingModel(needsProfileSetup: boolean): Enh
     additionalContacts: [],
     eventsByCategory: {},
     applicationStatusByEventId: {},
+    formResponseOpenByEventId: {},
     profileProgress: computeProfileProgress({ person: null, member: null }),
     needsProfileSetup,
   };
@@ -175,7 +181,9 @@ export async function fetchEnhancedLanding(
       (contacts.data ?? []) as Array<Record<string, unknown>>
     );
 
-    const eligibleEventIds = distinctEligibleEventIds(forms.data ?? [], new Date());
+    const now = new Date();
+    const eligibleEventIds = distinctListedEventIds(forms.data ?? []);
+    const formResponseOpenByEventId = buildFormResponseOpenByEventId(forms.data ?? [], now);
 
     const events =
       eligibleEventIds.length === 0
@@ -202,7 +210,7 @@ export async function fetchEnhancedLanding(
       const appStatusRes = await fetchApplicationStatusByEventIds(client, personId, eventIds, {
         code: 'ENHANCED_LANDING_QUERY',
         fallbackMessage: 'Could not load dashboard data.',
-      });
+      }, userId);
       if (!isOk(appStatusRes)) {
         return err(appStatusRes.error);
       }
@@ -238,6 +246,7 @@ export async function fetchEnhancedLanding(
       additionalContacts: contactRows,
       eventsByCategory,
       applicationStatusByEventId,
+      formResponseOpenByEventId,
       profileProgress: progress,
       needsProfileSetup: false,
     });

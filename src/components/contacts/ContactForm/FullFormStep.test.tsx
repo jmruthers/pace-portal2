@@ -15,7 +15,11 @@ describe('FullFormStep', () => {
         mode="create"
         contactTypes={[{ id: 'ct-1', name: 'Emergency' }]}
         phoneTypes={[{ id: 1, name: 'Mobile' }]}
-        permissionOptions={['view', 'edit']}
+        permissionOptions={[
+          { value: 'full', label: 'Full access' },
+          { value: 'notify', label: 'Notify only' },
+          { value: 'none', label: 'No access' },
+        ]}
         defaultValues={{
           first_name: 'Sam',
           last_name: 'Lee',
@@ -24,7 +28,7 @@ describe('FullFormStep', () => {
           phone_number: '0400',
           phone_type_id: 1,
           contact_type_id: 'ct-1',
-          permission_type: 'view',
+          permission_type: 'full',
         }}
         canBack={true}
         isLinkExistingPerson={false}

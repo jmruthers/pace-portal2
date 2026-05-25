@@ -23,7 +23,7 @@ This file is **`PR13-contact-create-edit-flow.md`** — portal requirement slice
 - [x] An existing contact can be opened in edit mode and saved successfully.
 - [x] Proxy mode continues to fetch and mutate the target member's contacts.
 - [x] Validation errors are surfaced before save.
-- [x] Duplicate-contact detection blocks accidental double-linking without silently creating a second contact record.
+- [x] Duplicate-contact detection blocks accidental double-linking without silently creating a second contact record (matched person id, email, shared phone number, or same name + relationship type in the active contact set — including manual no-email create).
 - [x] When an email match is already linked as a contact, the flow blocks duplicate linking and tells the user to edit the existing contact from the list.
 - [x] In proxy mode, duplicate-contact checks are evaluated against the target member's existing contacts rather than the signed-in delegate's contacts.
 - [x] The contact list refreshes after create, edit, or delete.
@@ -33,9 +33,10 @@ This file is **`PR13-contact-create-edit-flow.md`** — portal requirement slice
 
 - Public exports: the inline contact form, the email, match-confirmation, relationship, and full-form steps, `useContactFormState`, `useContactOperations`, and the contact validation utilities.
 - File paths: `src/pages/AdditionalContactsPage.tsx`, `src/components/contacts/ContactForm.tsx`, `src/components/contacts/ContactForm/EmailFormStep.tsx`, `src/components/contacts/ContactForm/MatchConfirmationStep.tsx`, `src/components/contacts/ContactForm/RelationshipFormStep.tsx`, `src/components/contacts/ContactForm/FullFormStep.tsx`, `src/hooks/contacts/useAdditionalContactsData.ts`, `src/hooks/contacts/useContactFormState.ts`, `src/hooks/contacts/useContactOperations.ts`, `src/utils/contacts/validation.ts`.
-- Data contracts: `data_pace_member_contacts_list`, `app_pace_contact_create`, `app_pace_contact_update`, `app_pace_contact_delete`, `core_person`, `core_contact`, `core_contact_type`, `core_phone_type`, and `core_phone`.
+- Data contracts: `data_pace_member_contacts_list`, `app_pace_contact_create`, `app_pace_contact_update` (optional `p_previous_phone_number` for in-place primary-phone edit; pace-core migration `20260522132000_app_pace_contact_update_primary_phone.sql`), `app_pace_contact_delete`, `core_person`, `core_contact`, `core_contact_type`, `core_phone_type`, and `core_phone`.
 - ID contract: contact create, link, and edit boundaries should use `UserId`, `OrganisationId`, and `PageId` from `@solvera/pace-core/types` where acting user, target member, organisation, and guarded-page identifiers cross hook or service seams.
 - Form contract: the branching contact create and edit forms should use `useZodForm` from `@solvera/pace-core/hooks` for Zod-backed validation and state instead of wiring raw `react-hook-form` per step.
+- Permission contract: contact permission selects must use RPC values `full`, `notify`, and `none` (legacy `view` / `edit` labels normalize to `full` on load). Do not offer `view` or `edit` as distinct save targets — `app_pace_contact_create` / `app_pace_contact_update` map those to `full`.
 - Permission and context contracts: authenticated user context is required; `PagePermissionGuard` continues to protect page access; proxy mode is supported for editing another member's contacts; save paths must respect whether the flow is acting on the signed-in member or a proxy target.
 
 Duplicate-link decision table:
@@ -43,6 +44,7 @@ Duplicate-link decision table:
 | Mode | Match result | Already linked to active contact set | Expected outcome |
 | --- | --- | --- | --- |
 | Self-service | No matching person by email | No | Allow normal create flow |
+| Self-service | Manual no-email create | Phone, email, or name+relationship already on active list | Block duplicate and direct user to edit existing contact |
 | Self-service | Matching person by email | No | Allow link flow or manual create-new path |
 | Self-service | Matching person by email | Yes | Block duplicate linking and direct the user to edit the existing contact |
 | Proxy mode | No matching person by email | No target-member match | Allow normal create flow for the target member |
@@ -53,7 +55,7 @@ Duplicate-link decision table:
 
 - Component layout and composition: `/additional-contacts`, the proxy-mode banner, the inline contact form, the contact list, the empty state, edit/delete actions, and the loading, validation-error, and save-failure states.
 - States: email lookup, match confirmation, full-form and no-email manual entry, duplicate-contact blocking, validation, save, and proxy-mode states must remain explicit. The blocked duplicate state may remain simple, but it must direct the user toward editing the existing contact rather than attempting an override.
-- Authoritative visual recipe: preserve the current inline editor and branching flow; keep the email-first matching experience, the existing-person confirmation step, the relationship step, and the full form step with pace-core `Form`, `Select`, `Input`, and `FormField` for phone number and phone type (create accepts one phone row; edit appends one new phone when it does not duplicate an existing number); use pace-core `Button`, `Card`, `Alert`, `Checkbox`, and `LoadingSpinner` where available (multi-row phone editing via `DataTable` is reserved for a future UX pass if needed).
+- Authoritative visual recipe: preserve the current inline editor and branching flow; keep the email-first matching experience, the existing-person confirmation step, the relationship step, and the full form step with pace-core `Form`, `Select`, `Input`, and `FormField` for phone number and phone type (create accepts one phone row; edit updates the first listed phone in place when that row changes; append via RPC only when the contact had no phone on open); use pace-core `Button`, `Card`, `Alert`, `Checkbox`, and `LoadingSpinner` where available (multi-row phone editing via `DataTable` is reserved for a future UX pass if needed). **Match confirmation:** two-column layout on `md+` for matched person summary and instruction copy in `CardContent`; **all** navigation and primary actions (`Back`, `Cancel`, `Link existing person`, `Create new contact`) in `CardFooter`. **Relationship step:** `Back`, `Cancel`, and `Continue` in `CardFooter` with `Back` left, `Cancel` centred, and `Continue` right. **Additional contacts list:** `Add contact` CTA in `CardFooter` when the list is populated (same as empty state).
 - Globals: cite pace-core Standard 07 Part A and Part C rather than restating shared global rules.
 
 ## Verification

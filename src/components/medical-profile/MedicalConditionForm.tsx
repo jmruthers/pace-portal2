@@ -10,7 +10,9 @@ import {
   DialogBody,
   DialogContent,
   DialogFooter,
+  DialogHeader,
   DialogPortal,
+  DialogTitle,
   FileDisplay,
   Form,
   FormField,
@@ -43,6 +45,37 @@ import { buildConditionTypePathLabel } from '@/utils/medical-profile/conditionTy
 import { validateActionPlanFile } from '@/utils/medical-profile/actionPlanFileValidation';
 
 const SEVERITY_NONE = '__severity_none__';
+
+function ConditionTextareaField({
+  name,
+  label,
+  rows = 2,
+}: {
+  name: keyof Pick<
+    MedicalConditionFormValues,
+    'treatment' | 'medications_and_aids' | 'triggers' | 'emergency_protocol' | 'notes'
+  >;
+  label: string;
+  rows?: number;
+}) {
+  const { control } = useFormContext<MedicalConditionFormValues>();
+
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field, fieldState }) => (
+        <Label className="grid min-w-0 gap-1">
+          {label}
+          <Textarea value={field.value} onChange={(v) => field.onChange(v)} rows={rows} />
+          {fieldState.error?.message != null ? (
+            <p role="alert">{String(fieldState.error.message)}</p>
+          ) : null}
+        </Label>
+      )}
+    />
+  );
+}
 
 export type MedicalConditionFormProps = {
   open: boolean;
@@ -184,8 +217,8 @@ function MedicalConditionFormFields({
   };
 
   return (
-    <article className="grid gap-4">
-      <section className="grid gap-4 md:grid-cols-2">
+    <article className="grid gap-3">
+      <section className="grid gap-3 sm:grid-cols-2">
         <FormField<MedicalConditionFormValues> name="name" label="Condition name" />
         <Controller
           control={control}
@@ -223,7 +256,7 @@ function MedicalConditionFormFields({
         />
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
+      <section className="grid gap-3 sm:grid-cols-2">
         <Controller
           control={control}
           name="severity"
@@ -254,6 +287,8 @@ function MedicalConditionFormFields({
             </Label>
           )}
         />
+        <FormField<MedicalConditionFormValues> name="diagnosed_date" label="Diagnosed date" type="date" />
+        <FormField<MedicalConditionFormValues> name="diagnosed_by" label="Diagnosed by" />
         <Controller
           control={control}
           name="medical_alert"
@@ -261,31 +296,6 @@ function MedicalConditionFormFields({
             <Label className="grid grid-cols-[auto_1fr] items-center gap-2">
               <Checkbox checked={field.value} onChange={(v) => field.onChange(v)} />
               Medical alert
-            </Label>
-          )}
-        />
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2">
-        <FormField<MedicalConditionFormValues> name="diagnosed_by" label="Diagnosed by" />
-        <FormField<MedicalConditionFormValues> name="diagnosed_date" label="Diagnosed date" type="date" />
-      </section>
-
-      <section className="grid gap-4">
-        <FormField<MedicalConditionFormValues> name="treatment" label="Treatment" />
-        <FormField<MedicalConditionFormValues> name="medications_and_aids" label="Medications and aids" />
-        <FormField<MedicalConditionFormValues> name="triggers" label="Triggers" />
-        <FormField<MedicalConditionFormValues> name="emergency_protocol" label="Emergency protocol" />
-        <Controller
-          control={control}
-          name="notes"
-          render={({ field, fieldState }) => (
-            <Label className="grid gap-1">
-              Notes
-              <Textarea value={field.value} onChange={(v) => field.onChange(v)} />
-              {fieldState.error?.message != null ? (
-                <p role="alert">{String(fieldState.error.message)}</p>
-              ) : null}
             </Label>
           )}
         />
@@ -301,22 +311,33 @@ function MedicalConditionFormFields({
         />
       </section>
 
-      <section className="grid gap-2" aria-label="Action plan document">
+      <section className="grid gap-3 sm:grid-cols-2" aria-label="Care and response details">
+        <ConditionTextareaField name="treatment" label="Treatment" />
+        <ConditionTextareaField name="medications_and_aids" label="Medications and aids" />
+        <ConditionTextareaField name="triggers" label="Triggers" />
+        <ConditionTextareaField name="emergency_protocol" label="Emergency protocol" />
+        <article className="sm:col-span-2">
+          <ConditionTextareaField name="notes" label="Notes" rows={3} />
+        </article>
+      </section>
+
+      <section className="grid gap-3" aria-label="Action plan document">
         <h3>Action plan document</h3>
-        {actionPlanQuery.data?.actionPlanDate ? (
-          <p>Current action plan date: {actionPlanQuery.data.actionPlanDate}</p>
-        ) : null}
-        {actionPlanQuery.isLoading ? <LoadingSpinner label="Loading file…" /> : null}
-        {existingRef ? (
-          <article aria-label="Current attachment">
-            <p>Attachment</p>
-            {attachmentUrl ? <FileDisplay fileReference={existingRef} url={attachmentUrl} label="View attachment" /> : null}
-            {!attachmentUrl && !attachmentError ? <LoadingSpinner label="Loading attachment link…" /> : null}
-            {attachmentError ? <p role="alert">{attachmentError}</p> : null}
-          </article>
-        ) : null}
-        <article className="grid gap-4 md:grid-cols-2">
-          <section aria-label="Action plan upload">
+        <article className="grid gap-3 sm:grid-cols-2 sm:items-start">
+          <section className="grid min-w-0 gap-2" aria-label="Action plan upload">
+            {actionPlanQuery.data?.actionPlanDate ? (
+              <p>Current action plan date: {actionPlanQuery.data.actionPlanDate}</p>
+            ) : null}
+            {actionPlanQuery.isLoading ? <LoadingSpinner label="Loading file…" /> : null}
+            {existingRef ? (
+              <>
+                {attachmentUrl ? (
+                  <FileDisplay fileReference={existingRef} url={attachmentUrl} label="View attachment" />
+                ) : null}
+                {!attachmentUrl && !attachmentError ? <LoadingSpinner label="Loading attachment link…" /> : null}
+                {attachmentError ? <p role="alert">{attachmentError}</p> : null}
+              </>
+            ) : null}
             {conditionId && appId ? (
               <>
                 <Label htmlFor={actionPlanInputId} className="grid gap-2">
@@ -416,34 +437,37 @@ export function MedicalConditionForm({
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogPortal>
-        <DialogContent>
-          <DialogBody>
-            <header>
-              <h2>{condition ? 'Edit medical condition' : 'Add medical condition'}</h2>
-            </header>
+        <DialogContent className="w-full max-w-4xl overflow-hidden">
+          <DialogBody className="grid max-h-[min(90vh,52rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 p-0">
+            <DialogHeader className="border-b border-border pb-4">
+              <DialogTitle>{condition ? 'Edit medical condition' : 'Add medical condition'}</DialogTitle>
+            </DialogHeader>
             {submitError ? (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="mx-4 mt-4">
                 <AlertTitle>Save failed</AlertTitle>
                 <AlertDescription>{submitError}</AlertDescription>
               </Alert>
             ) : null}
             <Form<MedicalConditionFormValues>
               key={condition?.id ?? 'new-condition'}
+              className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto]"
               schema={medicalConditionFormSchema}
               defaultValues={defaultValues}
               onSubmit={handleSubmit}
             >
-              <MedicalConditionFormFields
-                typesQuery={typesQuery}
-                uploadError={uploadError}
-                setUploadError={setUploadError}
-                actionPlanQuery={actionPlanQuery}
-                conditionId={conditionId}
-                appId={appId}
-                organisationId={organisationId}
-              />
-              <DialogFooter className="grid justify-items-end gap-2">
-                <fieldset className="m-0 border-0 p-0">
+              <section className="overflow-y-auto px-4 py-4">
+                <MedicalConditionFormFields
+                  typesQuery={typesQuery}
+                  uploadError={uploadError}
+                  setUploadError={setUploadError}
+                  actionPlanQuery={actionPlanQuery}
+                  conditionId={conditionId}
+                  appId={appId}
+                  organisationId={organisationId}
+                />
+              </section>
+              <DialogFooter className="border-t border-border">
+                <fieldset className="m-0 border-0 p-0 text-right">
                   <Button type="button" variant="secondary" disabled={busy} onClick={() => handleDialogOpenChange(false)}>
                     Cancel
                   </Button>{' '}

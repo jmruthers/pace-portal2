@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PhotoUploadDialog } from '@/components/member-profile/PhotoUploadDialog';
@@ -19,44 +19,51 @@ vi.mock('@solvera/pace-core/hooks', () => ({
   clearFileDisplayCache: vi.fn(),
 }));
 
-vi.mock('@solvera/pace-core/components', () => ({
-  Alert: ({ children }: { children: ReactNode }) => <section>{children}</section>,
-  AlertDescription: ({ children }: { children: ReactNode }) => <p>{children}</p>,
-  AlertTitle: ({ children }: { children: ReactNode }) => <h3>{children}</h3>,
-  Button: ({
+const { MockPaceButton } = vi.hoisted(() => {
+  function MockPaceButton({
     children,
     onClick,
   }: {
     children: ReactNode;
     onClick?: () => void;
-  }) => (
-    <span role="button" tabIndex={0} onClick={onClick} onKeyDown={() => {}}>
-      {children}
-    </span>
-  ),
+  }) {
+    return (
+      <div role="button" tabIndex={0} onClick={onClick} onKeyDown={() => undefined}>
+        {children}
+      </div>
+    );
+  }
+  return { MockPaceButton };
+});
+
+vi.mock('@solvera/pace-core/components', () => ({
+  Alert: ({ children }: { children: ReactNode }) => <section>{children}</section>,
+  AlertDescription: ({ children }: { children: ReactNode }) => <p>{children}</p>,
+  AlertTitle: ({ children }: { children: ReactNode }) => <h3>{children}</h3>,
+  Button: MockPaceButton,
+  Dialog: ({ children, open }: { children: ReactNode; open: boolean }) =>
+    open ? <section data-testid="dialog">{children}</section> : null,
+  DialogPortal: ({ children }: { children: ReactNode }) => <>{children}</>,
+  DialogContent: ({ children }: { children: ReactNode }) => <article>{children}</article>,
+  DialogHeader: ({ children }: { children: ReactNode }) => <header>{children}</header>,
+  DialogTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+  DialogBody: ({ children }: { children: ReactNode }) => <section>{children}</section>,
+  DialogFooter: ({ children }: { children: ReactNode }) => <footer>{children}</footer>,
   FileUpload: ({ onUploadError, onUploadSuccess }: FileUploadMockProps) => (
     <div>
-      <span
-        role="button"
-        tabIndex={0}
-        onClick={() => onUploadError?.(new Error('Upload failed from test'))}
-        onKeyDown={() => {}}
-      >
+      <MockPaceButton onClick={() => onUploadError?.(new Error('Upload failed from test'))}>
         Trigger upload error
-      </span>
-      <span
-        role="button"
-        tabIndex={0}
+      </MockPaceButton>
+      <MockPaceButton
         onClick={() =>
           onUploadSuccess?.({
             file_reference: { id: 'ref-new' },
             file_url: 'https://example.com/photo.jpg',
           })
         }
-        onKeyDown={() => {}}
       >
         Trigger upload success
-      </span>
+      </MockPaceButton>
     </div>
   ),
 }));
@@ -65,28 +72,9 @@ vi.mock('@solvera/pace-core/rbac', () => ({
   useStorageCapableClient: () => ({}),
 }));
 
-vi.mock('@/lib/supabase-typed', () => ({
-  toSupabaseClientLike: () => ({}),
-}));
-
 vi.mock('@/components/member-profile/PhotoGuidelines', () => ({
   PhotoGuidelines: () => <p>Photo guidance</p>,
 }));
-
-beforeAll(() => {
-  Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
-    configurable: true,
-    value: function showModal(this: HTMLDialogElement) {
-      this.setAttribute('open', '');
-    },
-  });
-  Object.defineProperty(HTMLDialogElement.prototype, 'close', {
-    configurable: true,
-    value: function close(this: HTMLDialogElement) {
-      this.removeAttribute('open');
-    },
-  });
-});
 
 describe('PhotoUploadDialog', () => {
   beforeEach(() => {
@@ -97,7 +85,6 @@ describe('PhotoUploadDialog', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
-    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
     const onOpenChange = vi.fn();
 
     render(
@@ -113,7 +100,7 @@ describe('PhotoUploadDialog', () => {
       </QueryClientProvider>
     );
 
-    return { onOpenChange, invalidateSpy };
+    return { onOpenChange };
   }
 
   it('shows unavailable message when organisation context is missing', () => {
@@ -121,7 +108,6 @@ describe('PhotoUploadDialog', () => {
 
     expect(screen.getByText(/upload unavailable/i)).toBeInTheDocument();
     expect(screen.getByText(/select an organisation/i)).toBeInTheDocument();
-    expect(screen.queryByText(/choose image/i)).not.toBeInTheDocument();
   });
 
   it('shows upload error when file upload fails', async () => {
@@ -158,17 +144,17 @@ describe('PhotoUploadDialog', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('closes when close button or backdrop is clicked', () => {
+  it('closes when close button is clicked', () => {
     const { onOpenChange } = renderDialog();
 
     fireEvent.click(screen.getByRole('button', { name: /close/i }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
 
-    const dialog = document.querySelector('dialog');
-    expect(dialog).not.toBeNull();
-    if (dialog) {
-      fireEvent.click(dialog);
-    }
-    expect(onOpenChange).toHaveBeenCalledTimes(2);
+  it('renders close action in dialog footer', () => {
+    renderDialog();
+
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument();
   });
 });

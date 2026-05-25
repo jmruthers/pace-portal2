@@ -21,6 +21,7 @@ audit/*.md
 
 # Test coverage
 coverage/
+.coverage-run.lock
 
 # Playwright / runner artifacts
 test-results/

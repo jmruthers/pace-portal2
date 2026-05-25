@@ -6,6 +6,7 @@ import type { EventId, FileReference } from '@solvera/pace-core/types';
 import * as unified from '@solvera/pace-core/providers';
 import { EventList } from '@/components/events/EventList';
 import type { DashboardEvent } from '@/shared/hooks/useEnhancedLanding';
+import { formatEventDateForDisplay } from '@/shared/lib/formatEventDateForDisplay';
 
 vi.mock('@solvera/pace-core/rbac', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@solvera/pace-core/rbac')>();
@@ -97,8 +98,8 @@ describe('EventList', () => {
     );
 
     expect(screen.getByRole('heading', { name: /Summer camp/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Summer camp logo/i })).toHaveAttribute(
-      'href',
+    expect(screen.getByRole('img', { name: /Summer camp logo/i })).toHaveAttribute(
+      'src',
       'https://signed.example/logo.png'
     );
 
@@ -140,6 +141,56 @@ describe('EventList', () => {
     );
     await user.click(screen.getByRole('button', { name: /^Manage$/i }));
     expect(screen.getByTestId('hub-route')).toBeInTheDocument();
+  });
+
+  it('disables Apply when the form response window is not open yet', () => {
+    render(
+      <MemoryRouter initialEntries={['/dash']}>
+        <Routes>
+          <Route
+            path="/dash"
+            element={
+              <EventList
+                eventsByCategory={{ camp: [baseEvent] }}
+                applicationStatusByEventId={{}}
+                formResponseOpenByEventId={{}}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByRole('button', { name: /Not open yet/i })).toBeDisabled();
+  });
+
+  it('shows event venue under the date when present', () => {
+    const withVenue = { ...baseEvent, event_date: '2026-06-01', event_venue: 'Gilwell Park' } as DashboardEvent;
+    render(
+      <MemoryRouter initialEntries={['/dash']}>
+        <Routes>
+          <Route
+            path="/dash"
+            element={<EventList eventsByCategory={{ camp: [withVenue] }} applicationStatusByEventId={{}} />}
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByText('Gilwell Park')).toBeInTheDocument();
+    expect(screen.getByText(formatEventDateForDisplay('2026-06-01'))).toBeInTheDocument();
+  });
+
+  it('omits venue line when event_venue is empty', () => {
+    render(
+      <MemoryRouter initialEntries={['/dash']}>
+        <Routes>
+          <Route
+            path="/dash"
+            element={<EventList eventsByCategory={{ camp: [baseEvent] }} applicationStatusByEventId={{}} />}
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.queryByText(/Gilwell Park/i)).not.toBeInTheDocument();
   });
 
   it('shows empty state when no events are visible', () => {

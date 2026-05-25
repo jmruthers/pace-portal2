@@ -76,6 +76,31 @@ describe('fetchSubmittedRegistrationSnapshot', () => {
     if (isErr(r)) expect(r.error.code).toBe('RESPONSE_QUERY');
   });
 
+  it('falls back to read-only snapshot when application exists without linked response', async () => {
+    const appsChain = makeChain({
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: 'app-sub', status: 'under_review' },
+        error: null,
+      }),
+    });
+    const responsesChain = makeChain({
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    });
+    const client = {
+      from: vi.fn((t: string) => {
+        if (t === 'base_application') return appsChain;
+        if (t === 'core_form_responses') return responsesChain;
+        return {};
+      }),
+    } as never;
+    const r = await fetchSubmittedRegistrationSnapshot(client, 'p1', 'ev1', 'form1');
+    expect(isOk(r)).toBe(true);
+    if (isOk(r) && r.data) {
+      expect(r.data.applicationId).toBe('app-sub');
+      expect(r.data.valueByFieldId).toEqual({});
+    }
+  });
+
   it('returns ok with value map when chain succeeds', async () => {
     const appsChain = makeChain({
       maybeSingle: vi.fn().mockResolvedValue({

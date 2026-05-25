@@ -167,6 +167,7 @@ export async function fetchDelegatedWorkspace(
       additionalContacts: contactRows,
       eventsByCategory,
       applicationStatusByEventId,
+      formResponseOpenByEventId: {},
       profileProgress: progress as ProfileProgressResult,
       needsProfileSetup: false,
     });

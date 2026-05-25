@@ -61,6 +61,7 @@ These rules apply across slices; PR requirement docs reference this section inst
 
 - **Delegated profile resource permissions:** delegated read `read:member-profiles`; delegated edit `update:member-profiles`. Delegated flows require both page-level and resource-level validation where applicable.
 - Event workflow routes require authenticated member context in MVP; when unauthenticated, show an auth-required handoff and preserve return URL context.
+- **Interim event/org workflow guard:** participant event routes (`/:eventSlug`, `/:eventSlug/*`) and org form routes (`/forms/:formSlug`) render inside `PortalAuthenticatedLayout` and use `PagePermissionGuard` with `pageName="dashboard"` / `operation="read"` until dedicated `rbac_app_pages` catalogue rows exist. The participant event hub additionally relies on row-level visibility in hub data fetchers.
 
 ### PaceAppLayout and AppSwitcher
 
@@ -630,7 +631,7 @@ Contract-only: public exports, paths, data touchpoints, and layout obligations â
 - Public service contracts: event-entry contracts must preserve slug context and auth-required handoff; participant-itinerary contracts must remain read-only and consume the same participant-scoped rules documented by TRAC SLICE-05; authenticated form contracts must load existing values and draft state; submission contracts must define duplicate-safe draft-to-submitted transitions across backend tables.
 - File paths under the app (Standard 01): `src/pages/events/*`, `src/components/events/*`, `src/hooks/events/*`, relevant dashboard composition hooks in `src/shared/hooks/*`.
 - Proposed or existing tables: events, forms, file references, response and response-value tables, `base_application`, participant-itinerary read tables/contracts (`trac_itinerary_assignment`, `trac_transport`, `trac_accommodation`, `trac_activity` under Option A assumptions), related RPCs, and file-display contracts. Participant event-hub metadata may require additional `core_events` fields (blurb, admin email, website) if not already present.
-- `PaceAppLayout` contract: authenticated event management and form routes must satisfy `PaceAppLayout` authenticated-route requirements whenever they render inside protected app chrome.
+- `PaceAppLayout` contract: authenticated event management, org form, and participant workflow routes render inside `PortalAuthenticatedLayout` and must satisfy `PaceAppLayout` authenticated-route requirements (header, nav, `PaceMain`, footer).
 
 ### Verification
 

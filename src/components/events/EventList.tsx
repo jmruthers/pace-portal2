@@ -19,6 +19,7 @@ import { formatEventDateForDisplay } from '@/shared/lib/formatEventDateForDispla
 export type EventListProps = {
   eventsByCategory: Record<string, DashboardEvent[]>;
   applicationStatusByEventId: Record<string, string>;
+  formResponseOpenByEventId?: Record<string, boolean>;
 };
 
 function organisationLabel(org: { display_name?: string | null; name?: string | null }): string {
@@ -30,7 +31,11 @@ function organisationLabel(org: { display_name?: string | null; name?: string | 
 /**
  * PR14 dashboard event selector: Apply / Resume / Manage + authenticated logo display via {@link useFileReferences}.
  */
-export function EventList({ eventsByCategory, applicationStatusByEventId }: EventListProps) {
+export function EventList({
+  eventsByCategory,
+  applicationStatusByEventId,
+  formResponseOpenByEventId,
+}: EventListProps) {
   const navigate = useNavigate();
   const org = useOrganisationsContextOptional();
   const selectedOrgName = org?.selectedOrganisation
@@ -117,7 +122,13 @@ export function EventList({ eventsByCategory, applicationStatusByEventId }: Even
             {flat.map((ev) => {
               const logoRef = refByEventId.get(createEventId(ev.event_id)) ?? null;
               const applicationStatus = applicationStatusByEventId[ev.event_id];
-              const { label } = deriveEventDashboardAction(applicationStatus);
+              const { intent, label } = deriveEventDashboardAction(applicationStatus);
+              const responseOpen =
+                formResponseOpenByEventId == null
+                  ? true
+                  : formResponseOpenByEventId[ev.event_id] === true;
+              const applyBlocked = intent === 'apply' && !responseOpen;
+              const ctaLabel = applyBlocked ? 'Not open yet' : label;
               const codeOk = Boolean(ev.event_code?.trim());
               return (
                 <li key={ev.event_id}>
@@ -135,6 +146,7 @@ export function EventList({ eventsByCategory, applicationStatusByEventId }: Even
                       {ev.event_date ? (
                         <time dateTime={ev.event_date}>{formatEventDateForDisplay(ev.event_date)}</time>
                       ) : null}
+                      {ev.event_venue?.trim() ? <p>{ev.event_venue.trim()}</p> : null}
                       {multipleOrgsInList ? (
                         <p>{orgNameById.get(ev.organisation_id) ?? 'Organisation'}</p>
                       ) : null}
@@ -144,10 +156,10 @@ export function EventList({ eventsByCategory, applicationStatusByEventId }: Even
                         <Button
                           type="button"
                           variant={label === 'Manage' ? 'default' : 'secondary'}
-                          disabled={!codeOk}
+                          disabled={!codeOk || applyBlocked}
                           onClick={() => navigateForEvent(ev)}
                         >
-                          {label}
+                          {ctaLabel}
                         </Button>
                       </fieldset>
                     </CardFooter>

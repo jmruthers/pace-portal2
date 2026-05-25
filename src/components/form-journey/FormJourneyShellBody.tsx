@@ -16,6 +16,9 @@ import { isOk } from '@solvera/pace-core/types';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ProxyModeBanner } from '@/shared/components/ProxyModeBanner';
 import { NO_PERSON_PROFILE_ERROR_CODE } from '@/shared/lib/utils/userUtils';
+import { createEventId } from '@solvera/pace-core/types';
+import { useFileReferences } from '@/hooks/events/useFileReferences';
+import { buildEventFormPresentation } from '@/lib/eventFormDisplayContext';
 import type { FormEntrypoint } from '@/lib/formEntrypointResolution';
 import type { useFormJourneyShellSetup } from '@/hooks/forms/useFormJourneyShellSetup';
 import { FormJourneyFillReady } from '@/components/form-journey/FormJourneyShell';
@@ -35,9 +38,9 @@ export function FormJourneyShellBody({
   const {
     user,
     organisationId,
+    writeOrganisationId,
     secureClient,
     proxy,
-    setUserStartedFilling,
     entry,
     ready,
     personQuery,
@@ -52,33 +55,38 @@ export function FormJourneyShellBody({
     displayPerson,
   } = setup;
 
+  const eventLogoScopes =
+    ready?.kind === 'event' &&
+    typeof ready.event.organisation_id === 'string' &&
+    ready.event.organisation_id.trim() !== ''
+      ? [{ event_id: ready.event.event_id, organisation_id: ready.event.organisation_id }]
+      : [];
+  const { refByEventId, isLoading: logoBusy, isError: logoRefsFailed } = useFileReferences(eventLogoScopes);
+  const eventPresentation =
+    ready?.kind === 'event'
+      ? buildEventFormPresentation(
+          ready.event,
+          refByEventId.get(createEventId(ready.event.event_id)) ?? null,
+          logoBusy,
+          logoRefsFailed
+        )
+      : null;
+
   if (!organisationId) {
-    return (
-      <main className="grid gap-4 px-4">
-        <Alert variant="destructive">
-          <AlertTitle>Organisation required</AlertTitle>
-          <AlertDescription>Select an organisation before opening this form.</AlertDescription>
-        </Alert>
-      </main>
-    );
+    return renderOrganisationGate(organisationId);
   }
 
-  if (proxy.isValidating) {
-    return (
-      <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
-        <LoadingSpinner label="Checking delegated access…" />
-      </main>
-    );
-  }
+  const resolvedWriteOrganisationId = writeOrganisationId ?? organisationId;
 
-  const personContextPending = Boolean(user?.id && organisationId && !secureClient);
-
-  if (personContextPending || personQuery.isLoading) {
-    return (
-      <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
-        <LoadingSpinner label="Loading profile…" />
-      </main>
-    );
+  const personLoadingGate = renderPersonLoadingGate({
+    proxy,
+    user,
+    organisationId,
+    secureClient,
+    personQuery,
+  });
+  if (personLoadingGate) {
+    return personLoadingGate;
   }
 
   if (personQuery.isError) {
@@ -139,29 +147,20 @@ export function FormJourneyShellBody({
   }
 
   if (fieldData.fetchErrorMessage) {
-    const backTarget =
-      entrypoint.kind !== 'org_form' && entry.routeEventSlug
-        ? `/${encodeURIComponent(entry.routeEventSlug)}`
-        : '/';
-    return (
-      <main className="mx-auto grid max-w-(--app-width) gap-4 p-4">
-        {proxy.isProxyActive ? <ProxyModeBanner /> : null}
-        <Alert variant="destructive">
-          <AlertTitle>Field data</AlertTitle>
-          <AlertDescription>{fieldData.fetchErrorMessage}</AlertDescription>
-        </Alert>
-        <Button type="button" variant="secondary" onClick={() => navigate(backTarget)}>
-          {entrypoint.kind === 'org_form' ? 'Back to home' : 'Back to event'}
-        </Button>
-      </main>
-    );
+    return renderFieldDataErrorGate({
+      entrypoint,
+      entry,
+      proxy,
+      navigate,
+      message: fieldData.fetchErrorMessage,
+    });
   }
 
   return (
     <main className="mx-auto grid max-w-(--app-width) gap-4 p-4">
       {proxy.isProxyActive ? <ProxyModeBanner /> : null}
       {extension}
-      {fieldData.isLoading && journey.phase !== 'intro' ? (
+      {fieldData.isLoading && journey.phase === 'filling' ? (
         <LoadingSpinner label="Loading field defaults…" />
       ) : null}
       <FormJourneyFillReady
@@ -170,7 +169,7 @@ export function FormJourneyShellBody({
         phase={journey.phase}
         submittedSnapshot={journey.submittedSnapshot}
         userId={user!.id}
-        organisationId={organisationId}
+        writeOrganisationId={resolvedWriteOrganisationId}
         effectivePersonId={effectivePersonId}
         memberId={memberId}
         displayPerson={
@@ -188,8 +187,79 @@ export function FormJourneyShellBody({
         prefillWarning={fieldData.prefillWarning}
         fieldDataLoading={fieldData.isLoading}
         draft={draft}
-        onStart={() => setUserStartedFilling(true)}
+        eventPresentation={eventPresentation}
       />
+    </main>
+  );
+}
+
+function renderOrganisationGate(organisationId: string | null): ReactNode {
+  if (organisationId) {
+    return null;
+  }
+
+  return (
+    <main className="grid gap-4 px-4">
+      <Alert variant="destructive">
+        <AlertTitle>Organisation required</AlertTitle>
+        <AlertDescription>Select an organisation before opening this form.</AlertDescription>
+      </Alert>
+    </main>
+  );
+}
+
+function renderPersonLoadingGate(args: {
+  proxy: Setup['proxy'];
+  user: Setup['user'];
+  organisationId: string | null;
+  secureClient: Setup['secureClient'];
+  personQuery: Setup['personQuery'];
+}): ReactNode {
+  const { proxy, user, organisationId, secureClient, personQuery } = args;
+
+  if (proxy.isValidating) {
+    return (
+      <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
+        <LoadingSpinner label="Checking delegated access…" />
+      </main>
+    );
+  }
+
+  const personContextPending = Boolean(user?.id && organisationId && !secureClient);
+  if (personContextPending || personQuery.isLoading) {
+    return (
+      <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
+        <LoadingSpinner label="Loading profile…" />
+      </main>
+    );
+  }
+
+  return null;
+}
+
+function renderFieldDataErrorGate(args: {
+  entrypoint: FormEntrypoint;
+  entry: Setup['entry'];
+  proxy: Setup['proxy'];
+  navigate: ReturnType<typeof useNavigate>;
+  message: string;
+}): ReactNode {
+  const { entrypoint, entry, proxy, navigate, message } = args;
+  const backTarget =
+    entrypoint.kind !== 'org_form' && entry.routeEventSlug
+      ? `/${encodeURIComponent(entry.routeEventSlug)}`
+      : '/';
+
+  return (
+    <main className="mx-auto grid max-w-(--app-width) gap-4 p-4">
+      {proxy.isProxyActive ? <ProxyModeBanner /> : null}
+      <Alert variant="destructive">
+        <AlertTitle>Field data</AlertTitle>
+        <AlertDescription>{message}</AlertDescription>
+      </Alert>
+      <Button type="button" variant="secondary" onClick={() => navigate(backTarget)}>
+        {entrypoint.kind === 'org_form' ? 'Back to home' : 'Back to event'}
+      </Button>
     </main>
   );
 }

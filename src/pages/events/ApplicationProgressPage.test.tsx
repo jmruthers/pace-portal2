@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ApplicationProgressPage } from '@/pages/events/ApplicationProgressPage';
 import { SENSITIVE_PROGRESS_KEYS } from '@/lib/applicationProgressContracts';
@@ -209,18 +209,6 @@ describe('ApplicationProgressPage', () => {
     for (const k of SENSITIVE_PROGRESS_KEYS) {
       expect(serial).not.toContain(k);
     }
-  });
-
-  it('redirects unauthenticated users to sign in with return URL (PR01 handoff)', async () => {
-    authState.isAuthenticated = false;
-    const appId = '11111111-1111-4111-a111-111111111111';
-    renderPage(`/camp/applications/${appId}`);
-    await waitFor(() =>
-      expect(mockNavigate).toHaveBeenCalledWith(
-        `/login?redirect=${encodeURIComponent(`/camp/applications/${appId}`)}`,
-        { replace: true }
-      )
-    );
   });
 
   it('shows a single access denied presentation for denied phase', () => {

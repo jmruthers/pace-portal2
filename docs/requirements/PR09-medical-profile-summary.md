@@ -38,16 +38,16 @@ This file is **`PR09-medical-profile-summary.md`** — portal requirement slice 
 
 ## Visual specification
 
-- Component layout and composition: `/medical-profile` renders the spinner state, the missing-member-profile redirect state, an optional `ProxyModeBanner`, a summary header with top save action, a completion progress bar, the grouped medical-profile field sections, and a read-only condition summary or management handoff area.
+- Component layout and composition: `/medical-profile` renders the spinner state, the missing-member-profile redirect state, an optional `ProxyModeBanner`, a page heading and completion progress bar, the grouped medical-profile field sections, a single **Save medical profile** action in `CardFooter`, and a read-only condition summary or management handoff area.
 - States: loading, missing member profile, proxy-target copy, validation, save, and permission-denied states must all be represented explicitly.
-- Authoritative visual recipe: preserve the current grouped-section layout; the page already uses pace-core `Card`, `Button`, `Progress`, `LoadingSpinner`, and `ProxyModeBanner`; keep the two-save-button pattern and the current target-member copy in proxy mode.
+- Authoritative visual recipe: preserve the current grouped-section layout; the page already uses pace-core `Card`, `Button`, `Progress`, `LoadingSpinner`, and `ProxyModeBanner`; expose exactly one save control in `CardFooter` (not duplicated in the page header); keep the current target-member copy in proxy mode.
 - Globals: cite pace-core Standard 07 Part A and Part C rather than restating shared global rules.
 
 ## Verification
 
 - Verify `/medical-profile` renders the expected summary view for both self-service and proxy-mode users.
 - Verify the page redirects to `/member-profile` when the member profile is incomplete.
-- Verify save behavior from both the top and bottom actions, including validation feedback and success feedback.
+- Verify save behavior from the footer action, including validation feedback and success feedback.
 - Verify the progress bar updates as profile data changes and the read-only condition handoff remains visible.
 
 ## Testing requirements

@@ -14,8 +14,12 @@ describe('RelationshipFormStep', () => {
       <RelationshipFormStep
         email="sam@example.com"
         contactTypes={[{ id: 'ct-1', name: 'Emergency' }]}
-        permissionOptions={['view', 'edit']}
-        defaultValues={{ contact_type_id: 'ct-1', permission_type: 'view' }}
+        permissionOptions={[
+          { value: 'full', label: 'Full access' },
+          { value: 'notify', label: 'Notify only' },
+          { value: 'none', label: 'No access' },
+        ]}
+        defaultValues={{ contact_type_id: 'ct-1', permission_type: 'full' }}
         onBack={onBack}
         onCancel={onCancel}
         onSubmit={onSubmit}

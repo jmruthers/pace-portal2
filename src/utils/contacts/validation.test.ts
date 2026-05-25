@@ -83,4 +83,41 @@ describe('findDuplicateContact', () => {
     });
     expect(duplicate.isDuplicate).toBe(false);
   });
+
+  it('blocks duplicate by phone number on manual no-email path', () => {
+    const duplicate = findDuplicateContact({
+      contacts: [
+        {
+          ...contacts[0]!,
+          email: '',
+          phones: [{ phone_number: '0412 345 678', phone_type: 'Home' }],
+        },
+      ],
+      candidatePhone: '0412 345 678',
+      candidateFirstName: 'Jessica',
+      candidateLastName: 'Rutherford',
+      candidateContactTypeId: '2',
+    });
+    expect(duplicate.isDuplicate).toBe(true);
+  });
+
+  it('blocks duplicate by same name and relationship type', () => {
+    const duplicate = findDuplicateContact({
+      contacts: [
+        {
+          ...contacts[0]!,
+          first_name: 'Jessica',
+          last_name: 'Rutherford',
+          contact_type_id: '2',
+          email: '',
+          phones: [{ phone_number: '0412 345 999', phone_type: 'Home' }],
+        },
+      ],
+      candidateFirstName: 'Jessica',
+      candidateLastName: 'Rutherford',
+      candidateContactTypeId: '2',
+      candidatePhone: '0499 000 111',
+    });
+    expect(duplicate.isDuplicate).toBe(true);
+  });
 });

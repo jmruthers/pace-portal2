@@ -1,6 +1,4 @@
-import { useEffect } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { useUnifiedAuthContext } from '@solvera/pace-core';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
   AlertDescription,
@@ -11,6 +9,7 @@ import {
   CardContent,
   LoadingSpinner,
 } from '@solvera/pace-core/components';
+import { AccessDenied, PagePermissionGuard } from '@solvera/pace-core/rbac';
 import { createEventId } from '@solvera/pace-core/types';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { type EventHubData, useEventHub } from '@/hooks/events/useEventHub';
@@ -27,17 +26,33 @@ function participantWebsiteHref(raw: string): string | null {
   return `https://${t}`;
 }
 
-/** PR14 authenticated participant hub at `/:eventSlug`.
+/**
+ * PR14 authenticated participant hub at `/:eventSlug`.
  *
- * Intentionally not wrapped in {@link PagePermissionGuard} from `@solvera/pace-core/rbac`: catalogue
- * `rbac_app_pages` does not yet include a dedicated participant event-hub row for all tenants; access is
- * enforced by `ProtectedRoute` + organisation loading gate plus per-row visibility in hub data fetchers.
+ * Renders inside {@link PortalAuthenticatedLayout}. Uses interim {@link PagePermissionGuard}
+ * (`dashboard` read) until `rbac_app_pages` includes a dedicated event-hub row; row-level
+ * visibility in hub data fetchers remains authoritative for event access.
  */
 export function EventHubPage() {
+  return (
+    <PagePermissionGuard
+      pageName="dashboard"
+      operation="read"
+      loading={
+        <main className="grid min-h-[40vh] place-items-center px-4" aria-busy="true">
+          <LoadingSpinner label="Checking access…" />
+        </main>
+      }
+      fallback={<AccessDenied />}
+    >
+      <EventHubPageContent />
+    </PagePermissionGuard>
+  );
+}
+
+function EventHubPageContent() {
   const { eventSlug = '' } = useParams();
-  const { isAuthenticated } = useUnifiedAuthContext();
   const navigate = useNavigate();
-  const location = useLocation();
   const { data, isLoading, errorMessage, notFound, reservedSlug } = useEventHub(eventSlug);
   const codeEnc = encodeURIComponent(eventSlug.trim());
 
@@ -51,23 +66,6 @@ export function EventHubPage() {
     data?.event.event_id != null
       ? (refByEventId.get(createEventId(data.event.event_id)) ?? null)
       : null;
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      const returnTo = `${location.pathname}${location.search}`;
-      const login = `/login?redirect=${encodeURIComponent(returnTo)}`;
-      navigate(login, { replace: true });
-    }
-  }, [isAuthenticated, location.pathname, location.search, navigate]);
-
-  if (!isAuthenticated) {
-    return (
-      <main className="mx-auto grid max-w-(--app-width) gap-4 p-4" aria-busy="true">
-        <h1>Event</h1>
-        <p>Redirecting to sign in…</p>
-      </main>
-    );
-  }
 
   if (reservedSlug || notFound) {
     return <NotFoundPage />;

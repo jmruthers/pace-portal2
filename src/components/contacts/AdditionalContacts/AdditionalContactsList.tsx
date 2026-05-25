@@ -13,6 +13,7 @@ import {
   Dialog,
   DialogBody,
   DialogContent,
+  DialogFooter,
   DialogPortal,
 } from '@solvera/pace-core/components';
 import type { GroupedAdditionalContact } from '@/utils/contacts/groupAdditionalContactRows';
@@ -122,7 +123,9 @@ export function AdditionalContactsList({
                   <AlertDescription>{deleteError}</AlertDescription>
                 </Alert>
               ) : null}
-              <section className="grid gap-2 [grid-template-columns:1fr_1fr]">
+            </DialogBody>
+            <DialogFooter className="border-t border-border">
+              <fieldset className="m-0 w-full border-0 p-0 text-right">
                 <Button
                   type="button"
                   variant="secondary"
@@ -132,7 +135,7 @@ export function AdditionalContactsList({
                   }}
                 >
                   Cancel
-                </Button>
+                </Button>{' '}
                 <Button
                   type="button"
                   variant="destructive"
@@ -152,8 +155,8 @@ export function AdditionalContactsList({
                 >
                   Delete contact
                 </Button>
-              </section>
-            </DialogBody>
+              </fieldset>
+            </DialogFooter>
           </DialogContent>
         </DialogPortal>
       </Dialog>

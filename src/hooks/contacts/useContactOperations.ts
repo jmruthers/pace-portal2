@@ -2,6 +2,11 @@ import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/r
 import { useSecureSupabase } from '@solvera/pace-core/rbac';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 import type { Database } from '@/types/pace-database';
+export type UpdateContactPrimaryPhoneInput = {
+  previousPhoneNumber: string;
+  nextPhoneNumber: string;
+  phoneTypeId: number | null;
+};
 
 type CreateRpc = Database['public']['Functions']['app_pace_contact_create'];
 type DeleteRpc = Database['public']['Functions']['app_pace_contact_delete'];
@@ -27,8 +32,14 @@ export type UpdateContactInput = {
   email?: string | null;
   contactTypeId: string;
   permissionType: string;
+  /** Inserts a new phone row when the contact had none (RPC append path). */
   phoneNumber?: string | null;
   phoneTypeId?: number | null;
+  /**
+   * Updates the first list phone in place via `app_pace_contact_update` + `p_previous_phone_number`.
+   * Requires pace-core migration `20260522132000_app_pace_contact_update_primary_phone.sql`.
+   */
+  primaryPhoneUpdate?: UpdateContactPrimaryPhoneInput;
 };
 
 export type UseContactOperationsResult = {
@@ -130,7 +141,8 @@ export function useContactOperations(): UseContactOperationsResult {
       const normalizedEmail = normalizeOptionalText(input.email);
       const normalizedPreferredName = normalizeOptionalText(input.preferredName);
       const normalizedPhoneNumber = normalizeOptionalText(input.phoneNumber);
-      const { data, error } = await client.rpc('app_pace_contact_update', {
+      const primaryUpdate = input.primaryPhoneUpdate;
+      const rpcArgs = {
         p_contact_id: input.contactId,
         p_first_name: input.firstName,
         p_last_name: input.lastName,
@@ -138,9 +150,21 @@ export function useContactOperations(): UseContactOperationsResult {
         p_email: normalizedEmail,
         p_contact_type_id: validateContactTypeId(input.contactTypeId),
         p_permission_type: input.permissionType,
-        p_phone_number: normalizedPhoneNumber,
-        p_phone_type_id: input.phoneTypeId ?? undefined,
-      } satisfies UpdateRpc['Args']);
+        p_phone_number:
+          primaryUpdate != null
+            ? normalizeOptionalText(primaryUpdate.nextPhoneNumber)
+            : normalizedPhoneNumber,
+        p_phone_type_id:
+          primaryUpdate != null
+            ? primaryUpdate.phoneTypeId ?? undefined
+            : input.phoneTypeId ?? undefined,
+        p_previous_phone_number:
+          primaryUpdate != null
+            ? normalizeOptionalText(primaryUpdate.previousPhoneNumber)
+            : undefined,
+      } satisfies UpdateRpc['Args'] & { p_previous_phone_number?: string };
+
+      const { data, error } = await client.rpc('app_pace_contact_update', rpcArgs);
       if (error) {
         throw new Error(error.message || 'Could not update contact.');
       }

@@ -14,7 +14,7 @@ import { getWorkflowPreSubmissionCheckKeys } from '@solvera/pace-core/forms';
 import type { WorkflowFormDefinition } from '@solvera/pace-core/forms';
 import { isReservedEventSlug } from '@/routing/eventFormPaths';
 import { toTypedSupabase } from '@/lib/supabase-typed';
-import { isDashboardEligibleForm, type FormRowForDashboardVisibility } from '@/shared/lib/dashboardEventVisibility';
+import { isFormResponseWindowOpen, type FormRowForDashboardVisibility } from '@/shared/lib/dashboardEventVisibility';
 import { lookupEventRowBySlug } from '@/hooks/events/useEventHub';
 import type { CoreFormFieldRow } from '@/shared/lib/formFieldMeta';
 import type { Database } from '@/types/pace-database';
@@ -145,7 +145,7 @@ export async function fetchFormBySlug(
       });
     }
 
-    if (!isDashboardEligibleForm(eligibilityShape(form), now)) {
+    if (!isFormResponseWindowOpen(eligibilityShape(form), now)) {
       return err({
         code: 'FORM_WINDOW_CLOSED',
         message: 'This form is not open for responses right now.',

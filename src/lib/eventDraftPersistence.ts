@@ -7,10 +7,10 @@ import {
   type ApiResult,
 } from '@solvera/pace-core/types';
 import { toTypedSupabase } from '@/lib/supabase-typed';
+import { PARTICIPANT_ALREADY_SUBMITTED_MESSAGE } from '@/lib/participantAlreadySubmittedMessage';
 import type { CoreFormFieldRow } from '@/shared/lib/formFieldMeta';
 import type { Database } from '@/types/pace-database';
 
-const WORKFLOW_SUBJECT_TYPE = 'base_application';
 const DRAFT_STATUS = 'draft';
 
 export type CoreFormResponseValueRow =
@@ -20,23 +20,69 @@ export type DraftApplicationBundle = {
   /** Set when a legacy draft `base_application` row exists; `null` until final submit in the PR16 path. */
   applicationId: string | null;
   responseId: string;
+  /** Event host org from `app_portal_form_response_ensure_draft` — use for value writes and submit. */
+  writeOrganisationId: string;
   valueByFieldId: Record<string, unknown>;
 };
 
+type EnsureDraftRpcRow = {
+  response_id: string;
+  organisation_id: string;
+  created?: boolean;
+  status?: 'draft' | 'submitted';
+  application_id?: string | null;
+};
+
+function normEnsureDraftStatus(raw: unknown): 'draft' | 'submitted' | null {
+  if (typeof raw !== 'string') {
+    return null;
+  }
+  const status = raw.trim().toLowerCase();
+  if (status === 'draft' || status === 'submitted') {
+    return status;
+  }
+  return null;
+}
+
+function parseEnsureDraftRpcData(data: unknown): EnsureDraftRpcRow | null {
+  if (data == null || typeof data !== 'object') {
+    return null;
+  }
+  const row = data as Record<string, unknown>;
+  const responseId = row.response_id;
+  const organisationId = row.organisation_id;
+  if (typeof responseId !== 'string' || responseId.trim() === '') {
+    return null;
+  }
+  if (typeof organisationId !== 'string' || organisationId.trim() === '') {
+    return null;
+  }
+  const status = normEnsureDraftStatus(row.status) ?? 'draft';
+  const applicationIdRaw = row.application_id;
+  const applicationId =
+    typeof applicationIdRaw === 'string' && applicationIdRaw.trim() !== ''
+      ? applicationIdRaw
+      : null;
+  return {
+    response_id: responseId,
+    organisation_id: organisationId,
+    created: typeof row.created === 'boolean' ? row.created : undefined,
+    status,
+    application_id: applicationId,
+  };
+}
+
 /**
- * Ensures a draft `core_form_responses` row (and optional legacy `base_application`).
- * `respondent_id` is the signed-in auth user (FK → `auth.users`); `applicantPersonId` scopes application lookup.
+ * Ensures a draft `core_form_responses` row via `app_portal_form_response_ensure_draft`.
+ * `applicantPersonId` scopes duplicate `base_application` checks and PORTAL-DB-005 draft ensure RPC.
  */
 export async function ensureDraftBundle(
   client: NonNullable<ReturnType<typeof toTypedSupabase>>,
-  actingUserId: string,
   applicantPersonId: string,
-  organisationId: string,
   eventId: string,
   formId: string
 ): Promise<ApiResult<DraftApplicationBundle>> {
   const eventIdTyped = createEventId(eventId);
-  const orgIdTyped = createOrganisationId(organisationId);
 
   const existingApp = await client
     .from('base_application')
@@ -59,64 +105,46 @@ export async function ensureDraftBundle(
     const st = (existingApp.data as { status?: string | null }).status?.trim().toLowerCase();
     if (st != null && st !== '' && st !== DRAFT_STATUS) {
       return err({
-        code: 'APPLICATION_NOT_DRAFT',
-        message: 'An application for this event already exists and is not a draft.',
+        code: 'APPLICATION_ALREADY_SUBMITTED',
+        message: PARTICIPANT_ALREADY_SUBMITTED_MESSAGE,
       });
     }
   }
 
-  const existingResp =
-    applicationId != null
-      ? await client
-          .from('core_form_responses')
-          .select('id')
-          .eq('form_id', formId)
-          .eq('workflow_subject_type', WORKFLOW_SUBJECT_TYPE)
-          .eq('workflow_subject_id', applicationId)
-          .maybeSingle()
-      : await client
-          .from('core_form_responses')
-          .select('id')
-          .eq('form_id', formId)
-          .eq('respondent_id', actingUserId)
-          .eq('status', DRAFT_STATUS)
-          .is('workflow_subject_id', null)
-          .order('updated_at', { ascending: false, nullsFirst: false })
-          .limit(1)
-          .maybeSingle();
+  type EnsureDraftRpc = (
+    fn: 'app_portal_form_response_ensure_draft',
+    args: { p_form_id: string; p_event_id: string; p_applicant_person_id: string }
+  ) => Promise<{ data: unknown; error: { message?: string } | null }>;
+  const ensureRes = await (client.rpc as unknown as EnsureDraftRpc)('app_portal_form_response_ensure_draft', {
+    p_form_id: formId,
+    p_event_id: eventId,
+    p_applicant_person_id: applicantPersonId,
+  });
 
-  if (existingResp.error) {
+  if (ensureRes.error) {
     return err({
-      code: 'DRAFT_RESPONSE_QUERY',
-      message: existingResp.error.message ?? 'Could not load form response.',
+      code: 'DRAFT_RESPONSE_ENSURE',
+      message: ensureRes.error.message ?? 'Could not prepare this form for saving.',
     });
   }
 
-  let responseId: string;
-  if (existingResp.data?.id) {
-    responseId = existingResp.data.id;
-  } else {
-    const rins = await client
-      .from('core_form_responses')
-      .insert({
-        form_id: formId,
-        organisation_id: orgIdTyped,
-        respondent_id: actingUserId,
-        status: DRAFT_STATUS,
-        workflow_subject_type: applicationId != null ? WORKFLOW_SUBJECT_TYPE : null,
-        workflow_subject_id: applicationId,
-      })
-      .select('id')
-      .single();
-
-    if (rins.error || !rins.data?.id) {
-      return err({
-        code: 'DRAFT_RESPONSE_CREATE',
-        message: rins.error?.message ?? 'Could not create draft response.',
-      });
-    }
-    responseId = rins.data.id;
+  const ensured = parseEnsureDraftRpcData(ensureRes.data);
+  if (!ensured) {
+    return err({
+      code: 'DRAFT_RESPONSE_ENSURE',
+      message: 'Could not prepare this form for saving.',
+    });
   }
+
+  if (ensured.status === 'submitted') {
+    return err({
+      code: 'APPLICATION_ALREADY_SUBMITTED',
+      message: PARTICIPANT_ALREADY_SUBMITTED_MESSAGE,
+    });
+  }
+
+  const responseId = ensured.response_id;
+  const writeOrganisationId = ensured.organisation_id;
 
   const valsRes = await client
     .from('core_form_response_values')
@@ -140,7 +168,7 @@ export async function ensureDraftBundle(
     }
   }
 
-  return ok({ applicationId, responseId, valueByFieldId });
+  return ok({ applicationId, responseId, writeOrganisationId, valueByFieldId });
 }
 
 async function deleteDraftValueRow(

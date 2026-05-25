@@ -1,96 +1,73 @@
 import { describe, expect, it } from 'vitest';
 import {
-  distinctEligibleEventIds,
-  isDashboardEligibleForm,
+  buildFormResponseOpenByEventId,
+  distinctListedEventIds,
+  isDashboardListedForm,
+  isFormResponseWindowOpen,
 } from '@/shared/lib/dashboardEventVisibility';
 
 const now = new Date('2025-06-15T12:00:00.000Z');
 
-describe('isDashboardEligibleForm', () => {
+describe('isDashboardListedForm', () => {
   it('requires published status', () => {
     expect(
-      isDashboardEligibleForm(
-        {
-          event_id: 'e1',
-          status: 'draft',
-          is_active: true,
-          opens_at: null,
-          closes_at: null,
-        },
-        now
-      )
+      isDashboardListedForm({
+        event_id: 'e1',
+        status: 'draft',
+        is_active: true,
+        opens_at: null,
+        closes_at: null,
+      })
     ).toBe(false);
     expect(
-      isDashboardEligibleForm(
-        {
-          event_id: 'e1',
-          status: 'closed',
-          is_active: true,
-          opens_at: null,
-          closes_at: null,
-        },
-        now
-      )
-    ).toBe(false);
-    expect(
-      isDashboardEligibleForm(
-        {
-          event_id: 'e1',
-          status: 'published',
-          is_active: true,
-          opens_at: null,
-          closes_at: null,
-        },
-        now
-      )
+      isDashboardListedForm({
+        event_id: 'e1',
+        status: 'published',
+        is_active: true,
+        opens_at: null,
+        closes_at: null,
+      })
     ).toBe(true);
   });
 
-  it('rejects missing event_id', () => {
+  it('rejects missing event_id and is_active false', () => {
     expect(
-      isDashboardEligibleForm(
-        {
-          event_id: null,
-          status: 'published',
-          is_active: true,
-          opens_at: null,
-          closes_at: null,
-        },
-        now
-      )
+      isDashboardListedForm({
+        event_id: null,
+        status: 'published',
+        is_active: true,
+        opens_at: null,
+        closes_at: null,
+      })
+    ).toBe(false);
+    expect(
+      isDashboardListedForm({
+        event_id: 'e1',
+        status: 'published',
+        is_active: false,
+        opens_at: null,
+        closes_at: null,
+      })
     ).toBe(false);
   });
 
-  it('rejects is_active false only', () => {
+  it('lists events even when opens_at is in the future', () => {
     expect(
-      isDashboardEligibleForm(
-        {
-          event_id: 'e1',
-          status: 'published',
-          is_active: false,
-          opens_at: null,
-          closes_at: null,
-        },
-        now
-      )
-    ).toBe(false);
-    expect(
-      isDashboardEligibleForm(
-        {
-          event_id: 'e1',
-          status: 'published',
-          is_active: null,
-          opens_at: null,
-          closes_at: null,
-        },
-        now
-      )
+      isDashboardListedForm({
+        event_id: 'e1',
+        status: 'published',
+        is_active: true,
+        opens_at: '2025-06-16T12:00:00.000Z',
+        closes_at: null,
+      })
     ).toBe(true);
   });
+});
 
+describe('isFormResponseWindowOpen', () => {
   it('applies opens_at and closes_at window', () => {
     expect(
-      isDashboardEligibleForm(
+      isFormResponseWindowOpen(
         {
           event_id: 'e1',
           status: 'published',
@@ -102,7 +79,7 @@ describe('isDashboardEligibleForm', () => {
       )
     ).toBe(false);
     expect(
-      isDashboardEligibleForm(
+      isFormResponseWindowOpen(
         {
           event_id: 'e1',
           status: 'published',
@@ -114,7 +91,7 @@ describe('isDashboardEligibleForm', () => {
       )
     ).toBe(true);
     expect(
-      isDashboardEligibleForm(
+      isFormResponseWindowOpen(
         {
           event_id: 'e1',
           status: 'published',
@@ -125,74 +102,54 @@ describe('isDashboardEligibleForm', () => {
         now
       )
     ).toBe(false);
-    expect(
-      isDashboardEligibleForm(
-        {
-          event_id: 'e1',
-          status: 'published',
-          is_active: true,
-          opens_at: '2025-06-14T12:00:00.000Z',
-          closes_at: null,
-        },
-        now
-      )
-    ).toBe(true);
-  });
-
-  it('treats empty event_id string as missing', () => {
-    expect(
-      isDashboardEligibleForm(
-        {
-          event_id: '   ',
-          status: 'published',
-          is_active: true,
-          opens_at: null,
-          closes_at: null,
-        },
-        now
-      )
-    ).toBe(false);
   });
 });
 
-describe('distinctEligibleEventIds', () => {
-  it('dedupes event ids', () => {
-    const ids = distinctEligibleEventIds(
-      [
-        {
-          event_id: 'e1',
-          status: 'published',
-          is_active: true,
-          opens_at: null,
-          closes_at: null,
-        },
-        {
-          event_id: 'e1',
-          status: 'published',
-          is_active: true,
-          opens_at: null,
-          closes_at: null,
-        },
-      ],
-      now
-    );
-    expect(ids).toEqual(['e1']);
-  });
-
-  it('drops ineligible forms', () => {
+describe('distinctListedEventIds', () => {
+  it('dedupes event ids and ignores draft forms', () => {
     expect(
-      distinctEligibleEventIds(
+      distinctListedEventIds([
+        {
+          event_id: 'e1',
+          status: 'published',
+          is_active: true,
+          opens_at: null,
+          closes_at: null,
+        },
+        {
+          event_id: 'e1',
+          status: 'published',
+          is_active: true,
+          opens_at: '2099-01-01T00:00:00.000Z',
+          closes_at: null,
+        },
+        {
+          event_id: 'e2',
+          status: 'draft',
+          is_active: true,
+          opens_at: null,
+          closes_at: null,
+        },
+      ])
+    ).toEqual(['e1']);
+  });
+});
+
+describe('buildFormResponseOpenByEventId', () => {
+  it('marks events open only when a listed form is in window', () => {
+    expect(
+      buildFormResponseOpenByEventId(
         [
           {
             event_id: 'e1',
             status: 'published',
             is_active: true,
-            opens_at: null,
+            opens_at: '2099-01-01T00:00:00.000Z',
             closes_at: null,
           },
           {
             event_id: 'e2',
-            status: 'draft',
+            status: 'published',
             is_active: true,
             opens_at: null,
             closes_at: null,
@@ -200,6 +157,6 @@ describe('distinctEligibleEventIds', () => {
         ],
         now
       )
-    ).toEqual(['e1']);
+    ).toEqual({ e2: true });
   });
 });

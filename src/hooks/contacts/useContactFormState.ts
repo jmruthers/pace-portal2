@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { GroupedAdditionalContact } from '@/utils/contacts/groupAdditionalContactRows';
+import { normalizeContactPermissionType } from '@/utils/contacts/permissionTypes';
 import type { ContactFullFormValues, ContactRelationshipValues } from '@/utils/contacts/validation';
 
 export type ContactFormMode = 'create' | 'edit';
@@ -56,7 +57,7 @@ function createDraftFromContact(contact: GroupedAdditionalContact | null): Conta
     phone_number: firstPhone?.phone_number ?? '',
     phone_type_id: null,
     contact_type_id: contact?.contact_type_id != null ? String(contact.contact_type_id) : '',
-    permission_type: contact?.permission_type ?? '',
+    permission_type: normalizeContactPermissionType(contact?.permission_type) ?? 'full',
     match_person_id: contact?.contact_person_id ?? null,
     link_existing_person: false,
     create_new_from_match: false,
@@ -120,7 +121,7 @@ export function useContactFormState(input: UseContactFormStateInput): UseContact
       setDraft((prev) => ({
         ...prev,
         contact_type_id: values.contact_type_id,
-        permission_type: values.permission_type,
+        permission_type: normalizeContactPermissionType(values.permission_type) ?? 'full',
       }));
       setStep('full');
     },
@@ -128,6 +129,7 @@ export function useContactFormState(input: UseContactFormStateInput): UseContact
       setDraft((prev) => ({
         ...prev,
         ...values,
+        permission_type: normalizeContactPermissionType(values.permission_type) ?? prev.permission_type,
       }));
     },
     setCreatePathNoEmail: () => {

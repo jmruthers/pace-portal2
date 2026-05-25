@@ -90,7 +90,7 @@ vi.mock('@/components/contacts/ContactForm/MatchConfirmationStep', () => ({
 
 vi.mock('@/components/contacts/ContactForm/RelationshipFormStep', () => ({
   RelationshipFormStep: ({ onSubmit }: { onSubmit: (value: { contact_type_id: string; permission_type: string }) => void }) => (
-    <Button type="button" variant="secondary" onClick={() => onSubmit({ contact_type_id: 'ct-1', permission_type: 'view' })}>
+    <Button type="button" variant="secondary" onClick={() => onSubmit({ contact_type_id: 'ct-1', permission_type: 'full' })}>
       Relationship submit
     </Button>
   ),
@@ -123,7 +123,7 @@ vi.mock('@/components/contacts/ContactForm/FullFormStep', () => ({
           phone_number: '0400',
           phone_type_id: 1,
           contact_type_id: 'ct-1',
-          permission_type: 'view',
+          permission_type: 'notify',
         })
       }
     >
@@ -143,7 +143,7 @@ function buildBaseState(step: UseContactFormStateResult['step']): UseContactForm
       phone_number: '',
       phone_type_id: null,
       contact_type_id: 'ct-1',
-      permission_type: 'view',
+      permission_type: 'full',
       match_person_id: null,
       link_existing_person: false,
       create_new_from_match: false,
@@ -334,6 +334,7 @@ describe('ContactForm', () => {
     expect(updateMutateAsync).toHaveBeenCalledOnce();
     expect(updateMutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({
+        permissionType: 'notify',
         phoneNumber: undefined,
         phoneTypeId: undefined,
       })

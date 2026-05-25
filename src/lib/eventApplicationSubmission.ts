@@ -1,6 +1,6 @@
 /**
  * PR16 — Final event registration form submit: persists response values, creates `base_application`
- * via `app_base_application_create`, then links `core_form_responses.workflow_subject_*`.
+ * via `app_base_application_create` (which finalises the linked form response).
  */
 import {
   err,
@@ -8,18 +8,34 @@ import {
   ok,
   type ApiResult,
 } from '@solvera/pace-core/types';
-import {
-  createEventId,
-  createOrganisationId,
-} from '@solvera/pace-core/types';
+import { createEventId } from '@solvera/pace-core/types';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 import {
   ensureDraftBundle,
   persistDraftValues,
+  type DraftApplicationBundle,
 } from '@/lib/eventDraftPersistence';
 import type { CoreFormFieldRow } from '@/shared/lib/formFieldMeta';
+import type { RBACSupabaseClient } from '@solvera/pace-core/rbac';
+import { fetchRegistrationTypeIdForApplicant } from '@/lib/resolveRegistrationTypeForApplicant';
+import { mapSubmissionRpcMessage } from '@/lib/submissionRpcMessages';
+import { runRpcWithOrganisationContext } from '@/lib/submissionOrganisationContext';
+import {
+  isAlreadySubmittedParticipantMessage,
+  PARTICIPANT_ALREADY_SUBMITTED_MESSAGE,
+} from '@/lib/participantAlreadySubmittedMessage';
 
-const WORKFLOW_SUBJECT_TYPE = 'base_application';
+const DRAFT_STATUS = 'draft';
+
+type TypedClient = NonNullable<ReturnType<typeof toTypedSupabase>>;
+
+function normResponseStatus(raw: string | null | undefined): string | null {
+  if (raw == null || typeof raw !== 'string') {
+    return null;
+  }
+  const status = raw.trim().toLowerCase();
+  return status === '' ? null : status;
+}
 
 export type EventSubmissionErrorCode =
   | 'MISSING_ORG_CONTEXT'
@@ -31,7 +47,7 @@ export type EventSubmissionErrorCode =
   | 'DUPLICATE_SUBMIT_PREVENTED';
 
 export type SubmitEventApplicationInput = {
-  client: NonNullable<ReturnType<typeof toTypedSupabase>>;
+  client: TypedClient;
   actingUserId: string;
   applicantPersonId: string;
   organisationId: string;
@@ -48,7 +64,7 @@ export type SubmitEventApplicationResult = {
 };
 
 export async function fetchRegistrationTypeIdForForm(
-  client: NonNullable<ReturnType<typeof toTypedSupabase>>,
+  client: TypedClient,
   formId: string
 ): Promise<ApiResult<string>> {
   const bindingRes = await client
@@ -88,37 +104,30 @@ function mapRpcFailure(message: string): EventSubmissionErrorCode {
     m.includes('duplicate') ||
     m.includes('unique') ||
     m.includes('23505') ||
-    m.includes('already exists')
+    m.includes('already exists') ||
+    m.includes('already submitted')
   ) {
+    return 'DUPLICATE_SUBMIT_PREVENTED';
+  }
+  if (m.includes('base_application_duplicate')) {
     return 'DUPLICATE_SUBMIT_PREVENTED';
   }
   if (
     m.includes('validation_error.') ||
     m.includes('scope_denied.') ||
     m.includes('eligibility_denied.') ||
-    m.includes('authorization_error.')
+    m.includes('authorization_error.') ||
+    m.includes('base_application_')
   ) {
     return 'VALIDATION_FAILED';
   }
   return 'APPLICATION_RPC_FAILED';
 }
 
-/**
- * Persists field values, calls `app_base_application_create`, then links the form response.
- */
-export async function submitEventApplication(
+function validateSubmitInput(
   input: SubmitEventApplicationInput
-): Promise<ApiResult<SubmitEventApplicationResult>> {
-  const {
-    client,
-    actingUserId,
-    applicantPersonId,
-    organisationId,
-    eventId,
-    formId,
-    fieldRows,
-    formValues,
-  } = input;
+): ApiResult<{ eventIdTyped: ReturnType<typeof createEventId> }> {
+  const { organisationId, actingUserId, applicantPersonId, eventId } = input;
 
   if (!organisationId?.trim()) {
     return err({
@@ -133,8 +142,14 @@ export async function submitEventApplication(
     });
   }
 
-  const eventIdTyped = createEventId(eventId);
+  return ok({ eventIdTyped: createEventId(eventId) });
+}
 
+async function guardExistingApplication(
+  client: TypedClient,
+  applicantPersonId: string,
+  eventIdTyped: ReturnType<typeof createEventId>
+): Promise<ApiResult<null>> {
   const existingApp = await client
     .from('base_application')
     .select('id, status')
@@ -149,50 +164,182 @@ export async function submitEventApplication(
     });
   }
 
-  if (existingApp.data?.id) {
-    const st = (existingApp.data as { status?: string | null }).status?.trim().toLowerCase();
-    if (st && st !== 'draft') {
-      return err({
-        code: 'DUPLICATE_SUBMIT_PREVENTED',
-        message: 'You already have an application for this event.',
-      });
-    }
-    if (st === 'draft') {
-      return err({
-        code: 'APPLICATION_RPC_FAILED',
-        message:
-          'This form is linked to an older draft that cannot be submitted automatically. Please contact support for assistance.',
-      });
-    }
+  if (!existingApp.data?.id) {
+    return ok(null);
   }
 
-  const bundleRes = await ensureDraftBundle(
+  const st = (existingApp.data as { status?: string | null }).status?.trim().toLowerCase();
+  if (st && st !== DRAFT_STATUS) {
+    return err({
+      code: 'DUPLICATE_SUBMIT_PREVENTED',
+      message: PARTICIPANT_ALREADY_SUBMITTED_MESSAGE,
+    });
+  }
+  if (st === DRAFT_STATUS) {
+    return err({
+      code: 'APPLICATION_RPC_FAILED',
+      message:
+        'This form is linked to an older draft that cannot be submitted automatically. Please contact support for assistance.',
+    });
+  }
+
+  return ok(null);
+}
+
+async function resolveSubmitDraftBundle(
+  client: TypedClient,
+  applicantPersonId: string,
+  eventId: string,
+  formId: string
+): Promise<ApiResult<DraftApplicationBundle>> {
+  const bundleRes = await ensureDraftBundle(client, applicantPersonId, eventId, formId);
+  if (isOk(bundleRes)) {
+    return bundleRes;
+  }
+
+  if (
+    bundleRes.error.code === 'APPLICATION_NOT_DRAFT' ||
+    bundleRes.error.code === 'APPLICATION_ALREADY_SUBMITTED' ||
+    isAlreadySubmittedParticipantMessage(bundleRes.error.message)
+  ) {
+    return err({
+      code: 'DUPLICATE_SUBMIT_PREVENTED',
+      message: PARTICIPANT_ALREADY_SUBMITTED_MESSAGE,
+    });
+  }
+
+  return err({
+    code: 'VALIDATION_FAILED',
+    message: bundleRes.error.message ?? 'Could not prepare this form for submission.',
+  });
+}
+
+async function guardResponseNotSubmitted(
+  client: TypedClient,
+  responseId: string
+): Promise<ApiResult<null>> {
+  const responseStatusRes = await client
+    .from('core_form_responses')
+    .select('status')
+    .eq('id', responseId)
+    .maybeSingle();
+
+  if (responseStatusRes.error) {
+    return err({
+      code: 'VALIDATION_FAILED',
+      message: responseStatusRes.error.message ?? 'Could not verify form response state.',
+    });
+  }
+
+  if (normResponseStatus((responseStatusRes.data as { status?: string | null } | null)?.status) === 'submitted') {
+    return err({
+      code: 'DUPLICATE_SUBMIT_PREVENTED',
+      message: PARTICIPANT_ALREADY_SUBMITTED_MESSAGE,
+    });
+  }
+
+  return ok(null);
+}
+
+async function runApplicationCreateRpc(args: {
+  client: TypedClient;
+  writeOrganisationId: string;
+  eventId: string;
+  applicantPersonId: string;
+  registrationTypeId: string;
+  formId: string;
+  responseId: string;
+  actingUserId: string;
+}): Promise<ApiResult<string>> {
+  const {
+    client,
+    writeOrganisationId,
+    eventId,
+    applicantPersonId,
+    registrationTypeId,
+    formId,
+    responseId,
+    actingUserId,
+  } = args;
+
+  const rpcRes = await runRpcWithOrganisationContext(
+    client as unknown as RBACSupabaseClient,
+    writeOrganisationId,
+    eventId,
+    'app_base_application_create',
+    {
+      p_event_id: eventId,
+      p_person_id: applicantPersonId,
+      p_registration_type_id: registrationTypeId,
+      p_organisation_id: writeOrganisationId,
+      p_form_id: formId,
+      p_form_response_id: responseId,
+      p_user_id: actingUserId,
+    }
+  );
+
+  if (rpcRes.error) {
+    const rawMessage = rpcRes.error.message ?? 'Application could not be created.';
+    const msg = mapSubmissionRpcMessage(rawMessage);
+    return err({
+      code: mapRpcFailure(rawMessage),
+      message: msg,
+    });
+  }
+  if (rpcRes.data == null || rpcRes.data === '') {
+    return err({
+      code: 'APPLICATION_RPC_FAILED',
+      message: 'Application could not be created.',
+    });
+  }
+
+  return ok(String(rpcRes.data));
+}
+
+/**
+ * Persists field values, then calls `app_base_application_create` with `p_form_response_id`.
+ */
+export async function submitEventApplication(
+  input: SubmitEventApplicationInput
+): Promise<ApiResult<SubmitEventApplicationResult>> {
+  const validated = validateSubmitInput(input);
+  if (!isOk(validated)) {
+    return validated;
+  }
+
+  const {
     client,
     actingUserId,
     applicantPersonId,
-    organisationId,
     eventId,
-    formId
-  );
-  if (!isOk(bundleRes)) {
-    if (bundleRes.error.code === 'APPLICATION_NOT_DRAFT') {
-      return err({
-        code: 'DUPLICATE_SUBMIT_PREVENTED',
-        message: bundleRes.error.message ?? 'This application was already submitted.',
-      });
-    }
-    return err({
-      code: 'VALIDATION_FAILED',
-      message: bundleRes.error.message ?? 'Could not prepare this form for submission.',
-    });
+    formId,
+    fieldRows,
+    formValues,
+  } = input;
+  const { eventIdTyped } = validated.data;
+
+  const existingGuard = await guardExistingApplication(client, applicantPersonId, eventIdTyped);
+  if (!isOk(existingGuard)) {
+    return existingGuard;
   }
-  const { responseId } = bundleRes.data;
+
+  const bundleRes = await resolveSubmitDraftBundle(client, applicantPersonId, eventId, formId);
+  if (!isOk(bundleRes)) {
+    return bundleRes;
+  }
+
+  const { responseId, writeOrganisationId } = bundleRes.data;
+
+  const responseGuard = await guardResponseNotSubmitted(client, responseId);
+  if (!isOk(responseGuard)) {
+    return responseGuard;
+  }
 
   const dynamic = stripConfirmations(formValues);
 
   const persistRes1 = await persistDraftValues(
     client,
-    organisationId,
+    writeOrganisationId,
     responseId,
     fieldRows,
     dynamic
@@ -204,60 +351,29 @@ export async function submitEventApplication(
     });
   }
 
-  const regTypeRes = await fetchRegistrationTypeIdForForm(client, formId);
+  const regTypeRes = await fetchRegistrationTypeIdForApplicant(
+    client,
+    formId,
+    applicantPersonId,
+    writeOrganisationId
+  );
   if (!isOk(regTypeRes)) {
     return regTypeRes as ApiResult<never>;
   }
-  const registrationTypeId = regTypeRes.data;
 
-  const rpcRes = await client.rpc('app_base_application_create', {
-    p_event_id: eventId,
-    p_person_id: applicantPersonId,
-    p_registration_type_id: registrationTypeId,
-    p_organisation_id: organisationId,
-    p_form_id: formId,
-    p_form_response_id: responseId,
-    p_user_id: actingUserId,
+  const applicationRes = await runApplicationCreateRpc({
+    client,
+    writeOrganisationId,
+    eventId,
+    applicantPersonId,
+    registrationTypeId: regTypeRes.data,
+    formId,
+    responseId,
+    actingUserId,
   });
-
-  if (rpcRes.error) {
-    const msg = rpcRes.error.message ?? 'Application could not be created.';
-    return err({
-      code: mapRpcFailure(msg),
-      message: msg,
-    });
-  }
-  if (rpcRes.data == null || rpcRes.data === '') {
-    return err({
-      code: 'APPLICATION_RPC_FAILED',
-      message: 'Application could not be created.',
-    });
+  if (!isOk(applicationRes)) {
+    return applicationRes;
   }
 
-  const applicationId = String(rpcRes.data);
-  const now = new Date().toISOString();
-  const orgIdTyped = createOrganisationId(organisationId);
-
-  const up = await client
-    .from('core_form_responses')
-    .update({
-      workflow_subject_type: WORKFLOW_SUBJECT_TYPE,
-      workflow_subject_id: applicationId,
-      status: 'submitted',
-      submitted_at: now,
-      organisation_id: orgIdTyped,
-      updated_at: now,
-    })
-    .eq('id', responseId);
-
-  if (up.error) {
-    /** Orphan UX note: `app_base_application_create` already persisted `base_application`; client cannot roll back RPC. User retries via support if needed. */
-    return err({
-      code: 'PARTIAL_PERSISTENCE',
-      message:
-        'Your application was created but the form response could not be finalised. Please retry or contact support.',
-    });
-  }
-
-  return ok({ applicationId, responseId });
+  return ok({ applicationId: applicationRes.data, responseId });
 }

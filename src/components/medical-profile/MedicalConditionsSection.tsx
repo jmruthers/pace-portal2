@@ -13,6 +13,7 @@ import {
   Dialog,
   DialogBody,
   DialogContent,
+  DialogFooter,
   DialogPortal,
   FileDisplay,
 } from '@solvera/pace-core/components';
@@ -223,7 +224,9 @@ export function MedicalConditionsSection({
                   <AlertDescription>{deleteError}</AlertDescription>
                 </Alert>
               ) : null}
-              <section className="grid gap-2 md:grid-cols-2">
+            </DialogBody>
+            <DialogFooter className="border-t border-border">
+              <fieldset className="m-0 w-full border-0 p-0 text-right">
                 <Button
                   type="button"
                   variant="secondary"
@@ -233,7 +236,7 @@ export function MedicalConditionsSection({
                   }}
                 >
                   Cancel
-                </Button>
+                </Button>{' '}
                 <Button
                   type="button"
                   variant="destructive"
@@ -254,8 +257,8 @@ export function MedicalConditionsSection({
                 >
                   Delete
                 </Button>
-              </section>
-            </DialogBody>
+              </fieldset>
+            </DialogFooter>
           </DialogContent>
         </DialogPortal>
       </Dialog>

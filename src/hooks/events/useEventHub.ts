@@ -14,7 +14,7 @@ import { isReservedEventSlug } from '@/routing/eventFormPaths';
 import { toTypedSupabase } from '@/lib/supabase-typed';
 import {
   type FormRowForDashboardVisibility,
-  isDashboardEligibleForm,
+  isFormResponseWindowOpen,
 } from '@/shared/lib/dashboardEventVisibility';
 import {
   fetchCurrentPersonMember,
@@ -44,7 +44,7 @@ export type EventHubData = {
   event: EventRowFull;
   applicationStatus: string | null;
   eligibleFormLinks: Array<Pick<EventHubFormRow, 'slug' | 'title' | 'name' | 'sort_order'>>;
-  /** True when published forms exist but none pass `isDashboardEligibleForm` at `now` */
+  /** True when published forms exist but none accept responses at `now` */
   inactiveFormWindow: boolean;
   /** True when member has no `core_person` in selected org — hub omits personalised application badge */
   needsProfileSetup: boolean;
@@ -204,9 +204,9 @@ export async function fetchEventHub(
     const now = new Date();
 
     const inactiveFormWindow =
-      published.length > 0 && !published.some((f) => isDashboardEligibleForm(eligibilityShape(f), now));
+      published.length > 0 && !published.some((f) => isFormResponseWindowOpen(eligibilityShape(f), now));
 
-    const eligibleForms = [...published].filter((f) => isDashboardEligibleForm(eligibilityShape(f), now));
+    const eligibleForms = [...published].filter((f) => isFormResponseWindowOpen(eligibilityShape(f), now));
 
     eligibleForms.sort(
       (a, b) => (Number(a.sort_order ?? 0) || 0) - (Number(b.sort_order ?? 0) || 0)

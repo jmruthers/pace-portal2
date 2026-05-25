@@ -8,8 +8,6 @@ import {
   Card,
   CardContent,
   CardFooter,
-  CardHeader,
-  CardTitle,
   Form,
   LoadingSpinner,
 } from '@solvera/pace-core/components';
@@ -23,11 +21,15 @@ import {
   createEventFormFieldRegistry,
   type EventFormRegistry,
 } from '@/shared/lib/formFieldRegistry';
+import { ApplicationEventHeader } from '@/components/events/ApplicationEventHeader';
+import type { EventFormPresentation } from '@/lib/eventFormDisplayContext';
 
 export type FormRendererProps = {
   eventTitle: string;
   formTitle: string;
   formDescription: string | null;
+  /** When set (event application routes), renders logo and event configuration above the form. */
+  eventPresentation?: EventFormPresentation | null;
   fieldMetas: FormFieldMeta[];
   confirmationKeys: string[];
   personId: string | null;
@@ -62,6 +64,7 @@ function FormRendererBody({
   eventTitle,
   formTitle,
   formDescription,
+  eventPresentation,
   fieldMetas,
   confirmationKeys,
   personId,
@@ -102,71 +105,74 @@ function FormRendererBody({
   );
 
   return (
-    <>
-      <h1>{eventTitle}</h1>
-      <h2>{formTitle}</h2>
+    <Card>
+      <CardContent className="grid gap-4">
+        {eventPresentation ? (
+          <ApplicationEventHeader formTitle={formTitle} {...eventPresentation} />
+        ) : (
+          <>
+            <h1>{eventTitle}</h1>
+            <h2>{formTitle}</h2>
+          </>
+        )}
 
-      {prefillWarning ? (
-        <Alert variant="default">
-          <AlertTitle>Prefill</AlertTitle>
-          <AlertDescription>{prefillWarning}</AlertDescription>
-        </Alert>
-      ) : null}
+        {prefillWarning ? (
+          <Alert variant="default">
+            <AlertTitle>Prefill</AlertTitle>
+            <AlertDescription>{prefillWarning}</AlertDescription>
+          </Alert>
+        ) : null}
 
-      {hasDraftRestore && !readOnly ? (
-        <Alert variant="default">
-          <AlertTitle>Resuming your application</AlertTitle>
-          <AlertDescription>Your saved answers for this form have been restored.</AlertDescription>
-        </Alert>
-      ) : null}
+        {hasDraftRestore && !readOnly ? (
+          <Alert variant="default">
+            <AlertTitle>Resuming your application</AlertTitle>
+            <AlertDescription>Your saved answers for this form have been restored.</AlertDescription>
+          </Alert>
+        ) : null}
 
-      {readOnly ? (
-        <Alert variant="default">
-          <AlertTitle>Submitted</AlertTitle>
-          <AlertDescription>This application was submitted. You can review your answers below.</AlertDescription>
-        </Alert>
-      ) : null}
+        {readOnly ? (
+          <Alert variant="default">
+            <AlertTitle>Submitted</AlertTitle>
+            <AlertDescription>This application was submitted. You can review your answers below.</AlertDescription>
+          </Alert>
+        ) : null}
 
-      {readOnly && participantProgressAction ? participantProgressAction : null}
+        {readOnly && participantProgressAction ? participantProgressAction : null}
 
-      {formDescription ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>About this form</CardTitle>
-          </CardHeader>
-          <CardContent>
+        {formDescription ? (
+          <section aria-label="About this form" className="grid gap-2">
+            <h3>About this form</h3>
             <p>{formDescription}</p>
-          </CardContent>
-        </Card>
-      ) : null}
+          </section>
+        ) : null}
 
-      {readOnly && confirmationKeys.length > 0 ? (
-        <Alert variant="default">
-          <AlertTitle>Confirmations</AlertTitle>
-          <AlertDescription>
-            Pre-submission requirements you acknowledged are on record. Review your answers below.
-          </AlertDescription>
-        </Alert>
-      ) : null}
+        {readOnly && confirmationKeys.length > 0 ? (
+          <Alert variant="default">
+            <AlertTitle>Confirmations</AlertTitle>
+            <AlertDescription>
+              Pre-submission requirements you acknowledged are on record. Review your answers below.
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
-      {!readOnly && confirmationKeys.length > 0 ? (
-        <FormRendererConfirmations
-          confirmationKeys={confirmationKeys}
-          personId={personId}
-          memberId={memberId}
-          personFirstName={personFirstName}
-          personLastName={personLastName}
-          personEmail={personEmail}
-          form={form}
-        />
-      ) : null}
+        {!readOnly && confirmationKeys.length > 0 ? (
+          <FormRendererConfirmations
+            confirmationKeys={confirmationKeys}
+            personId={personId}
+            memberId={memberId}
+            personFirstName={personFirstName}
+            personLastName={personLastName}
+            personEmail={personEmail}
+            form={form}
+          />
+        ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Form fields</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <fieldset disabled={readOnly} className="min-w-0 border-0 p-0 m-0 grid gap-4">
+        <h3>Form questions</h3>
+        <fieldset
+          aria-label="Form fields"
+          disabled={readOnly}
+          className="min-w-0 border-0 p-0 m-0 grid gap-4"
+        >
           {isDraftHydrating ? (
             <section className="grid place-items-center py-4" aria-busy="true">
               <LoadingSpinner label="Loading draft…" />
@@ -183,28 +189,27 @@ function FormRendererBody({
               })}
             </Fragment>
           ))}
+        </fieldset>
 
-          </fieldset>
+        {saveDraftError ? (
+          <Alert variant="destructive">
+            <AlertTitle>Draft save</AlertTitle>
+            <AlertDescription>{saveDraftError}</AlertDescription>
+          </Alert>
+        ) : null}
 
-          {saveDraftError ? (
-            <Alert variant="destructive">
-              <AlertTitle>Draft save</AlertTitle>
-              <AlertDescription>{saveDraftError}</AlertDescription>
-            </Alert>
-          ) : null}
+        {submitError ? (
+          <Alert variant="destructive">
+            <AlertTitle>Submit</AlertTitle>
+            <AlertDescription>{submitError}</AlertDescription>
+          </Alert>
+        ) : null}
 
-          {submitError ? (
-            <Alert variant="destructive">
-              <AlertTitle>Submit</AlertTitle>
-              <AlertDescription>{submitError}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          <output aria-live="polite" className="grid min-h-0">
-            {isSavingDraft && !saveDraftError ? <LoadingSpinner label="Saving draft…" /> : null}
-          </output>
-        </CardContent>
-        {!readOnly ? (
+        <output aria-live="polite" className="grid min-h-0">
+          {isSavingDraft && !saveDraftError ? <LoadingSpinner label="Saving draft…" /> : null}
+        </output>
+      </CardContent>
+      {!readOnly ? (
         <CardFooter className="text-right">
           <Button
             type="submit"
@@ -216,9 +221,8 @@ function FormRendererBody({
             {isSubmitting ? 'Submitting…' : 'Submit'}
           </Button>
         </CardFooter>
-        ) : null}
-      </Card>
-    </>
+      ) : null}
+    </Card>
   );
 }
 
@@ -257,16 +261,20 @@ export function FormRenderer(props: FormRendererProps) {
 
   if (draftHydrateError && !props.readOnly) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>Form</AlertTitle>
-        <AlertDescription>{draftHydrateError}</AlertDescription>
-      </Alert>
+      <Card>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertTitle>Form</AlertTitle>
+            <AlertDescription>{draftHydrateError}</AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <Form
-      className="grid max-w-(--app-width) gap-4"
+      className="grid w-full gap-4"
       schema={fullSchema}
       defaultValues={defaultValues}
       mode="onSubmit"

@@ -48,14 +48,7 @@ export function useDraftApplication(
       if (!client || !actingUserId || !applicantPersonId || !organisationId || !eventId || !formId) {
         return err({ code: 'DRAFT_CONTEXT', message: 'Draft requires full context.' });
       }
-      return ensureDraftBundle(
-        client,
-        actingUserId,
-        applicantPersonId,
-        organisationId,
-        eventId,
-        formId
-      );
+      return ensureDraftBundle(client, applicantPersonId, eventId, formId);
     },
   });
 
@@ -68,10 +61,11 @@ export function useDraftApplication(
   const saveMutation = useMutation({
     mutationFn: async (dynamicValues: Record<string, unknown>) => {
       const rid = bundleRef.current?.responseId;
-      if (!client || !organisationId || !rid) {
+      const writeOrgId = bundleRef.current?.writeOrganisationId;
+      if (!client || !writeOrgId || !rid) {
         throw new Error('Cannot save draft.');
       }
-      const r = await persistDraftValues(client, organisationId, rid, fieldRows, dynamicValues);
+      const r = await persistDraftValues(client, writeOrgId, rid, fieldRows, dynamicValues);
       if (!isOk(r)) {
         throw new Error(r.error.message);
       }

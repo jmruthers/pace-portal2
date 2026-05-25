@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   CardContent,
+  CardFooter,
   CardHeader,
   CardTitle,
   Checkbox,
@@ -147,16 +148,8 @@ function MedicalProfileFormInner({
 
   return (
     <article className="grid gap-6">
-      <section className="grid gap-4 md:grid-cols-[1fr_auto] md:items-start">
-        <h1>Medical profile</h1>
-        <fieldset className="text-right">
-          <Button type="submit" variant="default" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving…' : 'Save medical profile'}
-          </Button>
-        </fieldset>
-      </section>
-
       <section className="grid gap-2" aria-label="Medical profile completion">
+        <h1>Medical profile</h1>
         <p>Medical profile completion</p>
         <Progress value={pct} max={100} />
       </section>
@@ -273,11 +266,16 @@ function MedicalProfileFormInner({
         </CardContent>
       </Card>
 
-      <fieldset className="text-right">
-        <Button type="submit" variant="default" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving…' : 'Save medical profile'}
-        </Button>
-      </fieldset>
+      <Card>
+        <CardContent>
+          <p>Save your changes before leaving this page.</p>
+        </CardContent>
+        <CardFooter className="text-right">
+          <Button type="submit" variant="default" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving…' : 'Save medical profile'}
+          </Button>
+        </CardFooter>
+      </Card>
 
       <MedicalConditionsSection
         conditions={conditions}

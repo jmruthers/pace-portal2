@@ -32,6 +32,17 @@ describe('useContactFormState', () => {
     expect(result.current.step).toBe('full');
     expect(result.current.draft.first_name).toBe('Sam');
     expect(result.current.draft.contact_type_id).toBe('ct-1');
+    expect(result.current.draft.permission_type).toBe('full');
+  });
+
+  it('normalizes legacy view permission to full in edit draft', () => {
+    const { result } = renderHook(() =>
+      useContactFormState({
+        mode: 'edit',
+        initialContact: { ...existingContact, permission_type: 'view' },
+      })
+    );
+    expect(result.current.draft.permission_type).toBe('full');
   });
 
   it('moves through match to relationship when link existing is chosen', () => {
@@ -125,12 +136,12 @@ describe('useContactFormState', () => {
     act(() => {
       result.current.applyRelationship({
         contact_type_id: 'ct-1',
-        permission_type: 'edit',
+        permission_type: 'notify',
       });
     });
     expect(result.current.step).toBe('full');
     expect(result.current.draft.contact_type_id).toBe('ct-1');
-    expect(result.current.draft.permission_type).toBe('edit');
+    expect(result.current.draft.permission_type).toBe('notify');
 
     act(() => {
       result.current.applyFullValues({
@@ -141,10 +152,11 @@ describe('useContactFormState', () => {
         phone_number: '0400',
         phone_type_id: 1,
         contact_type_id: 'ct-1',
-        permission_type: 'edit',
+        permission_type: 'none',
       });
     });
     expect(result.current.draft.first_name).toBe('Alex');
+    expect(result.current.draft.permission_type).toBe('none');
     expect(result.current.draft.email).toBe('alex@example.com');
   });
 

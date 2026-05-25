@@ -190,10 +190,6 @@ const minimalMember = {
 };
 
 describe('FormFillPage', () => {
-  async function clickStart(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(await screen.findByRole('button', { name: /^start$/i }));
-  }
-
   beforeEach(() => {
     vi.clearAllMocks();
     mockNavigate.mockClear();
@@ -268,13 +264,6 @@ describe('FormFillPage', () => {
     });
   });
 
-  it('shows sign-in handoff copy when unauthenticated', () => {
-    authState.isAuthenticated = false;
-    authState.user = null;
-    renderPage();
-    expect(screen.getByText(/redirecting to sign in/i)).toBeInTheDocument();
-  });
-
   it('requires organisation context', () => {
     orgState.selectedOrganisation = null;
     renderPage();
@@ -303,7 +292,6 @@ describe('FormFillPage', () => {
       isError: false,
     });
     renderPage();
-    await clickStart(userEvent.setup());
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
   });
 
@@ -394,13 +382,14 @@ describe('FormFillPage', () => {
     expect(screen.getByRole('button', { name: /back to event/i })).toBeInTheDocument();
   });
 
-  it('shows draft hydrate error from FormRenderer', async () => {
+  it('shows read-only submitted state when draft hydrate indicates already submitted', async () => {
     useDraftMock.mockReturnValue({
       applicationId: null,
       responseId: null,
       valueByFieldId: {},
       isHydrating: false,
-      hydrateError: 'An application for this event already exists and is not a draft.',
+      hydrateError:
+        'You have already submitted an application for this event. Use Manage on the dashboard to view your application progress.',
       scheduleSaveDraft: vi.fn(),
       saveDraftNow: vi.fn().mockResolvedValue(undefined),
       isSavingDraft: false,
@@ -408,15 +397,14 @@ describe('FormFillPage', () => {
       refetchBundle: vi.fn(),
     });
     renderPage();
-    expect(
-      await screen.findByText(/an application for this event already exists/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/^Submitted$/i)).toBeInTheDocument();
+    expect(screen.getByText(/this application was submitted/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Submit' })).not.toBeInTheDocument();
   });
 
   it('shows success toast and navigates home after submit succeeds', async () => {
     const user = userEvent.setup();
     renderPage();
-    await clickStart(user);
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
     expect(submitAsync).toHaveBeenCalled();
@@ -440,7 +428,6 @@ describe('FormFillPage', () => {
     });
     const user = userEvent.setup();
     renderPage();
-    await clickStart(user);
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
     expect(toastMock).toHaveBeenCalledWith(
@@ -461,9 +448,7 @@ describe('FormFillPage', () => {
       isLoading: false,
       isError: false,
     });
-    const user = userEvent.setup();
     renderPage();
-    await clickStart(user);
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     expect(lastSubmissionInput.current?.applicantPersonId).toBe('p-proxy');
     expect(lastSubmissionInput.current?.actingUserId).toBe('user-1');
@@ -478,7 +463,6 @@ describe('FormFillPage', () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await clickStart(user);
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
     expect(toastMock).toHaveBeenCalledWith(
@@ -502,7 +486,6 @@ describe('FormFillPage', () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await clickStart(user);
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
     expect(toastMock).toHaveBeenCalledWith(
@@ -524,7 +507,6 @@ describe('FormFillPage', () => {
     );
     const user = userEvent.setup();
     renderPage();
-    await clickStart(user);
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
     expect(toastMock).toHaveBeenCalledWith(
@@ -553,7 +535,6 @@ describe('FormFillPage', () => {
     });
     const user = userEvent.setup();
     renderPage();
-    await clickStart(user);
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
     expect(saveDraftNow).toHaveBeenCalled();

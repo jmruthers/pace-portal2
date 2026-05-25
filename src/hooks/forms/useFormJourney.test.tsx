@@ -52,7 +52,7 @@ describe('useFormJourney', () => {
     fetchSubmittedMock.mockResolvedValue(ok(null));
   });
 
-  it('starts at intro when there is no draft, no submitted record, and user has not started', async () => {
+  it('starts at filling when there is no draft and no submitted record', async () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     function wrapper({ children }: { children: ReactNode }) {
       return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
@@ -69,20 +69,20 @@ describe('useFormJourney', () => {
           ready: readyEvent,
           draft: draftStub() as never,
           effectivePersonId: 'p1',
-          userStartedFilling: false,
         }),
       { wrapper }
     );
-    await waitFor(() => expect(result.current.phase).toBe('intro'));
+    await waitFor(() => expect(result.current.phase).toBe('filling'));
   });
 
-  it('moves to filling when the user has started from intro', async () => {
+  it('uses viewing phase when draft hydrate indicates already submitted', async () => {
+    fetchSubmittedMock.mockResolvedValue(ok(null));
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     function wrapper({ children }: { children: ReactNode }) {
       return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
     }
-    const { result, rerender } = renderHook(
-      (props: { started: boolean }) =>
+    const { result } = renderHook(
+      () =>
         useFormJourney({
           entry: {
             data: readyEvent,
@@ -91,14 +91,42 @@ describe('useFormJourney', () => {
             reservedSlug: false,
           },
           ready: readyEvent,
-          draft: draftStub() as never,
+          draft: draftStub({
+            hydrateError:
+              'You have already submitted an application for this event. Use Manage on the dashboard to view your application progress.',
+          }) as never,
           effectivePersonId: 'p1',
-          userStartedFilling: props.started,
         }),
-      { wrapper, initialProps: { started: false } }
+      { wrapper }
     );
-    await waitFor(() => expect(result.current.phase).toBe('intro'));
-    rerender({ started: true });
+    await waitFor(() => expect(result.current.phase).toBe('view_submitted'));
+  });
+
+  it('stays filling in proxy when hydrate error is only for the acting user', async () => {
+    fetchSubmittedMock.mockResolvedValue(ok(null));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    function wrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+    }
+    const { result } = renderHook(
+      () =>
+        useFormJourney({
+          entry: {
+            data: readyEvent,
+            isLoading: false,
+            error: null,
+            reservedSlug: false,
+          },
+          ready: readyEvent,
+          draft: draftStub({
+            hydrateError:
+              'You have already submitted an application for this event. Use Manage on the dashboard to view your application progress.',
+          }) as never,
+          effectivePersonId: 'p-target',
+          proxyActive: true,
+        }),
+      { wrapper }
+    );
     await waitFor(() => expect(result.current.phase).toBe('filling'));
   });
 
@@ -126,7 +154,6 @@ describe('useFormJourney', () => {
           ready: readyEvent,
           draft: draftStub() as never,
           effectivePersonId: 'p1',
-          userStartedFilling: false,
         }),
       { wrapper }
     );

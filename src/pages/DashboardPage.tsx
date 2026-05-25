@@ -64,6 +64,7 @@ function DashboardContent() {
       <DashboardEventSelector
         eventsByCategory={data.eventsByCategory}
         applicationStatusByEventId={data.applicationStatusByEventId}
+        formResponseOpenByEventId={data.formResponseOpenByEventId}
       />
       <LinkedProfilesSection />
     </main>

@@ -1,6 +1,23 @@
 import path from 'path';
 import { defineConfig, mergeConfig } from 'vitest/config';
 import viteConfig from './vite.config';
+import {
+  acquireCoverageLock,
+  registerCoverageLockRelease,
+} from './scripts/coverage-lock.mjs';
+
+const coverageRequested = process.argv.some(
+  (arg) => arg === '--coverage' || arg.startsWith('--coverage.')
+);
+
+if (coverageRequested) {
+  acquireCoverageLock();
+  registerCoverageLockRelease();
+}
+
+const coverageReportsDirectory = coverageRequested
+  ? `./coverage/.run-${process.pid}`
+  : './coverage';
 
 /** Extends Vite (aliases, plugins) with Vitest-only options. */
 export default mergeConfig(
@@ -23,6 +40,9 @@ export default mergeConfig(
       teardownTimeout: 5000,
       coverage: {
         provider: 'istanbul',
+        reportsDirectory: coverageReportsDirectory,
+        // Keep temp files when tests fail so a partial run does not delete `.tmp` mid-merge.
+        reportOnFailure: true,
         reporter: ['text', 'json', 'html'],
         include: ['src/**/*.{ts,tsx}'],
         exclude: [

@@ -1,9 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import * as auth from '@solvera/pace-core';
 import * as hubHook from '@/hooks/events/useEventHub';
 import { EventHubPage } from '@/pages/events/EventHubPage';
 import type { Database } from '@/types/pace-database';
@@ -13,6 +12,8 @@ vi.mock('@solvera/pace-core/rbac', async (importOriginal) => {
   return {
     ...actual,
     useSecureSupabase: () => null,
+    PagePermissionGuard: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    AccessDenied: () => <p>Access denied</p>,
   };
 });
 
@@ -116,7 +117,6 @@ function renderUnderRoute(options: HubSpyState & { initialEntries?: string[] }) 
 describe('EventHubPage', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(auth, 'useUnifiedAuthContext').mockReturnValue({ isAuthenticated: true } as never);
   });
 
   it('shows View itinerary when participant is scoped and navigates to itinerary route', async () => {
@@ -234,14 +234,5 @@ describe('EventHubPage', () => {
     await user.click(screen.getByRole('button', { name: /Back to dashboard/i }));
     expect(router.state.location.pathname).toBe('/');
     expect(screen.getByTestId('home-route')).toBeInTheDocument();
-  });
-
-  it('redirects unauthenticated users toward sign-in copy', async () => {
-    vi.spyOn(auth, 'useUnifiedAuthContext').mockReturnValue({ isAuthenticated: false } as never);
-    renderUnderRoute({ data: undefined });
-    await waitFor(() => {
-      expect(screen.getByTestId('login-route')).toBeInTheDocument();
-    });
-    expect(screen.getByTestId('login-route').textContent).toMatch(/Login/i);
   });
 });

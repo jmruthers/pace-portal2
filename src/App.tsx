@@ -157,14 +157,14 @@ export default function App() {
                 <Route path="my-memberships" element={<MyMembershipsPage />} />
                 <Route path="profile/view/:memberId" element={<ProfileViewPage />} />
                 <Route path="profile/edit/:memberId" element={<ProfileEditProxyPage />} />
+                <Route path="forms/:formSlug" element={<OrgFormRoute />} />
+                <Route path=":eventSlug/application" element={<EventApplicationRoute />} />
+                <Route path=":eventSlug/applications/:applicationId" element={<EventApplicationProgressRoute />} />
+                <Route path=":eventSlug/activities" element={<EventActivityBookingRoute />} />
+                <Route path=":eventSlug/itinerary" element={<EventItineraryRoute />} />
+                <Route path=":eventSlug/:formSlug" element={<EventFormRoute />} />
+                <Route path=":eventSlug" element={<EventHubPage />} />
               </Route>
-              <Route path="forms/:formSlug" element={<OrgFormRoute />} />
-              <Route path=":eventSlug/application" element={<EventApplicationRoute />} />
-              <Route path=":eventSlug/applications/:applicationId" element={<EventApplicationProgressRoute />} />
-              <Route path=":eventSlug/activities" element={<EventActivityBookingRoute />} />
-              <Route path=":eventSlug/itinerary" element={<EventItineraryRoute />} />
-              <Route path=":eventSlug/:formSlug" element={<EventFormRoute />} />
-              <Route path=":eventSlug" element={<EventHubPage />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFoundPage />} />

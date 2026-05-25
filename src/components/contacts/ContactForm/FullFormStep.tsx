@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@solvera/pace-core/components';
 import type { ContactTypeOption } from '@/components/contacts/ContactForm/RelationshipFormStep';
+import type { ContactPermissionOption } from '@/utils/contacts/permissionTypes';
 import {
   contactFullFormSchema,
   type ContactFullFormValues,
@@ -32,7 +33,7 @@ export type FullFormStepProps = {
   mode: 'create' | 'edit';
   contactTypes: ReadonlyArray<ContactTypeOption>;
   phoneTypes: ReadonlyArray<PhoneTypeOption>;
-  permissionOptions: ReadonlyArray<string>;
+  permissionOptions: ReadonlyArray<ContactPermissionOption>;
   defaultValues: ContactFullFormValues;
   canBack: boolean;
   isLinkExistingPerson: boolean;
@@ -61,15 +62,19 @@ export function FullFormStep({
     mode: 'onBlur',
   });
 
+  const defaultValuesKey = JSON.stringify(defaultValues);
+
   useEffect(() => {
     form.reset(defaultValues);
-  }, [defaultValues, form]);
+  }, [defaultValuesKey, defaultValues, form]);
 
   const selectedContactTypeId = form.watch('contact_type_id');
   const selectedPermissionType = form.watch('permission_type');
   const selectedPhoneTypeId = form.watch('phone_type_id');
   const selectedContactTypeLabel = contactTypes.find((option) => option.id === selectedContactTypeId)?.name;
-  const selectedPermissionLabel = permissionOptions.find((option) => option === selectedPermissionType);
+  const selectedPermissionLabel = permissionOptions.find(
+    (option) => option.value === selectedPermissionType
+  )?.label;
   const selectedPhoneTypeLabel = phoneTypes.find((option) => option.id === selectedPhoneTypeId)?.name;
 
   return (
@@ -120,8 +125,8 @@ export function FullFormStep({
                     </SelectTrigger>
                     <SelectContent>
                       {permissionOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>

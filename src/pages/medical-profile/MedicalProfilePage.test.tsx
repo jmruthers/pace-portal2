@@ -251,7 +251,7 @@ describe('MedicalProfilePage', () => {
     expect(String(call[0])).toMatch(/member-profile/);
   });
 
-  it('submits save from bottom save button', async () => {
+  it('submits save from save button', async () => {
     const user = userEvent.setup();
     const save = vi.fn().mockResolvedValue(undefined);
     editor.mockImplementation(() => ({
@@ -309,69 +309,6 @@ describe('MedicalProfilePage', () => {
     );
 
     const buttons = screen.getAllByRole('button', { name: /save medical profile/i });
-    await user.click(buttons[buttons.length - 1]!);
-    await waitFor(() => expect(save).toHaveBeenCalled());
-  });
-
-  it('submits save from top save button', async () => {
-    const user = userEvent.setup();
-    const save = vi.fn().mockResolvedValue(undefined);
-    editor.mockImplementation(() => ({
-      organisationId: 'org-1',
-      appId: 'app-1',
-      userId: 'u1',
-      gateReady: true,
-      blockedReason: null,
-      load: {
-        data: {
-          profile: {
-            id: 'mp1',
-            person_id: 'p1',
-            created_at: null,
-            created_by: null,
-            data_retention_until: null,
-            diet_type_id: '1',
-            dietary_comments: null,
-            health_care_card_expiry: null,
-            health_care_card_number: null,
-            health_fund_name: null,
-            health_fund_number: null,
-            is_fully_immunised: false,
-            last_tetanus_date: null,
-            medicare_expiry: null,
-            medicare_number: null,
-            updated_at: null,
-            updated_by: null,
-          },
-          memberId: 'm1',
-          personId: 'p1',
-          conditions: [],
-          dietTypeNameFromRpc: null,
-        },
-        isLoading: false,
-        isError: false,
-        error: null,
-        dataUpdatedAt: 0,
-      },
-      saveMedicalProfile: save,
-      isSaving: false,
-      saveError: null,
-      supabase: null,
-      typedClient: null,
-      queryClient: {},
-    }));
-
-    const client = new QueryClient();
-    render(
-      <QueryClientProvider client={client}>
-        <MemoryRouter>
-          <MedicalProfilePage />
-        </MemoryRouter>
-      </QueryClientProvider>
-    );
-
-    const buttons = screen.getAllByRole('button', { name: /save medical profile/i });
-    expect(buttons.length).toBeGreaterThanOrEqual(2);
     await user.click(buttons[0]!);
     await waitFor(() => expect(save).toHaveBeenCalled());
   });

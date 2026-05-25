@@ -43,7 +43,22 @@ describe('formFieldMeta', () => {
     expect(
       resolveRegistryFieldType({ field_type: 'boolean' } as CoreFieldCatalogueRow, null)
     ).toBe('checkbox');
+    expect(resolveRegistryFieldType({ field_type: 'date' } as CoreFieldCatalogueRow, null)).toBe('date');
     expect(resolveRegistryFieldType(undefined, null)).toBe('text');
+  });
+
+  it('maps date_of_birth to date when catalogue resolves as text', () => {
+    const meta = buildFormFieldMeta(
+      minimalFieldRow({ field_key: 'person.date_of_birth', field_label: 'Date of birth' }),
+      buildCatalogueIndex([
+        {
+          table_name: 'core_person',
+          field_name: 'date_of_birth',
+          field_type: 'varchar',
+        } as unknown as CoreFieldCatalogueRow,
+      ])
+    );
+    expect(meta.fieldType).toBe('date');
   });
 
   it('buildConfirmationZodSchema rejects false and accepts true', () => {

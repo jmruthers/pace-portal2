@@ -44,4 +44,22 @@ describe('PortalAuthenticatedLayout', () => {
     expect(screen.getByRole('banner')).toBeTruthy();
     expect(screen.getByRole('navigation', { name: 'Application header' })).toBeTruthy();
   });
+
+  it('renders outlet content for dynamic event hub paths', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/summer-camp']}>
+          <Routes>
+            <Route element={<PortalAuthenticatedLayout />}>
+              <Route path=":eventSlug" element={<h1>Event hub child</h1>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    expect(screen.getByRole('banner')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Event hub child' })).toBeInTheDocument();
+  });
 });

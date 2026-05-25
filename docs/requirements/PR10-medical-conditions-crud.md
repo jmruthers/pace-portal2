@@ -40,7 +40,7 @@ This file is **`PR10-medical-conditions-crud.md`** — portal requirement slice 
 
 - Component layout and composition: compact condition cards in a responsive grid; add-condition CTA; edit/delete actions per card; shared modal-based condition editor containing condition fields plus action-plan display/upload.
 - States: loading, empty, validation, save, permission-denied, and stale-selection states must remain explicit.
-- Authoritative visual recipe: cards show key identity/status signals (name + badges) and attachment affordance only; remove verbose field rows from cards; render attachment link as open-in-new-tab behavior; ensure badge rows wrap and card contents remain within bounds; keep add/edit on the same modal component path.
+- Authoritative visual recipe: cards show key identity/status signals (name + badges) and attachment affordance only; remove verbose field rows from cards; render attachment link as open-in-new-tab behavior; ensure badge rows wrap and card contents remain within bounds; keep add/edit on the same modal component path; place delete-confirmation **Cancel** and **Delete** in `DialogFooter` (body holds title/alert only).
 - Globals: cite pace-core Standard 07 Part A and Part C rather than restating shared global rules.
 
 ## Verification

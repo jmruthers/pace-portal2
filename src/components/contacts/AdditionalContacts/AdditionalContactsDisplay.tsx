@@ -108,26 +108,28 @@ export function AdditionalContactsDisplay({
   }
 
   return (
-    <section className="grid gap-4" aria-label="Additional contacts content">
-      <header className="text-right">
+    <Card aria-label="Additional contacts content">
+      <CardContent className="grid gap-4">
+        <AdditionalContactsList
+          contacts={contacts}
+          onEdit={onEditContact}
+          onDelete={(id) => deleteContact.mutateAsync(id)}
+          isDeletePending={deleteContact.isPending}
+          deleteError={
+            deleteContact.isError && deleteContact.error instanceof Error
+              ? deleteContact.error.message
+              : null
+          }
+          onDeleteDialogClose={() => {
+            deleteContact.reset();
+          }}
+        />
+      </CardContent>
+      <CardFooter className="text-right">
         <Button type="button" variant="default" onClick={onAddContact}>
           Add contact
         </Button>
-      </header>
-      <AdditionalContactsList
-        contacts={contacts}
-        onEdit={onEditContact}
-        onDelete={(id) => deleteContact.mutateAsync(id)}
-        isDeletePending={deleteContact.isPending}
-        deleteError={
-          deleteContact.isError && deleteContact.error instanceof Error
-            ? deleteContact.error.message
-            : null
-        }
-        onDeleteDialogClose={() => {
-          deleteContact.reset();
-        }}
-      />
-    </section>
+      </CardFooter>
+    </Card>
   );
 }

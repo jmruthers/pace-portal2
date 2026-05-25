@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Button, LoadingSpinner } from '@solvera/pace-core/components';
+import { LoadingSpinner } from '@solvera/pace-core/components';
 import { FormRenderer } from '@/components/events/FormRenderer';
 import { useFormFieldData } from '@/hooks/events/useFormFieldData';
 import type { OrgSignupFormReady } from '@/lib/memberRequestTypes';
@@ -56,11 +56,6 @@ export function MemberRequestOrgFormStep(props: MemberRequestOrgFormStepProps) {
         {submitError ? (
           <p role="alert">{submitError}</p>
         ) : null}
-        <fieldset className="text-right">
-          <Button type="button" disabled={submitPending} onClick={() => onSubmit({})}>
-            {submitPending ? 'Submitting…' : 'Submit'}
-          </Button>
-        </fieldset>
       </section>
     );
   }

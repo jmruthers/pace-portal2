@@ -128,6 +128,19 @@ vi.mock('@/pages/events/EventHubPage', () => ({
   EventHubPage: () => <h1>Event hub surface</h1>,
 }));
 
+vi.mock('@/pages/events/EventFormRoutes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/pages/events/EventFormRoutes')>();
+  return {
+    ...actual,
+    EventApplicationRoute: () => <h1>Event application surface</h1>,
+    EventFormRoute: () => <h1>Event form surface</h1>,
+  };
+});
+
+vi.mock('@/pages/forms/OrgFormRoutes', () => ({
+  OrgFormRoute: () => <h1>Org form surface</h1>,
+}));
+
 function renderApp(initialEntry: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -215,9 +228,37 @@ describe('App shell routing (PR01)', () => {
     isAuthenticated = true;
     renderApp('/camp/itinerary');
     await waitFor(() => {
+      expect(screen.getByTestId('portal-layout')).toBeInTheDocument();
       expect(screen.getByRole('heading', { name: 'Itinerary surface' })).toBeInTheDocument();
     });
     expect(screen.queryByRole('heading', { name: 'Not found surface' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Event hub surface' })).toBeNull();
+  });
+
+  it('renders event hub inside portal layout when authenticated (PR14)', async () => {
+    isAuthenticated = true;
+    renderApp('/camp');
+    await waitFor(() => {
+      expect(screen.getByTestId('portal-layout')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Event hub surface' })).toBeInTheDocument();
+    });
+  });
+
+  it('renders event application route inside portal layout when authenticated (PR15)', async () => {
+    isAuthenticated = true;
+    renderApp('/camp/application');
+    await waitFor(() => {
+      expect(screen.getByTestId('portal-layout')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Event application surface' })).toBeInTheDocument();
+    });
+  });
+
+  it('renders org form route inside portal layout when authenticated (PR17)', async () => {
+    isAuthenticated = true;
+    renderApp('/forms/signup');
+    await waitFor(() => {
+      expect(screen.getByTestId('portal-layout')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Org form surface' })).toBeInTheDocument();
+    });
   });
 });

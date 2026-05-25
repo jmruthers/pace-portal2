@@ -14,6 +14,7 @@ import {
   Dialog,
   DialogBody,
   DialogContent,
+  DialogFooter,
   DialogPortal,
   Label,
   LoadingSpinner,
@@ -404,7 +405,12 @@ export function ActivityBookingView() {
             <DialogBody className="grid gap-4">
               <h2>Cancel booking</h2>
               <p>Are you sure you want to cancel this activity booking?</p>
-              <fieldset className="text-right">
+            </DialogBody>
+            <DialogFooter className="border-t border-border">
+              <fieldset className="m-0 w-full border-0 p-0 text-right">
+                <Button type="button" variant="secondary" onClick={() => setCancelTargetId(null)}>
+                  Keep booking
+                </Button>{' '}
                 <Button
                   type="button"
                   variant="destructive"
@@ -413,11 +419,8 @@ export function ActivityBookingView() {
                 >
                   Confirm cancellation
                 </Button>
-                <Button type="button" variant="secondary" onClick={() => setCancelTargetId(null)}>
-                  Keep booking
-                </Button>
               </fieldset>
-            </DialogBody>
+            </DialogFooter>
           </DialogContent>
         </DialogPortal>
       </Dialog>

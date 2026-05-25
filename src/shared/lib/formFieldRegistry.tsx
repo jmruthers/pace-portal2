@@ -10,6 +10,7 @@ import {
 } from '@solvera/pace-core/forms';
 import {
   Checkbox,
+  DatePickerWithTimezone,
   Label,
   Select,
   SelectContent,
@@ -33,10 +34,54 @@ function buildSelectSchema(meta: FormFieldMeta): z.ZodTypeAny {
   return meta.required === false ? base.optional() : base.min(1, 'Required');
 }
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function buildDateSchema(meta: FormFieldMeta): z.ZodTypeAny {
+  const base = z.string().regex(ISO_DATE_RE, { message: 'Use a complete date.' });
+  return meta.required === false ? z.union([base, z.literal('')]).optional() : base.min(1, 'Required');
+}
+
+function isoDateStringToDate(value: unknown): Date | null {
+  if (typeof value !== 'string') return null;
+  const t = value.trim();
+  if (!ISO_DATE_RE.test(t)) return null;
+  const [y, m, d] = t.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function dateToIsoDateString(date: Date): string {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export function createEventFormFieldRegistry() {
   return createFieldRegistry({
     entries: [
       ...createDefaultFieldRegistryEntries(),
+      {
+        fieldType: 'date',
+        buildSchema: buildDateSchema,
+        render: ({ meta, control, name }) => (
+          <Controller
+            name={name as never}
+            control={control}
+            render={({ field }) => (
+              <Label className="grid gap-1">
+                {meta.label ?? meta.id}
+                {meta.required !== false ? ' *' : null}
+                <DatePickerWithTimezone
+                  value={isoDateStringToDate(field.value)}
+                  onChange={(next) => field.onChange(dateToIsoDateString(next))}
+                  placeholder="Select date"
+                />
+              </Label>
+            )}
+          />
+        ),
+      },
       {
         fieldType: 'checkbox',
         buildSchema: buildCheckboxSchema,

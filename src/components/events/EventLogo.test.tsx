@@ -45,15 +45,15 @@ describe('EventLogo', () => {
     expect(screen.queryByText('SC')).not.toBeInTheDocument();
   });
 
-  it('renders FileDisplay when a signed URL resolves for the logo reference', () => {
+  it('renders an inline image when a signed URL resolves for the logo reference', () => {
     vi.spyOn(hooks, 'useFileDisplay').mockReturnValue({
       url: 'https://signed.example/logo.png',
       isLoading: false,
       error: null,
     });
     render(<EventLogo eventName="Summer camp" logoRef={logoRef} refsBusy={false} />);
-    expect(screen.getByRole('link', { name: /Summer camp logo/i })).toHaveAttribute(
-      'href',
+    expect(screen.getByRole('img', { name: /Summer camp logo/i })).toHaveAttribute(
+      'src',
       'https://signed.example/logo.png'
     );
   });

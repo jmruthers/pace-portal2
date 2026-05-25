@@ -7,7 +7,8 @@ export type EventDashboardAction = {
 };
 
 /**
- * PR14 dashboard event cards: derives Apply / Resume / Manage from optional `base_application.status`.
+ * PR14 dashboard event cards: derives Apply / Resume / Manage from `base_application.status`
+ * or PR16 draft `core_form_responses` saved before submit.
  */
 export function deriveEventDashboardAction(
   applicationStatus: string | null | undefined

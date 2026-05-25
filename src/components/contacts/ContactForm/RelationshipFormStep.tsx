@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@solvera/pace-core/components';
+import type { ContactPermissionOption } from '@/utils/contacts/permissionTypes';
 import {
   contactRelationshipSchema,
   type ContactRelationshipValues,
@@ -28,7 +29,7 @@ export type ContactTypeOption = {
 export type RelationshipFormStepProps = {
   email: string;
   contactTypes: ReadonlyArray<ContactTypeOption>;
-  permissionOptions: ReadonlyArray<string>;
+  permissionOptions: ReadonlyArray<ContactPermissionOption>;
   defaultValues: ContactRelationshipValues;
   onBack: () => void;
   onCancel: () => void;
@@ -50,28 +51,31 @@ export function RelationshipFormStep({
     mode: 'onBlur',
   });
 
+  const defaultValuesKey = JSON.stringify(defaultValues);
+
   useEffect(() => {
     form.reset(defaultValues);
-  }, [defaultValues, form]);
+  }, [defaultValuesKey, defaultValues, form]);
 
   const selectedContactTypeId = form.watch('contact_type_id');
   const selectedPermissionType = form.watch('permission_type');
   const contactTypeLabel = contactTypes.find((option) => option.id === selectedContactTypeId)?.name;
-  const permissionLabel = permissionOptions.find((option) => option === selectedPermissionType);
+  const permissionLabel = permissionOptions.find(
+    (option) => option.value === selectedPermissionType
+  )?.label;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Relationship details</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="grid gap-4 md:grid-cols-2" aria-label="Relationship step">
         <FormProvider {...form}>
-          <section className="grid gap-4 md:grid-cols-2" aria-label="Relationship step">
-            <article className="grid gap-1 md:col-span-2" aria-label="Email selected for contact">
-              <p>Email</p>
-              <p>{email.trim() === '' ? 'No email address' : email}</p>
-            </article>
-            <Controller
+          <article className="grid gap-1 md:col-span-2" aria-label="Email selected for contact">
+            <p>Email</p>
+            <p>{email.trim() === '' ? 'No email address' : email}</p>
+          </article>
+          <Controller
               control={form.control}
               name="contact_type_id"
               render={({ field, fieldState }) => (
@@ -111,8 +115,8 @@ export function RelationshipFormStep({
                     </SelectTrigger>
                     <SelectContent>
                       {permissionOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -123,27 +127,32 @@ export function RelationshipFormStep({
                 </Label>
               )}
             />
-          </section>
         </FormProvider>
       </CardContent>
-      <CardFooter className="grid gap-2 [grid-template-columns:1fr_1fr] md:[grid-template-columns:repeat(4,minmax(0,1fr))]">
-        <Button type="button" variant="ghost" onClick={onBack}>
-          Back
-        </Button>
-        <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          type="button"
-          variant="default"
-          onClick={() => {
-            void form.handleSubmit((values) => {
-              onSubmit(values);
-            })();
-          }}
-        >
-          Continue
-        </Button>
+      <CardFooter className="border-t border-border">
+        <fieldset className="m-0 w-full border-0 p-0 grid grid-cols-3 items-center gap-2">
+          <Button type="button" variant="ghost" onClick={onBack}>
+            Back
+          </Button>
+          <section className="grid justify-items-center">
+            <Button type="button" variant="secondary" onClick={onCancel}>
+              Cancel
+            </Button>
+          </section>
+          <section className="grid justify-items-end">
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => {
+                void form.handleSubmit((values) => {
+                  onSubmit(values);
+                })();
+              }}
+            >
+              Continue
+            </Button>
+          </section>
+        </fieldset>
       </CardFooter>
     </Card>
   );

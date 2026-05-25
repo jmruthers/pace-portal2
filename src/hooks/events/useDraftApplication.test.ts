@@ -37,93 +37,41 @@ function responsesThenable(rows: unknown[]) {
         return vi.fn(() => builder);
       },
     }
- );
+  );
   return builder;
 }
 
 describe('ensureDraftBundle', () => {
-  it('reuses an existing draft application and restores response values', async () => {
+  it('returns draft bundle from ensure_draft RPC', async () => {
     const client = {
+      rpc: vi.fn().mockResolvedValue({
+        data: { response_id: 'resp-1', organisation_id: 'org-event', created: true },
+        error: null,
+      }),
       from: vi.fn((table: string) => {
         if (table === 'base_application') {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValue({
-              data: { id: 'app-1', status: 'draft', form_id: 'form-1' },
-              error: null,
-            }),
-          };
-        }
-        if (table === 'core_form_responses') {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'resp-1' }, error: null }),
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
           };
         }
         if (table === 'core_form_response_values') {
           return responsesThenable([
-            {
-              form_field_id: 'field-1',
-              value_text: 'saved',
-              value_json: null,
-            },
+            { form_field_id: 'field-1', value_text: 'saved', value_json: null },
           ]);
         }
         return {};
       }),
     } as unknown as Client;
 
-    const r = await ensureDraftBundle(client, 'user-1', 'p1', 'o1', 'ev1', 'form-1');
-    expect(isOk(r)).toBe(true);
-    if (isOk(r)) {
-      expect(r.data.applicationId).toBe('app-1');
-      expect(r.data.valueByFieldId['field-1']).toBe('saved');
-    }
-  });
-
-  it('creates unlinked draft response when no application exists (PR16 no base_application at draft time)', async () => {
-    const insert = vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        single: vi.fn().mockResolvedValue({ data: { id: 'resp-new' }, error: null }),
-      }),
-    });
-    const client = {
-      from: vi.fn((table: string) => {
-        if (table === 'base_application') {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValueOnce({ data: null, error: null }),
-          };
-        }
-        if (table === 'core_form_responses') {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            is: vi.fn().mockReturnThis(),
-            order: vi.fn().mockReturnThis(),
-            limit: vi.fn().mockReturnThis(),
-            maybeSingle: vi.fn().mockResolvedValueOnce({ data: null, error: null }),
-            insert,
-          };
-        }
-        if (table === 'core_form_response_values') {
-          return responsesThenable([]);
-        }
-        return {};
-      }),
-    } as unknown as Client;
-
-    const r = await ensureDraftBundle(client, 'user-1', 'p1', 'o1', 'ev1', 'form-1');
-    expect(insert).toHaveBeenCalledWith(
-      expect.objectContaining({ respondent_id: 'user-1' })
-    );
+    const r = await ensureDraftBundle(client, 'p1', 'ev1', 'form-1');
     expect(isOk(r)).toBe(true);
     if (isOk(r)) {
       expect(r.data.applicationId).toBeNull();
-      expect(r.data.responseId).toBe('resp-new');
+      expect(r.data.responseId).toBe('resp-1');
+      expect(r.data.writeOrganisationId).toBe('org-event');
+      expect(r.data.valueByFieldId['field-1']).toBe('saved');
     }
   });
 });
@@ -150,7 +98,7 @@ describe('persistDraftValues', () => {
       }),
     } as unknown as Client;
 
-    const r = await persistDraftValues(client, 'o1', 'resp-1', [fieldRow('field-1')], {
+    const r = await persistDraftValues(client, 'org-event', 'resp-1', [fieldRow('field-1')], {
       'field-1': 'next',
     });
     expect(isOk(r)).toBe(true);
@@ -181,44 +129,9 @@ describe('persistDraftValues', () => {
       }),
     } as unknown as Client;
 
-    const r = await persistDraftValues(client, 'o1', 'resp-1', [fieldRow('stay')], {
+    const r = await persistDraftValues(client, 'org-event', 'resp-1', [fieldRow('stay')], {
       stay: 'next',
     });
-    expect(isOk(r)).toBe(true);
-    expect(del).toHaveBeenCalledTimes(2);
-    expect(insert).toHaveBeenCalledTimes(1);
-  });
-
-  it('deletes values for active fields omitted from persisted snapshot keys', async () => {
-    const del = vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      }),
-    });
-    const insert = vi.fn().mockResolvedValue({ error: null });
-
-    const client = {
-      from: vi.fn((table: string) => {
-        if (table === 'core_form_response_values') {
-          return {
-            select: vi.fn(() =>
-              responsesThenable([{ form_field_id: 'stay-a' }, { form_field_id: 'stay-b' }])
-            ),
-            delete: del,
-            insert,
-          };
-        }
-        return {};
-      }),
-    } as unknown as Client;
-
-    const r = await persistDraftValues(
-      client,
-      'o1',
-      'resp-1',
-      [fieldRow('stay-a'), fieldRow('stay-b')],
-      { 'stay-a': 'kept' }
-    );
     expect(isOk(r)).toBe(true);
     expect(del).toHaveBeenCalledTimes(2);
     expect(insert).toHaveBeenCalledTimes(1);

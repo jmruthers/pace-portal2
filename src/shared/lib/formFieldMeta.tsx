@@ -39,6 +39,7 @@ function normaliseCatalogueFieldType(raw: string): string {
   if (s.includes('textarea') || s.includes('text_area')) return 'textarea';
   if (s.includes('bool') || s === 'checkbox' || s === 'toggle') return 'checkbox';
   if (s.includes('address')) return 'address';
+  if (s.includes('date') || s === 'timestamp') return 'date';
   if (s.includes('select') || s.includes('enum') || s.includes('dropdown')) return 'select';
   if (s.includes('text') || s === 'string' || s === 'varchar') return 'text';
   return 'text';
@@ -54,6 +55,7 @@ function displayOptionsFieldType(opts: unknown): string | null {
   if (t === 'textarea' || c === 'textarea') return 'textarea';
   if (t === 'checkbox' || c === 'checkbox') return 'checkbox';
   if (t === 'address' || c === 'address') return 'address';
+  if (t === 'date' || c === 'date' || c === 'datepicker') return 'date';
   if (t === 'select' || c === 'select') return 'select';
   if (t === 'text' || c === 'input') return 'text';
   return null;
@@ -84,7 +86,11 @@ export function buildFormFieldMeta(
     }
   }
 
-  const fieldType = resolveRegistryFieldType(catalogue, row.display_options);
+  const fieldTypeFromCatalogue = resolveRegistryFieldType(catalogue, row.display_options);
+  const fieldType =
+    parsed?.columnPath === 'date_of_birth' && fieldTypeFromCatalogue === 'text'
+      ? 'date'
+      : fieldTypeFromCatalogue;
 
   const meta: FormFieldMeta = {
     id: row.id,

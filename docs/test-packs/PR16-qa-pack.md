@@ -8,20 +8,23 @@
 
 ## Manual frontend scenarios
 
-| scenario | route_or_screen | steps | expected_result | result | notes |
-|---|---|---|---|---|---|
-| S-01 (AC-01) | /:eventSlug/:formSlug | 1) Complete and submit an event form for a response-first draft without legacy draft base_application. | Application is created or updated through the submit path and user sees success feedback. | - | Partial: legacy draft base_application rows may return APPLICATION_RPC_FAILED until migration |
-| S-02 (AC-02) | /:eventSlug/:formSlug | 1) Submit form with valid answers. | Form response and response-value rows save successfully before or as part of final submit. | - | - |
-| S-03 (AC-03) | /:eventSlug/:formSlug | 1) Submit draft workflow. 2) Attempt duplicate submit on already-submitted application. | Draft transitions to submitted without duplicate submitted applications for response-first drafts; duplicate submit shows DUPLICATE_SUBMIT_PREVENTED style messaging. | - | Partial: legacy draft base_application path not auto-transitioned |
-| S-04 (AC-04) | /:eventSlug/:formSlug | 1) Submit event form while in proxy mode for a target person. | Submission succeeds using target person context with same success UX as self-service when valid. | - | - |
-| S-05 (AC-05) | /:eventSlug/:formSlug | 1) Attempt submit without required organisation context. | Clear error is shown; no success toast or redirect home. | - | - |
-| S-06 (AC-06) | /:eventSlug/:formSlug | 1) Trigger PARTIAL_PERSISTENCE failure scenario if reproducible. 2) Attempt double submit and retry after failure. | Destructive toast and no redirect on partial persistence; double submit does not show false success or duplicate submitted applications. | - | PARTIAL_PERSISTENCE: orphan base_application possible after RPC success per requirement |
-| S-07 (Verification) | /:eventSlug/:formSlug | 1) Submit valid form end-to-end. | Success toast appears and user is redirected to /. | - | - |
-| S-08 (Verification) | /:eventSlug/:formSlug | 1) Rapidly double-click submit on happy path. | Only one submitted application outcome is presented to the user without duplicate success navigation. | - | - |
+
+| scenario            | route_or_screen       | steps                                                                                                              | expected_result                                                                                                                                                       | result | notes                                                                                         |
+| ------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------- |
+| S-01 (AC-01)        | /:eventSlug/:formSlug | 1) Complete and submit an event form for a response-first draft without legacy draft base_application.             | Application is created or updated through the submit path and user sees success feedback.                                                                             | Pass   | Partial: legacy draft base_application rows may return APPLICATION_RPC_FAILED until migration |
+| S-02 (AC-02)        | /:eventSlug/:formSlug | 1) Submit form with valid answers.                                                                                 | Form response and response-value rows save successfully before or as part of final submit.                                                                            | Pass   | -                                                                                             |
+| S-03 (AC-03)        | /:eventSlug/:formSlug | 1) Submit draft workflow. 2) Attempt duplicate submit on already-submitted application.                            | Draft transitions to submitted without duplicate submitted applications for response-first drafts; duplicate submit shows DUPLICATE_SUBMIT_PREVENTED style messaging. | Pass   | Partial: legacy draft base_application path not auto-transitioned                             |
+| S-04 (AC-04)        | /:eventSlug/:formSlug | 1) Submit event form while in proxy mode for a target person.                                                      | Submission succeeds using target person context with same success UX as self-service when valid.                                                                      | Pass   | -                                                                                             |
+| S-05 (AC-05)        | /:eventSlug/:formSlug | 1) Attempt submit without required organisation context.                                                           | Clear error is shown; no success toast or redirect home.                                                                                                              | Pass   | -                                                                                             |
+| S-06 (AC-06)        | /:eventSlug/:formSlug | 1) Trigger PARTIAL_PERSISTENCE failure scenario if reproducible. 2) Attempt double submit and retry after failure. | Destructive toast and no redirect on partial persistence; double submit does not show false success or duplicate submitted applications.                              | Pass   | PARTIAL_PERSISTENCE: orphan base_application possible after RPC success per requirement       |
+| S-07 (Verification) | /:eventSlug/:formSlug | 1) Submit valid form end-to-end.                                                                                   | Success toast appears and user is redirected to /.                                                                                                                    | Pass   | -                                                                                             |
+| S-08 (Verification) | /:eventSlug/:formSlug | 1) Rapidly double-click submit on happy path.                                                                      | Only one submitted application outcome is presented to the user without duplicate success navigation.                                                                 | Pass   | -                                                                                             |
+
 
 ## Test run summary
 
-- overall result: -
-- failed scenarios: -
-- defect links: -
-- retest needed: -
+- overall result: Pass
+- failed scenarios: None (S-01 through S-08 all Pass)
+- defect links: None for this run. Known partial scope (documented in scenario notes): legacy draft `base_application` auto-transition (S-01, S-03); orphan `base_application` after RPC success edge case (S-06). Proxy delegated submit verified (S-04) after PORTAL-DB-005 applicant-person and delegated-permission migrations.
+- retest needed: No for PR16 sign-off on response-first draft and proxy paths. Retest when legacy draft `base_application` migration or BA05a transition path is delivered (S-01, S-03 partial items).
+

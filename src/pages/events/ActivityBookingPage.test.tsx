@@ -147,13 +147,6 @@ describe('ActivityBookingPage', () => {
     ],
   });
 
-  it('redirects unauthenticated visitors to login with return URL', () => {
-    authState.isAuthenticated = false;
-    stubVm({ phase: 'loading' });
-    renderPage();
-    expect(screen.getByText(/redirecting to sign in/i)).toBeInTheDocument();
-  });
-
   it('renders browse and bookings when ready', () => {
     stubVm({ phase: 'ready', data: readyData() });
     renderPage();

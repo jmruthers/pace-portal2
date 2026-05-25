@@ -5,12 +5,6 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
-  Button,
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
 } from '@solvera/pace-core/components';
 import { isOk } from '@solvera/pace-core/types';
 import type { FormFieldMeta } from '@solvera/pace-core/forms';
@@ -18,6 +12,7 @@ import { FormRenderer } from '@/components/events/FormRenderer';
 import type { FormEntrypoint } from '@/lib/formEntrypointResolution';
 import type { FormJourneyReady } from '@/hooks/forms/useFormEntrypoint';
 import type { FormJourneyPhase } from '@/hooks/forms/useFormJourney';
+import type { EventFormPresentation } from '@/lib/eventFormDisplayContext';
 import {
   mapSubmissionErrorToToast,
   useApplicationSubmission,
@@ -74,7 +69,7 @@ type JourneyFillProps = {
   phase: FormJourneyPhase;
   submittedSnapshot: SubmittedRegistrationSnapshot | null;
   userId: string;
-  organisationId: string;
+  writeOrganisationId: string;
   effectivePersonId: string;
   memberId: string | null;
   displayPerson: {
@@ -88,7 +83,7 @@ type JourneyFillProps = {
   prefillWarning: string | null;
   fieldDataLoading: boolean;
   draft: ReturnType<typeof useDraftApplication>;
-  onStart: () => void;
+  eventPresentation: EventFormPresentation | null;
 };
 
 export function FormJourneyFillReady({
@@ -97,7 +92,7 @@ export function FormJourneyFillReady({
   phase,
   submittedSnapshot,
   userId,
-  organisationId,
+  writeOrganisationId,
   effectivePersonId,
   memberId,
   displayPerson,
@@ -107,7 +102,7 @@ export function FormJourneyFillReady({
   prefillWarning,
   fieldDataLoading,
   draft,
-  onStart,
+  eventPresentation,
 }: JourneyFillProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -123,12 +118,12 @@ export function FormJourneyFillReady({
     () => ({
       actingUserId: userId,
       applicantPersonId: effectivePersonId,
-      organisationId,
+      organisationId: writeOrganisationId,
       eventId: ctx.eventId!,
       formId: ctx.form.id,
       fieldRows: ctx.fieldRows,
     }),
-    [userId, effectivePersonId, organisationId, ctx.eventId, ctx.form.id, ctx.fieldRows]
+    [userId, effectivePersonId, writeOrganisationId, ctx.eventId, ctx.form.id, ctx.fieldRows]
   );
 
   const submission = useApplicationSubmission(
@@ -186,36 +181,6 @@ export function FormJourneyFillReady({
   const draftHydrateForRenderer = readOnly ? null : draft.hydrateError;
   const scheduleNoop = useCallback(() => {}, []);
 
-  if (phase === 'intro') {
-    return (
-      <>
-        <Card>
-          <CardHeader>
-            <CardTitle>{ctx.form.title ?? ctx.form.name}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {ctx.form.description ? (
-              <p>{ctx.form.description}</p>
-            ) : (
-              <p>You are about to start this form.</p>
-            )}
-          </CardContent>
-          <CardFooter className="text-right">
-            <Button type="button" variant="default" onClick={onStart}>
-              Start
-            </Button>
-          </CardFooter>
-        </Card>
-        {submitMode.mode === 'none' && entrypoint.kind === 'org_form' ? (
-          <Alert variant="default">
-            <AlertTitle>Submit</AlertTitle>
-            <AlertDescription>{submitMode.reason}</AlertDescription>
-          </Alert>
-        ) : null}
-      </>
-    );
-  }
-
   return (
     <>
       {submitMode.mode === 'none' && phase === 'filling' ? (
@@ -228,6 +193,7 @@ export function FormJourneyFillReady({
         eventTitle={ctx.eventTitle}
         formTitle={ctx.form.title ?? ctx.form.name}
         formDescription={ctx.form.description ?? null}
+        eventPresentation={eventPresentation}
         fieldMetas={fieldMetas}
         confirmationKeys={ctx.confirmationKeys}
         personId={effectivePersonId}
@@ -270,15 +236,6 @@ export type FormJourneyShellProps = {
 export function FormJourneyShell({ entrypoint, renderExtension }: FormJourneyShellProps) {
   const extension = renderExtension?.();
   const setup = useFormJourneyShellSetup(entrypoint);
-
-  if (!setup.isAuthenticated) {
-    return (
-      <main className="mx-auto grid max-w-(--app-width) gap-4 p-4" aria-busy="true">
-        <h1>Form</h1>
-        <p>Redirecting to sign in…</p>
-      </main>
-    );
-  }
 
   return <FormJourneyShellBody entrypoint={entrypoint} extension={extension} setup={setup} />;
 }

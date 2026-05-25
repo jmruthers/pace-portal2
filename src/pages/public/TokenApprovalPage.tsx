@@ -137,6 +137,7 @@ export function TokenApprovalPage() {
   }
 
   if ((phase === 'ready' || phase === 'submit_validation' || phase === 'submitting') && resolveContext) {
+    const isSubmitting = phase === 'submitting';
     const checkHeading = checkTypeHeading(resolveContext.check_type);
 
     return (
@@ -151,43 +152,42 @@ export function TokenApprovalPage() {
           <CardHeader>
             <CardTitle>{checkHeading}</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4">
-            <section>
-              <h2>Event</h2>
-              <p>{resolveContext.event_title}</p>
-            </section>
-            <section>
-              <h2>Applicant</h2>
-              <p>{resolveContext.applicant_display_name}</p>
-            </section>
-            <section>
-              <h2>Registration type</h2>
-              <p>{resolveContext.registration_type_name}</p>
-            </section>
-            {phase === 'submit_validation' ? (
-              <Alert variant="destructive">
-                <AlertTitle>Required</AlertTitle>
-                <AlertDescription>
-                  Add a comment to explain your response when you choose not to approve.
-                </AlertDescription>
-              </Alert>
-            ) : null}
-            {hasSubmitFailure ? (
-              <Alert variant="destructive">
-                <AlertTitle>Could not save</AlertTitle>
-                <AlertDescription>{TOKEN_APPROVAL_SUBMIT_FAILED}</AlertDescription>
-              </Alert>
-            ) : null}
-            <Form<TokenApprovalDecisionValues>
-              key={resolveContext.check_id}
-              schema={tokenApprovalDecisionSchema}
-              defaultValues={{ rejectNotes: '' }}
-              mode="onBlur"
-              onSubmit={() => undefined}
-              className="grid gap-4"
-            >
-              {(methods) => (
-                <>
+          <Form<TokenApprovalDecisionValues>
+            key={resolveContext.check_id}
+            schema={tokenApprovalDecisionSchema}
+            defaultValues={{ rejectNotes: '' }}
+            mode="onBlur"
+            onSubmit={() => undefined}
+          >
+            {(methods) => (
+              <>
+                <CardContent className="grid gap-4">
+                  <section>
+                    <h2>Event</h2>
+                    <p>{resolveContext.event_title}</p>
+                  </section>
+                  <section>
+                    <h2>Applicant</h2>
+                    <p>{resolveContext.applicant_display_name}</p>
+                  </section>
+                  <section>
+                    <h2>Registration type</h2>
+                    <p>{resolveContext.registration_type_name}</p>
+                  </section>
+                  {phase === 'submit_validation' ? (
+                    <Alert variant="destructive">
+                      <AlertTitle>Required</AlertTitle>
+                      <AlertDescription>
+                        Add a comment to explain your response when you choose not to approve.
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
+                  {hasSubmitFailure ? (
+                    <Alert variant="destructive">
+                      <AlertTitle>Could not save</AlertTitle>
+                      <AlertDescription>{TOKEN_APPROVAL_SUBMIT_FAILED}</AlertDescription>
+                    </Alert>
+                  ) : null}
                   <Label htmlFor={rejectNotesFieldId} className="grid gap-1">
                     <span>Comments for rejection (required if you decline)</span>
                     <Controller
@@ -201,48 +201,46 @@ export function TokenApprovalPage() {
                             field.onChange(v);
                             clearSubmitValidation();
                           }}
-                          disabled={phase === 'submitting'}
+                          disabled={isSubmitting}
                           rows={4}
                           placeholder="Required when you choose not to approve."
                         />
                       )}
                     />
                   </Label>
-                  <fieldset
-                    className="grid gap-2 sm:grid-cols-2 sm:gap-4"
-                    disabled={phase === 'submitting'}
-                  >
-                    <Button
-                      type="button"
-                      variant="default"
-                      onClick={() => submitApproval({ outcome: 'approve' })}
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={() =>
-                        submitApproval({
-                          outcome: 'reject',
-                          notes: methods.getValues('rejectNotes'),
-                        })
-                      }
-                    >
-                      Decline
-                    </Button>
-                  </fieldset>
-                </>
-              )}
-            </Form>
-          </CardContent>
-          {phase === 'submitting' ? (
-            <CardFooter>
-              <output aria-live="polite">
-                <LoadingSpinner label="Saving…" />
-              </output>
-            </CardFooter>
-          ) : null}
+                </CardContent>
+                <CardFooter className="border-t border-border">
+                  {isSubmitting ? (
+                    <output aria-live="polite">
+                      <LoadingSpinner label="Saving…" />
+                    </output>
+                  ) : (
+                    <fieldset className="m-0 w-full border-0 p-0 text-right">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() =>
+                          submitApproval({
+                            outcome: 'reject',
+                            notes: methods.getValues('rejectNotes'),
+                          })
+                        }
+                      >
+                        Decline
+                      </Button>{' '}
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => submitApproval({ outcome: 'approve' })}
+                      >
+                        Approve
+                      </Button>
+                    </fieldset>
+                  )}
+                </CardFooter>
+              </>
+            )}
+          </Form>
         </Card>
       </main>
     );
