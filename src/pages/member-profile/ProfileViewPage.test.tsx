@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ProfileViewPage } from '@/pages/member-profile/ProfileViewPage';
@@ -313,7 +313,7 @@ describe('ProfileViewPage', () => {
   });
 
   it('navigates home from error state', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     delegated.isError = true;
     delegated.error = new Error('Denied');
 
@@ -324,7 +324,7 @@ describe('ProfileViewPage', () => {
   });
 
   it('navigates to delegated edit when edit is clicked', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     delegated.data = {
       person: personRow,
       phones: [],
@@ -348,7 +348,7 @@ describe('ProfileViewPage', () => {
   });
 
   it('navigates home from success state', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     delegated.data = {
       person: personRow,
       phones: [],

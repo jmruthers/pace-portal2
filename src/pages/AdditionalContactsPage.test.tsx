@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Button } from '@solvera/pace-core/components';
@@ -140,7 +140,7 @@ describe('AdditionalContactsPage', () => {
   });
 
   it('opens create contact form when add contact is clicked', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage('/additional-contacts');
 
     await user.click(screen.getByRole('button', { name: /add contact/i }));
@@ -149,7 +149,7 @@ describe('AdditionalContactsPage', () => {
   });
 
   it('returns to list from create contact form cancel', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage('/additional-contacts');
 
     await user.click(screen.getByRole('button', { name: /add contact/i }));
@@ -217,7 +217,7 @@ describe('AdditionalContactsPage', () => {
       refetch: vi.fn(),
       organisationId: 'org-1',
     });
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage('/additional-contacts');
 
     await user.click(screen.getByRole('button', { name: /^edit$/i }));

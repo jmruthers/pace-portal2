@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import * as approvalHook from '@/hooks/approvals/useTokenApproval';
 import { TOKEN_APPROVAL_LINK_UNAVAILABLE } from '@/hooks/approvals/tokenApprovalContracts';
@@ -67,7 +67,7 @@ describe('TokenApprovalPage', () => {
       submitApproval,
     });
 
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
 
     await user.click(screen.getByRole('button', { name: 'Approve' }));

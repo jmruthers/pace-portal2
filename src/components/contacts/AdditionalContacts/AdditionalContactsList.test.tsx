@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { AdditionalContactsList } from '@/components/contacts/AdditionalContacts/AdditionalContactsList';
 import type { GroupedAdditionalContact } from '@/utils/contacts/groupAdditionalContactRows';
 
@@ -45,7 +45,7 @@ describe('AdditionalContactsList', () => {
   });
 
   it('calls onEdit for selected contact', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const onEdit = vi.fn();
 
     render(
@@ -64,7 +64,7 @@ describe('AdditionalContactsList', () => {
   });
 
   it('opens delete dialog and closes via cancel', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const onDeleteDialogClose = vi.fn();
 
     render(
@@ -87,7 +87,7 @@ describe('AdditionalContactsList', () => {
   });
 
   it('calls onDelete and closes dialog on successful delete', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const onDelete = vi.fn(async () => {});
     const onDeleteDialogClose = vi.fn();
 
@@ -112,7 +112,7 @@ describe('AdditionalContactsList', () => {
   });
 
   it('surfaces delete error and keeps dialog open on failed delete', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const onDelete = vi.fn(async () => {
       throw new Error('delete failed');
     });

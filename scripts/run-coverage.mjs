@@ -35,6 +35,8 @@ cleanCoverageOutput();
 run('npx', [
   'vitest',
   'run',
+  '-c',
+  'vitest.config.ts',
   '--coverage',
   '--coverage.provider=istanbul',
   '--testTimeout=10000',

@@ -1,5 +1,6 @@
 const paceCoreConfig = require('@solvera/pace-core/eslint-config');
 const js = require('@eslint/js');
+const globals = require('globals');
 
 let tseslint = null;
 let react = null;
@@ -43,6 +44,13 @@ if (react?.configs?.recommended?.rules && reactHooks?.configs?.recommended?.rule
     },
   });
 }
+
+config.push({
+  files: ['scripts/check-rbac-page-names.mjs'],
+  languageOptions: {
+    globals: globals.node,
+  },
+});
 
 config.push({
   ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'audit/**', '**/*.cjs'],

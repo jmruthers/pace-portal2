@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { UnifiedAuthContextValue } from '@solvera/pace-core/types';
 import * as paceCore from '@solvera/pace-core';
@@ -73,7 +73,7 @@ describe('RegistrationPage', () => {
   });
 
   it('navigates to login when primary action is used', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(
       <MemoryRouter initialEntries={['/register']}>
         <Routes>

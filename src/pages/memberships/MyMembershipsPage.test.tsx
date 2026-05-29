@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MyMembershipsPage } from '@/pages/memberships/MyMembershipsPage';
@@ -118,7 +118,7 @@ describe('MyMembershipsPage', () => {
   });
 
   it('starts join flow from empty state CTA', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     await user.click(screen.getByRole('button', { name: /add organisation/i }));
     expect(flowState.startFlow).toHaveBeenCalled();

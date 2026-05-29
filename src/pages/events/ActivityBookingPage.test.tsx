@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ActivityBookingPage } from '@/pages/events/ActivityBookingPage';
 import type { ActivityBookingPhase } from '@/hooks/events/useActivityBooking';
@@ -218,7 +218,7 @@ describe('ActivityBookingPage', () => {
   });
 
   it('calls cancelBooking when confirming cancel dialog', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     cancelBookingStub.mockResolvedValue({ ok: true, data: undefined });
     stubVm({ phase: 'ready', data: readyData() });
     renderPage();

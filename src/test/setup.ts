@@ -1,7 +1,4 @@
-import '@testing-library/jest-dom/vitest';
-import { afterEach } from 'vitest';
-import { cleanup } from '@testing-library/react';
-
-afterEach(() => {
-  cleanup();
-});
+/**
+ * @deprecated Use `src/test-setup.ts` (Standard 8). Kept as a re-export for any legacy imports.
+ */
+import '../test-setup.js';

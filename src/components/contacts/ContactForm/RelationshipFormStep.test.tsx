@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { RelationshipFormStep } from '@/components/contacts/ContactForm/RelationshipFormStep';
 
 describe('RelationshipFormStep', () => {
   it('submits default relationship values and supports back/cancel', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const onBack = vi.fn();
     const onCancel = vi.fn();
     const onSubmit = vi.fn();

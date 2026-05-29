@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from 'react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { isOk } from '@solvera/pace-core/types';
@@ -8,6 +8,16 @@ import { useAddressOperations } from '@/hooks/member-profile/useAddressOperation
 vi.mock('@solvera/pace-core', () => ({
   useUnifiedAuthContext: () => ({ user: { id: 'u1' } }),
 }));
+
+let infoSpy: ReturnType<typeof vi.spyOn>;
+
+beforeEach(() => {
+  infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  infoSpy.mockRestore();
+});
 
 const insertSingle = vi.fn().mockResolvedValue({ data: { id: 'addr-new' }, error: null });
 const updateEq = vi.fn().mockResolvedValue({ data: [{ id: 'addr-existing' }], error: null });

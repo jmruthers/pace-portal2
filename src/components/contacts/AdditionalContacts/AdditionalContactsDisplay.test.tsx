@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { Button } from '@solvera/pace-core/components';
 import { AdditionalContactsDisplay } from '@/components/contacts/AdditionalContacts/AdditionalContactsDisplay';
 import type { GroupedAdditionalContact } from '@/utils/contacts/groupAdditionalContactRows';
@@ -156,7 +156,7 @@ describe('AdditionalContactsDisplay', () => {
   });
 
   it('renders empty state and calls add contact CTA', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const onAddContact = vi.fn();
     render(
       <AdditionalContactsDisplay
@@ -178,7 +178,7 @@ describe('AdditionalContactsDisplay', () => {
   });
 
   it('passes list callbacks through and resets delete state on dialog close', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const onEditContact = vi.fn();
     const deleteMutateAsync = vi.fn(async () => {});
     const deleteReset = vi.fn();

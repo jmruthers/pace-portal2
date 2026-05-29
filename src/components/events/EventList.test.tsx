@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { EventId, FileReference } from '@solvera/pace-core/types';
 import * as unified from '@solvera/pace-core/providers';
@@ -86,7 +86,7 @@ describe('EventList', () => {
   });
 
   it('shows Apply navigation when no application and renders authenticated logo affordance', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(
       <MemoryRouter initialEntries={['/dashboard']}>
         <Routes>
@@ -108,7 +108,7 @@ describe('EventList', () => {
   });
 
   it('shows Resume navigation for draft applications', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(
       <MemoryRouter initialEntries={['/dash']}>
         <Routes>
@@ -125,7 +125,7 @@ describe('EventList', () => {
   });
 
   it('shows Manage navigation for non-draft application', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(
       <MemoryRouter initialEntries={['/dash']}>
         <Routes>
@@ -205,7 +205,7 @@ describe('EventList', () => {
   });
 
   it('disables the action button when event_code is missing', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const noCode = { ...baseEvent, event_code: '' } as DashboardEvent;
     render(
       <MemoryRouter initialEntries={['/dash']}>

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { Button } from '@solvera/pace-core/components';
 import { ContactForm } from '@/components/contacts/ContactForm';
 import type { UseContactFormStateResult } from '@/hooks/contacts/useContactFormState';
@@ -210,7 +210,7 @@ describe('ContactForm', () => {
   });
 
   it('moves to relationship path when email has no existing match', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const state = buildBaseState('email');
     stateMock.mockReturnValue(state);
     findByEmailMock.mockResolvedValue({ ok: true, data: null });
@@ -232,7 +232,7 @@ describe('ContactForm', () => {
   });
 
   it('blocks duplicate match against provided contacts set', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const state = buildBaseState('email');
     stateMock.mockReturnValue(state);
     findByEmailMock.mockResolvedValue({
@@ -280,7 +280,7 @@ describe('ContactForm', () => {
   });
 
   it('saves create flow from full step', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     stateMock.mockReturnValue(buildBaseState('full'));
     const onSaved = vi.fn();
 
@@ -302,7 +302,7 @@ describe('ContactForm', () => {
   });
 
   it('saves edit flow from full step', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     stateMock.mockReturnValue(buildBaseState('full'));
     const onSaved = vi.fn();
 
@@ -343,7 +343,7 @@ describe('ContactForm', () => {
   });
 
   it('saves create-new-from-match without re-entering match step', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const state = buildBaseState('full');
     state.draft.create_new_from_match = true;
     stateMock.mockReturnValue(state);
@@ -368,7 +368,7 @@ describe('ContactForm', () => {
   });
 
   it('allows editing the existing contact from duplicate blocked state', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const state = buildBaseState('blocked');
     state.blockedMessage = 'Duplicate contact';
     state.draft.match_person_id = 'p-dup';
@@ -405,7 +405,7 @@ describe('ContactForm', () => {
   });
 
   it('retries from generic blocked state back to form', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const state = buildBaseState('blocked');
     state.blockedMessage = 'Could not save';
     stateMock.mockReturnValue(state);
@@ -427,7 +427,7 @@ describe('ContactForm', () => {
   });
 
   it('enters no-email path from email step', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const state = buildBaseState('email');
     stateMock.mockReturnValue(state);
 
@@ -448,7 +448,7 @@ describe('ContactForm', () => {
   });
 
   it('blocks duplicate email match using proxy target member contacts', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const state = buildBaseState('email');
     stateMock.mockReturnValue(state);
     findByEmailMock.mockResolvedValue({
@@ -496,7 +496,7 @@ describe('ContactForm', () => {
   });
 
   it('passes proxy member id through create save from full step', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     stateMock.mockReturnValue(buildBaseState('full'));
     createMutateAsync.mockResolvedValue(undefined);
 

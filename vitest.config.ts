@@ -1,10 +1,15 @@
 import path from 'path';
 import { defineConfig, mergeConfig } from 'vitest/config';
 import viteConfig from './vite.config';
+import { domInclude } from './vitest.shared';
 import {
   acquireCoverageLock,
   registerCoverageLockRelease,
 } from './scripts/coverage-lock.mjs';
+
+const domEnvironmentGlobs = domInclude.map(
+  (pattern) => [pattern, 'happy-dom'] as [string, string]
+);
 
 const coverageRequested = process.argv.some(
   (arg) => arg === '--coverage' || arg.startsWith('--coverage.')
@@ -26,6 +31,7 @@ export default mergeConfig(
     // Linked `@solvera/pace-core` can resolve `react` from the monorepo copy; force one React for hooks.
     resolve: {
       alias: {
+        '@test-utils': path.resolve(process.cwd(), 'src/test-utils.ts'),
         react: path.resolve(process.cwd(), 'node_modules/react'),
         'react-dom': path.resolve(process.cwd(), 'node_modules/react-dom'),
         // pace-core workspace can resolve RHF from monorepo `node_modules`; pin to app copy so `react` matches.
@@ -33,8 +39,9 @@ export default mergeConfig(
       },
     },
     test: {
-      environment: 'jsdom',
-      setupFiles: ['./src/test/setup.ts'],
+      environment: 'node',
+      environmentMatchGlobs: domEnvironmentGlobs,
+      setupFiles: ['./src/test-setup.ts'],
       testTimeout: 10000,
       hookTimeout: 10000,
       teardownTimeout: 5000,

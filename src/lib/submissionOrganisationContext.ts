@@ -20,7 +20,6 @@ export async function runRpcWithOrganisationContext(
 ): Promise<RpcResult> {
   const base = resolveBaseRpcClient(client);
   // BASE session context RPC (not portal-owned); name is fixed in database.
-  // eslint-disable-next-line pace-core-compliance/rpc-naming-pattern -- set_organisation_context is the authoritative BASE RPC
   const ctxRes = (await base.rpc('set_organisation_context', {
     p_organisation_id: organisationId,
     p_event_id: eventId,

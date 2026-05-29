@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { err } from '@solvera/pace-core/types';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { MemberProfileLoadModel } from '@/hooks/member-profile/useMemberProfileData';
@@ -233,7 +233,7 @@ describe('MemberProfilePage save flow', () => {
   });
 
   it('navigates to dashboard after successful save', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
 
     await user.click(screen.getByRole('button', { name: /save profile/i }));
@@ -250,7 +250,7 @@ describe('MemberProfilePage save flow', () => {
   });
 
   it('creates a distinct postal address id when splitting a previously shared address', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     hooks.memberProfile.data = {
       ...loadedProfile,
       person: {

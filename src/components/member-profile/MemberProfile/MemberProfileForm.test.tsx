@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemberProfileForm } from '@/components/member-profile/MemberProfile/MemberProfileForm';
@@ -40,7 +40,7 @@ const referenceBundle: ReferenceDataBundle = {
 
 describe('MemberProfileForm', () => {
   it('renders sectioned profile fields', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const client = new QueryClient();
     render(
       <QueryClientProvider client={client}>
@@ -66,7 +66,7 @@ describe('MemberProfileForm', () => {
   });
 
   it('updates completion progress when a tracked field is cleared', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const client = new QueryClient();
     const completeDefaults = { ...defaultValues, preferred_name: 'Pat' };
     render(

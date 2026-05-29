@@ -15,19 +15,13 @@ import {
   Progress,
 } from '@solvera/pace-core/components';
 import { useToast } from '@solvera/pace-core/hooks';
+import { AccessDenied, PagePermissionGuard } from '@solvera/pace-core/rbac';
 import type { MemberProfileFormValues } from '@/components/member-profile/MemberProfile/memberProfileWizardSchema';
 import { MemberProfileWizardSteps } from '@/components/member-profile/MemberProfile/MemberProfileWizardSteps';
 import { useProfileCompletionWizard } from '@/hooks/auth/useProfileCompletionWizard';
 
-/**
- * Profile completion wizard shell (PR05). Step field content is owned by PR06.
- *
- * Intentionally not wrapped in {@link PagePermissionGuard}: `rbac_check_permission_simplified`
- * evaluates `rbac_permissions_get` for resolved app pages and does not grant org-admin bypass on
- * that path, so missing `rbac_page_permissions` rows for `profile-complete` would block all roles
- * including onboarding. Access is enforced by `ProtectedRoute` in the app shell instead.
- */
-export function ProfileCompletionWizardPage() {
+/** Profile completion wizard body (PR05). Step field content is owned by PR06. */
+function ProfileCompletionWizardContent() {
   const w = useProfileCompletionWizard();
   const { toast } = useToast();
   const prevSaveStatus = useRef(w.saveStatus);
@@ -115,57 +109,82 @@ export function ProfileCompletionWizardPage() {
               </section>
             </CardContent>
             <CardFooter className="text-right">
-            <fieldset className="grid auto-cols-max grid-flow-col justify-end gap-2 border-0 p-0">
-              {isLast ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={w.saveStatus === 'saving'}
-                    onClick={() => void w.skipFinalStep()}
-                  >
-                    Skip
-                  </Button>
-                  <Button type="button" variant="outline" onClick={w.goToPrevious}>
-                    Previous
-                  </Button>
-                  <Button type="button" variant="outline" onClick={w.cancel}>
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="default"
-                    disabled={w.saveStatus === 'saving'}
-                    onClick={() => void w.completeProfile()}
-                  >
-                    {w.saveStatus === 'saving' ? 'Saving…' : 'Complete profile'}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {w.currentStep > 0 ? (
+              <fieldset className="grid auto-cols-max grid-flow-col justify-end gap-2 border-0 p-0">
+                {isLast ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={w.saveStatus === 'saving'}
+                      onClick={() => void w.skipFinalStep()}
+                    >
+                      Skip
+                    </Button>
                     <Button type="button" variant="outline" onClick={w.goToPrevious}>
                       Previous
                     </Button>
-                  ) : null}
-                  <Button type="button" variant="outline" onClick={w.cancel}>
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="default"
-                    disabled={w.saveStatus === 'saving'}
-                    onClick={() => void w.saveAndContinue()}
-                  >
-                    {w.saveStatus === 'saving' ? 'Saving…' : 'Save and continue'}
-                  </Button>
-                </>
-              )}
-            </fieldset>
-          </CardFooter>
-        </Card>
+                    <Button type="button" variant="outline" onClick={w.cancel}>
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="default"
+                      disabled={w.saveStatus === 'saving'}
+                      onClick={() => void w.completeProfile()}
+                    >
+                      {w.saveStatus === 'saving' ? 'Saving…' : 'Complete profile'}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    {w.currentStep > 0 ? (
+                      <Button type="button" variant="outline" onClick={w.goToPrevious}>
+                        Previous
+                      </Button>
+                    ) : null}
+                    <Button type="button" variant="outline" onClick={w.cancel}>
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="default"
+                      disabled={w.saveStatus === 'saving'}
+                      onClick={() => void w.saveAndContinue()}
+                    >
+                      {w.saveStatus === 'saving' ? 'Saving…' : 'Save and continue'}
+                    </Button>
+                  </>
+                )}
+              </fieldset>
+            </CardFooter>
+          </Card>
         </FormProvider>
       )}
     </section>
+  );
+}
+
+/**
+ * PR05 profile completion wizard shell. Requires PORTAL-DB-001 `profile-complete` catalogue row and
+ * member `read` grants; shell auth remains via `ProtectedRoute` in `App.tsx`.
+ */
+export function ProfileCompletionWizardPage() {
+  return (
+    <PagePermissionGuard
+      pageName="profile-complete"
+      operation="read"
+      loading={
+        <section
+          aria-label="Profile completion wizard"
+          className="mx-auto grid min-h-[40vh] w-full max-w-(--app-width) place-items-center gap-4 px-4 py-6"
+          aria-busy="true"
+        >
+          <LoadingSpinner label="Checking access…" />
+        </section>
+      }
+      fallback={<AccessDenied />}
+    >
+      <ProfileCompletionWizardContent />
+    </PagePermissionGuard>
   );
 }

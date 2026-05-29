@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { MatchConfirmationStep } from '@/components/contacts/ContactForm/MatchConfirmationStep';
 
 describe('MatchConfirmationStep', () => {
   it('calls actions from confirmation buttons', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const onBack = vi.fn();
     const onCancel = vi.fn();
     const onLinkExisting = vi.fn();

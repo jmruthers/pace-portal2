@@ -48,20 +48,29 @@ These rules apply across slices; PR requirement docs reference this section inst
 ### RBAC and route permission model
 
 - `setupRBAC` must run in `src/main.tsx` **before** any RBAC-dependent route renders.
+- **App registration:** portal uses `APP_NAME = PACE` (`src/constants.ts`). Page keys live in `rbac_app_pages` for the PACE app, not a separate PORTAL app.
+- **Page key naming (canonical):** lowercase **kebab-case** slugs only — see pace-core Standard 03 (Security & RBAC, **Page key naming**) at `node_modules/@solvera/pace-core/docs/standards/3-security-rbac-standards.md` and the rollout checklist at `pace-core2/docs/database/decisions/RBAC-page-name-rollout-checklist.md`. Permission format is `{operation}:page.{slug}` (e.g. `read:page.member-profile`). UI `PagePermissionGuard` `pageName`, file `pageContext`, and RLS `p_page_name` must use the same slug. Canonical constants: `src/constants/rbacPageNames.ts`. Verification steps: `docs/operations/rbac-page-name-verification.md`.
 - **Page permissions (active rebuild):**
 
-| Surface | Page name | Operation |
-| --- | --- | --- |
-| Dashboard | `dashboard` | `read` |
-| Profile completion wizard | `profile-complete` | `read` |
-| Member profile | `member-profile` | `read` |
-| Medical profile | `medical-profile` | `read` |
-| Additional contacts | `additional-contacts` | `read` |
-| My memberships | `my-memberships` | `read` |
+| Route / surface | Page name (`pageName`) | Operation | Guard |
+| --- | --- | --- | --- |
+| `/`, `/dashboard` | `dashboard` | `read` | `PagePermissionGuard` |
+| `/profile-complete` | `profile-complete` | `read` | `PagePermissionGuard` (+ `ProtectedRoute`) |
+| `/member-profile` | `member-profile` | `read` | `PagePermissionGuard` |
+| `/profile/view/:memberId` | `member-profile` | `read` | `PagePermissionGuard` |
+| `/profile/edit/:memberId` | `member-profile` | `read` | `PagePermissionGuard` |
+| `/medical-profile` | `medical-profile` | `read` | `PagePermissionGuard` |
+| `/additional-contacts` | `additional-contacts` | `read` | `PagePermissionGuard` |
+| `/my-memberships` | `my-memberships` | `read` | `PagePermissionGuard` |
+| `/:eventSlug`, `/:eventSlug/*`, `/forms/:formSlug` (interim) | `dashboard` | `read` | `PagePermissionGuard` until dedicated catalogue rows exist |
+| Profile photo upload | `member-profile` | (file RPC) | `pageContext` on `FileUpload` |
+| Medical action-plan upload | `medical-profile` | (file RPC) | `pageContext` on `FileUpload` |
 
 - **Delegated profile resource permissions:** delegated read `read:member-profiles`; delegated edit `update:member-profiles`. Delegated flows require both page-level and resource-level validation where applicable.
+- **Route caller types for `/profile/view/:memberId`:** this route serves **RBAC read-only org staff** (e.g. navigating from TEAM) who hold `read:member-profiles` but not `update:member-profiles`. It is **not** a proxy/delegated-editing route and does **not** use the `editProxyMode` localStorage or `useProxyMode` session model. The legacy additional-contact `view` tier that previously routed here has been removed (see DB-412 and PR08 **Route caller types**).
 - Event workflow routes require authenticated member context in MVP; when unauthenticated, show an auth-required handoff and preserve return URL context.
 - **Interim event/org workflow guard:** participant event routes (`/:eventSlug`, `/:eventSlug/*`) and org form routes (`/forms/:formSlug`) render inside `PortalAuthenticatedLayout` and use `PagePermissionGuard` with `pageName="dashboard"` / `operation="read"` until dedicated `rbac_app_pages` catalogue rows exist. The participant event hub additionally relies on row-level visibility in hub data fetchers.
+- **Deploy order:** apply pace-core migrations (including PORTAL-DB-001 and platform kebab renames) **before or with** portal releases that rely on fail-closed page checks.
 
 ### PaceAppLayout and AppSwitcher
 

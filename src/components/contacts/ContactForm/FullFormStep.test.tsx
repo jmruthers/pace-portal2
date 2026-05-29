@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { FullFormStep } from '@/components/contacts/ContactForm/FullFormStep';
 
 describe('FullFormStep', () => {
   it('submits full-form defaults and supports back/cancel', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const onBack = vi.fn();
     const onCancel = vi.fn();
     const onSubmit = vi.fn();

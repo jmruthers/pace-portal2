@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { FileReference } from '@solvera/pace-core/types';
 import { MedicalConditionForm } from '@/components/medical-profile/MedicalConditionForm';
@@ -222,7 +222,7 @@ describe('MedicalConditionForm', () => {
   });
 
   it('shows validation feedback when saving without selecting a condition type', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderForm();
 
     await user.click(screen.getByRole('button', { name: /save condition/i }));

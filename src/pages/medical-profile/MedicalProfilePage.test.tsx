@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { MedicalProfilePage } from '@/pages/medical-profile/MedicalProfilePage';
@@ -252,7 +252,7 @@ describe('MedicalProfilePage', () => {
   });
 
   it('submits save from save button', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const save = vi.fn().mockResolvedValue(undefined);
     editor.mockImplementation(() => ({
       organisationId: 'org-1',

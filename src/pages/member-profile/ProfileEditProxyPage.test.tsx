@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ProfileEditProxyPage } from '@/pages/member-profile/ProfileEditProxyPage';
@@ -264,7 +264,7 @@ describe('ProfileEditProxyPage', () => {
   });
 
   it('navigates home from validation error state', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     proxy.targetMemberId = 'm1';
     proxy.validationError = 'Proxy access was denied.';
 
@@ -287,7 +287,7 @@ describe('ProfileEditProxyPage', () => {
   });
 
   it('navigates home from workspace load error', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     proxy.targetMemberId = 'm1';
     proxy.isProxyActive = true;
     proxy.targetPersonId = 'p1';
@@ -301,7 +301,7 @@ describe('ProfileEditProxyPage', () => {
   });
 
   it('navigates home from success workspace', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     proxy.targetMemberId = 'm1';
     proxy.isProxyActive = true;
     proxy.targetPersonId = 'p1';

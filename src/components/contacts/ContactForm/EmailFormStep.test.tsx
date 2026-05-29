@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { EmailFormStep } from '@/components/contacts/ContactForm/EmailFormStep';
 
 describe('EmailFormStep', () => {
   it('submits no-email branch and supports cancel', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const onCancel = vi.fn();
     const onSubmit = vi.fn();
 

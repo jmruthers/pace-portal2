@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ProfilePrompts } from '@/components/member-profile/ProfilePrompts';
 import { ProfileSetupPrompt } from '@/components/member-profile/ProfileSetupPrompt';
@@ -8,7 +8,7 @@ import { PhotoGuidelines } from '@/components/member-profile/PhotoGuidelines';
 
 describe('member profile composition (PR03)', () => {
   it('ProfilePrompts shows completion and navigation affordances', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(
       <MemoryRouter>
         <ProfilePrompts
@@ -26,7 +26,7 @@ describe('member profile composition (PR03)', () => {
   });
 
   it('ProfilePrompts delegated context routes member profile to member-profile with target query', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(
       <MemoryRouter initialEntries={['/']}>
         <Routes>
@@ -58,7 +58,7 @@ describe('member profile composition (PR03)', () => {
   });
 
   it('ProfileSetupPrompt offers setup navigation', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(
       <MemoryRouter initialEntries={['/']}>
         <Routes>

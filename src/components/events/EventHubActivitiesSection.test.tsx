@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { MemoryRouter } from 'react-router-dom';
 import { EventHubActivitiesSection } from '@/components/events/EventHubActivitiesSection';
 
@@ -16,7 +16,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 
 describe('EventHubActivitiesSection', () => {
   it('navigates to activity booking when application is approved', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     navigateMock.mockClear();
     render(
       <MemoryRouter>

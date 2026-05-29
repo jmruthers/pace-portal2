@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { FormProvider, type UseFormReturn } from '@solvera/pace-core/forms';
 import { useZodForm } from '@solvera/pace-core/hooks';
 import type { GoogleMapsPreloadState } from '@/hooks/auth/useProfileCompletionWizard';
@@ -103,7 +103,7 @@ describe('MemberProfileWizardSteps', () => {
   });
 
   it('adds and removes extra phone rows', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(<Harness step={1} />);
     const phoneGroup = screen.getByRole('group', { name: /phone numbers/i });
     expect(within(phoneGroup).getAllByRole('textbox')).toHaveLength(1);

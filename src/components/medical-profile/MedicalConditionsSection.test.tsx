@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { MedicalConditionsSection } from '@/components/medical-profile/MedicalConditionsSection';
 
 const medicalMocks = vi.hoisted(() => ({
@@ -125,7 +125,7 @@ describe('MedicalConditionsSection', () => {
   });
 
   it('shows delete error when removal fails', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     medicalMocks.deleteMutateAsync.mockRejectedValueOnce(new Error('Permission denied'));
 
     render(

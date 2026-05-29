@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { err, ok } from '@solvera/pace-core/types';
@@ -321,7 +321,7 @@ describe('FormFillPage', () => {
         valueByFieldId: { 'field-1': 'prior answer' },
       })
     );
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     expect(await screen.findByText(/this application was submitted/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^start$/i })).not.toBeInTheDocument();
@@ -403,7 +403,7 @@ describe('FormFillPage', () => {
   });
 
   it('shows success toast and navigates home after submit succeeds', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
@@ -426,7 +426,7 @@ describe('FormFillPage', () => {
       isLoading: false,
       isError: false,
     });
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
@@ -461,7 +461,7 @@ describe('FormFillPage', () => {
         message: 'Your application was created but the form response could not be finalised.',
       })
     );
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
@@ -484,7 +484,7 @@ describe('FormFillPage', () => {
         message: 'Application RPC rejected.',
       })
     );
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
@@ -505,7 +505,7 @@ describe('FormFillPage', () => {
         message: 'You already submitted.',
       })
     );
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));
@@ -533,7 +533,7 @@ describe('FormFillPage', () => {
       saveDraftError: null,
       refetchBundle: vi.fn(),
     });
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
     expect(await screen.findByRole('heading', { level: 1, name: 'Camp event' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Submit' }));

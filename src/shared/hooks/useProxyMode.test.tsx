@@ -239,18 +239,36 @@ describe('useProxyMode', () => {
   });
 
   it('ignores localStorage read failures', () => {
-    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const spy = vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
       throw new Error('quota');
     });
 
     const { result } = renderHook(() => useProxyMode());
 
     expect(result.current.targetMemberId).toBeNull();
+    warn.mockRestore();
     spy.mockRestore();
   });
 
+  it('logs read failures in development', () => {
+    vi.stubEnv('DEV', true);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const spy = vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
+      throw new Error('quota');
+    });
+
+    renderHook(() => useProxyMode());
+
+    expect(warn).toHaveBeenCalledWith('pace-portal: proxy storage read failed', expect.any(Error));
+    warn.mockRestore();
+    spy.mockRestore();
+    vi.unstubAllEnvs();
+  });
+
   it('continues when localStorage write fails', async () => {
-    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const spy = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw new Error('quota');
     });
     rpc.mockResolvedValue({ data: true, error: null });
@@ -271,6 +289,37 @@ describe('useProxyMode', () => {
     await waitFor(() => {
       expect(result.current.targetPersonId).toBe('p-target');
     });
+    warn.mockRestore();
     spy.mockRestore();
+  });
+
+  it('logs write failures in development', async () => {
+    vi.stubEnv('DEV', true);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const spy = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('quota');
+    });
+    rpc.mockResolvedValue({ data: true, error: null });
+    vi.spyOn(userUtils, 'fetchCurrentPersonMember').mockResolvedValue(
+      ok({
+        person: { id: 'p-self' } as never,
+        member: { id: 'other-member' } as never,
+        usedReducedFieldFallback: false,
+      })
+    );
+
+    const { result } = renderHook(() => useProxyMode());
+
+    act(() => {
+      result.current.setProxyTargetMemberId('member-write-warn');
+    });
+
+    await waitFor(() => {
+      expect(result.current.targetPersonId).toBe('p-target');
+    });
+    expect(warn).toHaveBeenCalledWith('pace-portal: proxy storage write failed', expect.any(Error));
+    warn.mockRestore();
+    spy.mockRestore();
+    vi.unstubAllEnvs();
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { RouterProvider, createMemoryRouter } from 'react-router-dom';
+import { setupUser } from '@test-utils';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as hubHook from '@/hooks/events/useEventHub';
 import { EventHubPage } from '@/pages/events/EventHubPage';
@@ -79,39 +79,19 @@ function renderUnderRoute(options: HubSpyState & { initialEntries?: string[] }) 
     reservedSlug: hubState.reservedSlug ?? false,
   });
 
-  const router = createMemoryRouter(
-    [
-      {
-        path: '/',
-        element: <main data-testid="home-route">Dashboard</main>,
-      },
-      {
-        path: '/login',
-        element: <main data-testid="login-route">Login</main>,
-      },
-      {
-        path: '/:eventSlug/itinerary',
-        element: <article data-testid="itinerary-route">itinerary</article>,
-      },
-      {
-        path: '/:eventSlug/:formSlug',
-        element: <article data-testid="form-route">form</article>,
-      },
-      {
-        path: '/:eventSlug',
-        element: <EventHubPage />,
-      },
-    ],
-    { initialEntries, initialIndex: 0 },
-  );
-
-  const view = render(
+  return render(
     <QueryClientProvider client={qc}>
-      <RouterProvider router={router} />
+      <MemoryRouter initialEntries={initialEntries} initialIndex={0}>
+        <Routes>
+          <Route path="/" element={<main data-testid="home-route">Dashboard</main>} />
+          <Route path="/login" element={<main data-testid="login-route">Login</main>} />
+          <Route path="/:eventSlug/itinerary" element={<article data-testid="itinerary-route">itinerary</article>} />
+          <Route path="/:eventSlug/:formSlug" element={<article data-testid="form-route">form</article>} />
+          <Route path="/:eventSlug" element={<EventHubPage />} />
+        </Routes>
+      </MemoryRouter>
     </QueryClientProvider>
   );
-
-  return { router, ...view };
 }
 
 describe('EventHubPage', () => {
@@ -120,8 +100,8 @@ describe('EventHubPage', () => {
   });
 
   it('shows View itinerary when participant is scoped and navigates to itinerary route', async () => {
-    const user = userEvent.setup();
-    const { router } = renderUnderRoute({
+    const user = setupUser();
+    renderUnderRoute({
       data: {
         event: sampleRow,
         applicationStatus: 'approved',
@@ -136,7 +116,7 @@ describe('EventHubPage', () => {
     expect(itineraryButton).toBeInTheDocument();
 
     await user.click(itineraryButton);
-    expect(router.state.location.pathname).toBe('/camp/itinerary');
+    expect(screen.getByTestId('itinerary-route')).toBeInTheDocument();
   });
 
   it('does not show View itinerary when profile setup is required', () => {
@@ -153,8 +133,8 @@ describe('EventHubPage', () => {
   });
 
   it('renders event summary, application badge, inactive warning, and form links', async () => {
-    const user = userEvent.setup();
-    const { router } = renderUnderRoute({
+    const user = setupUser();
+    renderUnderRoute({
       data: {
         event: sampleRow,
         applicationStatus: 'under_review',
@@ -175,7 +155,7 @@ describe('EventHubPage', () => {
     expect(screen.getByText(/Forms not open right now/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Registration/i }));
-    expect(router.state.location.pathname).toBe('/camp/reg');
+    expect(screen.getByTestId('form-route')).toBeInTheDocument();
   });
 
   it('shows profile-setup guidance instead of personalised application badge', () => {
@@ -219,8 +199,8 @@ describe('EventHubPage', () => {
   });
 
   it('shows hub query error and navigates back to dashboard', async () => {
-    const user = userEvent.setup();
-    const { router } = renderUnderRoute({
+    const user = setupUser();
+    renderUnderRoute({
       data: undefined,
       errorMessage: 'Could not load event.',
       notFound: false,
@@ -232,7 +212,6 @@ describe('EventHubPage', () => {
     expect(screen.getByText(/Could not load event/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Back to dashboard/i }));
-    expect(router.state.location.pathname).toBe('/');
     expect(screen.getByTestId('home-route')).toBeInTheDocument();
   });
 });

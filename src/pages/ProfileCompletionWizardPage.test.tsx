@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUser } from '@test-utils';
 import { useZodForm } from '@solvera/pace-core/hooks';
+
+vi.mock('@solvera/pace-core/rbac', () => ({
+  PagePermissionGuard: ({ children }: { children: ReactNode }) => <>{children}</>,
+  AccessDenied: () => <p>Access denied</p>,
+}));
 
 const { toastMock } = vi.hoisted(() => ({
   toastMock: vi.fn(),
@@ -185,7 +191,7 @@ describe('ProfileCompletionWizardPage', () => {
     });
 
     it('renders final-step actions on the last step', async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const cancel = vi.fn();
 
       function FinalStepPage() {
