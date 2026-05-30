@@ -208,4 +208,31 @@ describe('useAddressOperations', () => {
     expect(out.residentialAddressId).toBe('addr-new');
     expect(out.postalAddressId).toBe('addr-new');
   });
+
+  it('upsertAddress returns ADDRESS_UPDATE when update fails', async () => {
+    updateEq.mockResolvedValue({
+      data: null,
+      error: { message: 'row-level security violation' },
+    });
+
+    const qc = new QueryClient();
+    const { result } = renderHook(() => useAddressOperations(), { wrapper: wrapper(qc) });
+
+    const res = await result.current.upsertAddress(
+      {
+        line1: '9 St',
+        locality: 'Sydney',
+        countryCode: 'AU',
+        placeId: 'place-fail',
+      },
+      'o1',
+      'addr-existing'
+    );
+
+    expect(isOk(res)).toBe(false);
+    if (!isOk(res)) {
+      expect(res.error.code).toBe('ADDRESS_UPDATE');
+      expect(res.error.message).toMatch(/row-level security/i);
+    }
+  });
 });

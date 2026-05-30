@@ -48,10 +48,11 @@ function buildLandingMockClient(options?: {
   registrationFormRows?: Array<{ id: string; event_id: string }>;
   submittedFormResponseRows?: Array<{ form_id: string }>;
   draftFormResponseRows?: Array<{ form_id: string }>;
+  contactRpcRows?: Array<Record<string, unknown>>;
 }) {
   const rpc = vi.fn((name: string) => {
     if (name === 'data_pace_contacts_list') {
-      return Promise.resolve({ data: [], error: null });
+      return Promise.resolve({ data: options?.contactRpcRows ?? [], error: null });
     }
     return Promise.resolve({ data: null, error: null });
   });
@@ -607,6 +608,57 @@ describe('fetchEnhancedLanding', () => {
     expect(isOk(r)).toBe(true);
     if (isOk(r)) {
       expect(r.data.applicationStatusByEventId).toEqual({ ev1: 'submitted' });
+    }
+  });
+
+  it('drops additional contacts with non-numeric contact_type_id', async () => {
+    vi.spyOn(userUtils, 'fetchCurrentPersonMember').mockResolvedValue(
+      ok({
+        person: samplePerson,
+        member: null,
+        usedReducedFieldFallback: false,
+      })
+    );
+    vi.spyOn(supabaseTyped, 'toTypedSupabase').mockReturnValue(
+      buildLandingMockClient({
+        contactRpcRows: [
+          {
+            contact_id: 'c1',
+            contact_person_id: 'cp1',
+            contact_type_id: 'not-a-number',
+            contact_type_name: 'Emergency',
+            email: 'e@example.com',
+            first_name: 'Sam',
+            last_name: 'Lee',
+            member_id: 'm1',
+            organisation_id: 'o1',
+            permission_type: 'view',
+            phone_number: '0400',
+            phone_type: 'Mobile',
+          },
+          {
+            contact_id: 'c2',
+            contact_person_id: 'cp2',
+            contact_type_id: 2,
+            contact_type_name: 'Parent',
+            email: 'p@example.com',
+            first_name: 'Pat',
+            last_name: 'Lee',
+            member_id: 'm1',
+            organisation_id: 'o1',
+            permission_type: 'view',
+            phone_number: '0401',
+            phone_type: 'Mobile',
+          },
+        ],
+      }) as unknown as SupabaseClient<Database>
+    );
+
+    const r = await fetchEnhancedLanding({} as RBACSupabaseClient, 'u1', 'o1', ['o1']);
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) {
+      expect(r.data.additionalContacts).toHaveLength(1);
+      expect(r.data.additionalContacts[0]?.contact_id).toBe('c2');
     }
   });
 });

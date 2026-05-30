@@ -5,8 +5,8 @@
       "id": "hooks",
       "label": "Hooks (app + shared)",
       "prefixes": ["src/hooks/", "src/shared/hooks/"],
-      "statements": 0.79,
-      "lines": 0.79
+      "statements": 0.82,
+      "lines": 0.82
     },
     {
       "id": "utils",
